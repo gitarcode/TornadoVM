@@ -29,48 +29,49 @@ import java.util.List;
 
 public class DeallocateNode extends ContextOpNode {
 
-    public DeallocateNode(ContextNode context) {
-        super(context);
+  public DeallocateNode(ContextNode context) {
+    super(context);
+  }
+
+  private ObjectNode value;
+  private ContextOpNode dependent;
+
+  public ContextOpNode getDependent() {
+    return dependent;
+  }
+
+  public void setDependent(ContextOpNode dependent) {
+    this.dependent = dependent;
+  }
+
+  public void setValue(ObjectNode object) {
+    value = object;
+  }
+
+  public ObjectNode getValue() {
+    return value;
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "[%d]: deallocate object %d after %d", id, value.getId(), dependent.getId());
+  }
+
+  @Override
+  public boolean hasInputs() {
+    return value != null;
+  }
+
+  @Override
+  public List<AbstractNode> getInputs() {
+    if (!hasInputs()) {
+      return Collections.emptyList();
     }
 
-    private ObjectNode value;
-    private ContextOpNode dependent;
-
-    public ContextOpNode getDependent() {
-        return dependent;
-    }
-
-    public void setDependent(ContextOpNode dependent) {
-        this.dependent = dependent;
-    }
-
-    public void setValue(ObjectNode object) {
-        value = object;
-    }
-
-    public ObjectNode getValue() {
-        return value;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("[%d]: deallocate object %d after %d", id, value.getId(), dependent.getId());
-    }
-
-    @Override
-    public boolean hasInputs() {
-        return value != null;
-    }
-
-    @Override
-    public List<AbstractNode> getInputs() {
-        if (!hasInputs()) {
-            return Collections.emptyList();
-        }
-
-        final List<AbstractNode> result = new ArrayList<>();
-        result.add(value);
-        result.add(dependent);
-        return result;
-    }
+    final List<AbstractNode> result = new ArrayList<>();
+    result.add(value);
+    result.add(dependent);
+    return result;
+  }
 }

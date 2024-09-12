@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.nodes.vector;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.graph.Node;
@@ -32,8 +33,6 @@ import org.graalvm.compiler.nodes.calc.BinaryNode;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXStamp;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXStampFactory;
@@ -45,38 +44,45 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt.AssignStmt;
 @NodeInfo(shortName = "Vector(-)")
 public class VectorSubNode extends BinaryNode implements LIRLowerable, VectorOp {
 
-    public static final NodeClass<VectorSubNode> TYPE = NodeClass.create(VectorSubNode.class);
+  public static final NodeClass<VectorSubNode> TYPE = NodeClass.create(VectorSubNode.class);
 
-    public VectorSubNode(PTXKind kind, ValueNode x, ValueNode y) {
-        super(TYPE, PTXStampFactory.getStampFor(kind), x, y);
-    }
+  public VectorSubNode(PTXKind kind, ValueNode x, ValueNode y) {
+    super(TYPE, PTXStampFactory.getStampFor(kind), x, y);
+  }
 
-    @Override
-    public Stamp foldStamp(Stamp stampX, Stamp stampY) {
-        return (stampX instanceof PTXStamp) ? stampX.join(stampY) : stampY.join(stampX);
-    }
+  @Override
+  public Stamp foldStamp(Stamp stampX, Stamp stampY) {
+    return (stampX instanceof PTXStamp) ? stampX.join(stampY) : stampY.join(stampX);
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
-        final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
+    final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
 
-        final Value input1 = gen.operand(x);
-        final Value input2 = gen.operand(y);
+    final Value input1 = gen.operand(x);
+    final Value input2 = gen.operand(y);
 
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitVectorSub: %s - %s", input1, input2);
-        gen.getLIRGeneratorTool().append(new AssignStmt(result, new PTXBinary.Expr(PTXAssembler.PTXBinaryOp.SUB, gen.getLIRGeneratorTool().getLIRKind(stamp), input1, input2)));
-        gen.setResult(this, result);
-    }
+    Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitVectorSub: %s - %s", input1, input2);
+    gen.getLIRGeneratorTool()
+        .append(
+            new AssignStmt(
+                result,
+                new PTXBinary.Expr(
+                    PTXAssembler.PTXBinaryOp.SUB,
+                    gen.getLIRGeneratorTool().getLIRKind(stamp),
+                    input1,
+                    input2)));
+    gen.setResult(this, result);
+  }
 
-    @Override
-    public Node canonical(CanonicalizerTool ct, ValueNode t, ValueNode t1) {
-        return this;
-    }
+  @Override
+  public Node canonical(CanonicalizerTool ct, ValueNode t, ValueNode t1) {
+    return this;
+  }
 
-    @Override
-    public ValueNode canonical(CanonicalizerTool ct) {
-        return this;
-    }
-
+  @Override
+  public ValueNode canonical(CanonicalizerTool ct) {
+    return this;
+  }
 }

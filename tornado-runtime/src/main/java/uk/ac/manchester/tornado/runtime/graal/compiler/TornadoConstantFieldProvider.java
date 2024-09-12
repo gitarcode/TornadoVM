@@ -27,10 +27,9 @@ import org.graalvm.compiler.core.common.spi.ConstantFieldProvider;
 
 public class TornadoConstantFieldProvider implements ConstantFieldProvider {
 
-    @Override
-    public <T> T readConstantField(ResolvedJavaField resolvedField, ConstantFieldTool<T> tool) {
-        JavaConstant ret = tool.readValue();
-        return tool.foldConstant(ret);
-    }
-
+  @Override
+  public <T> T readConstantField(ResolvedJavaField resolvedField, ConstantFieldTool<T> tool) {
+    JavaConstant ret = tool.readValue();
+    return tool.foldConstant(ret);
+  }
 }

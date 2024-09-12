@@ -35,24 +35,22 @@ import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 @NodeInfo
 public class ThreadConfigurationNode extends FixedWithNextNode implements LIRLowerable {
 
-    @Successor
-    LoopBeginNode loopBegin;
+  @Successor LoopBeginNode loopBegin;
 
-    @Input
-    LocalWorkGroupDimensionsNode localWork;
+  @Input LocalWorkGroupDimensionsNode localWork;
 
-    public static final NodeClass<ThreadConfigurationNode> TYPE = NodeClass.create(ThreadConfigurationNode.class);
+  public static final NodeClass<ThreadConfigurationNode> TYPE =
+      NodeClass.create(ThreadConfigurationNode.class);
 
-    public ThreadConfigurationNode(LocalWorkGroupDimensionsNode localWork) {
-        super(TYPE, StampFactory.forVoid());
-        this.localWork = localWork;
-    }
+  public ThreadConfigurationNode(LocalWorkGroupDimensionsNode localWork) {
+    super(TYPE, StampFactory.forVoid());
+    this.localWork = localWork;
+  }
 
-    /**
-     * This an empty implementation for generating LIR for this node. This is due to
-     * a fix template used during code generation for this node.
-     */
-    @Override
-    public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
-    }
+  /**
+   * This an empty implementation for generating LIR for this node. This is due to a fix template
+   * used during code generation for this node.
+   */
+  @Override
+  public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {}
 }

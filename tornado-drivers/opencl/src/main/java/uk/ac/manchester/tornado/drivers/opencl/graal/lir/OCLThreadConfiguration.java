@@ -25,24 +25,22 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.Opcode;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 
 @Opcode("ThreadScheduling")
 public class OCLThreadConfiguration extends OCLLIROp {
-    private int x;
-    private int y;
-    private int z;
+  private int x;
+  private int y;
+  private int z;
 
-    public OCLThreadConfiguration(int oneD, int twoD, int threeD) {
-        super(LIRKind.Illegal);
-        this.x = oneD;
-        this.y = twoD;
-        this.z = threeD;
-    }
+  public OCLThreadConfiguration(int oneD, int twoD, int threeD) {
+    super(LIRKind.Illegal);
+    this.x = oneD;
+    this.y = twoD;
+    this.z = threeD;
+  }
 
-    @Override
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-    }
+  @Override
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {}
 }

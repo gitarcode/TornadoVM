@@ -35,7 +35,6 @@ import org.graalvm.compiler.phases.common.IterativeConditionalEliminationPhase;
 import org.graalvm.compiler.phases.common.LowTierLoweringPhase;
 import org.graalvm.compiler.phases.common.UseTrappingNullChecksPhase;
 import org.graalvm.compiler.phases.schedule.SchedulePhase;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.analysis.TornadoFeatureExtraction;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.loops.TornadoLoopCanonicalization;
@@ -55,68 +54,72 @@ import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoLowTier;
 
 public class OCLLowTier extends TornadoLowTier {
 
-    TornadoDeviceContext tornadoDeviceContext;
+  TornadoDeviceContext tornadoDeviceContext;
 
-    public OCLLowTier(OptionValues options, TornadoDeviceContext tornadoDeviceContext, AddressLowering addressLowering) {
-        this.tornadoDeviceContext = tornadoDeviceContext;
-        CanonicalizerPhase canonicalizer = getCannonicalizer(options);
+  public OCLLowTier(
+      OptionValues options,
+      TornadoDeviceContext tornadoDeviceContext,
+      AddressLowering addressLowering) {
+    this.tornadoDeviceContext = tornadoDeviceContext;
+    CanonicalizerPhase canonicalizer = getCannonicalizer(options);
 
-        appendPhase(new OCLFP64SupportPhase(tornadoDeviceContext));
+    appendPhase(new OCLFP64SupportPhase(tornadoDeviceContext));
 
-        appendPhase(new OCLFP16SupportPhase(tornadoDeviceContext));
+    appendPhase(new OCLFP16SupportPhase(tornadoDeviceContext));
 
-        appendPhase(new LowTierLoweringPhase(canonicalizer));
+    appendPhase(new LowTierLoweringPhase(canonicalizer));
 
-        if (ConditionalElimination.getValue(options)) {
-            appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, true));
-        }
-
-        // TODO Investigate why FixReads break kfusion on Nvidia GPUs
-        if (TornadoOptions.ENABLE_FIX_READS) {
-            appendPhase(new FixReadsPhase(true, new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS)));
-        }
-        appendPhase(new UseTrappingNullChecksPhase());
-
-        appendPhase(new TornadoFixedArrayCopyPhase());
-
-        appendPhase(new AddressLoweringByNodePhase(addressLowering));
-
-        appendPhase(new DeadCodeEliminationPhase(DeadCodeEliminationPhase.Optionality.Required));
-
-        if (tornadoDeviceContext.isPlatformFPGA()) {
-            appendPhase(new OCLFPGAPragmaPhase(tornadoDeviceContext));
-            appendPhase(new OCLFPGAThreadScheduler());
-        }
-
-        appendPhase(new TornadoHalfFloatVectorOffset());
-
-        appendPhase(new TornadoLoopCanonicalization());
-
-        if (TornadoOptions.ENABLE_FMA) {
-            appendPhase(new OCLFMAPhase());
-        }
-
-        if (TornadoOptions.MATH_OPTIMIZATIONS) {
-            appendPhase(new InverseSquareRootPhase());
-        }
-
-        appendPhase(new TornadoAtomicsParametersPhase());
-
-        appendPhase(new TornadoAtomicsScheduling());
-
-        appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS));
-
-        if (TornadoOptions.FEATURE_EXTRACTION) {
-            appendPhase(new TornadoFeatureExtraction(tornadoDeviceContext));
-        }
-
-        if (TornadoOptions.DUMP_LOW_TIER_WITH_IGV) {
-            appendPhase(new DumpLowTierGraph());
-        }
-
+    if (ConditionalElimination.getValue(options)) {
+      appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, true));
     }
 
-    private CanonicalizerPhase getCannonicalizer(OptionValues options) {
-        return CanonicalizerPhase.create();
+    // TODO Investigate why FixReads break kfusion on Nvidia GPUs
+    if (TornadoOptions.ENABLE_FIX_READS) {
+      appendPhase(
+          new FixReadsPhase(
+              true, new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS)));
     }
+    appendPhase(new UseTrappingNullChecksPhase());
+
+    appendPhase(new TornadoFixedArrayCopyPhase());
+
+    appendPhase(new AddressLoweringByNodePhase(addressLowering));
+
+    appendPhase(new DeadCodeEliminationPhase(DeadCodeEliminationPhase.Optionality.Required));
+
+    if (tornadoDeviceContext.isPlatformFPGA()) {
+      appendPhase(new OCLFPGAPragmaPhase(tornadoDeviceContext));
+      appendPhase(new OCLFPGAThreadScheduler());
+    }
+
+    appendPhase(new TornadoHalfFloatVectorOffset());
+
+    appendPhase(new TornadoLoopCanonicalization());
+
+    if (TornadoOptions.ENABLE_FMA) {
+      appendPhase(new OCLFMAPhase());
+    }
+
+    if (TornadoOptions.MATH_OPTIMIZATIONS) {
+      appendPhase(new InverseSquareRootPhase());
+    }
+
+    appendPhase(new TornadoAtomicsParametersPhase());
+
+    appendPhase(new TornadoAtomicsScheduling());
+
+    appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS));
+
+    if (TornadoOptions.FEATURE_EXTRACTION) {
+      appendPhase(new TornadoFeatureExtraction(tornadoDeviceContext));
+    }
+
+    if (TornadoOptions.DUMP_LOW_TIER_WITH_IGV) {
+      appendPhase(new DumpLowTierGraph());
+    }
+  }
+
+  private CanonicalizerPhase getCannonicalizer(OptionValues options) {
+    return CanonicalizerPhase.create();
+  }
 }

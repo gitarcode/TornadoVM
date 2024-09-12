@@ -30,58 +30,69 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import jdk.vm.ci.code.CallingConvention;
 import org.graalvm.compiler.core.common.CompilationIdentifier;
 import org.graalvm.compiler.core.common.alloc.RegisterAllocationConfig;
 import org.graalvm.compiler.lir.LIR;
 import org.graalvm.compiler.lir.Variable;
 import org.graalvm.compiler.lir.framemap.FrameMapBuilder;
 import org.graalvm.compiler.lir.gen.LIRGenerationResult;
-
-import jdk.vm.ci.code.CallingConvention;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 
 public class PTXLIRGenerationResult extends LIRGenerationResult {
 
-    private final Map<PTXKind, Set<VariableData>> variableTable;
-    private final Map<PTXKind, List<Variable>> returnVariables;
+  private final Map<PTXKind, Set<VariableData>> variableTable;
+  private final Map<PTXKind, List<Variable>> returnVariables;
 
-    public PTXLIRGenerationResult(CompilationIdentifier identifier, LIR lir, FrameMapBuilder frameMapBuilder, RegisterAllocationConfig registerAllocationConfig, CallingConvention callingConvention) {
-        super(identifier, lir, frameMapBuilder, registerAllocationConfig, callingConvention);
+  public PTXLIRGenerationResult(
+      CompilationIdentifier identifier,
+      LIR lir,
+      FrameMapBuilder frameMapBuilder,
+      RegisterAllocationConfig registerAllocationConfig,
+      CallingConvention callingConvention) {
+    super(identifier, lir, frameMapBuilder, registerAllocationConfig, callingConvention);
 
-        variableTable = new HashMap<>();
-        returnVariables = new HashMap<>();
+    variableTable = new HashMap<>();
+    returnVariables = new HashMap<>();
+  }
+
+  public int insertVariableAndGetIndex(Variable variable, boolean isArray) {
+    guarantee(
+        variable.getPlatformKind() instanceof PTXKind,
+        "invalid variable kind: %s",
+        variable.getValueKind());
+    PTXKind kind = (PTXKind) variable.getPlatformKind();
+
+    variableTable
+        .computeIfAbsent(kind, k -> new HashSet<>())
+        .add(new VariableData(variable, isArray));
+    int arrayCount =
+        isArray
+            ? 0
+            : (int) variableTable.get(kind).stream().filter(varData -> varData.isArray).count();
+    return variableTable.get(kind).size() - arrayCount - 1;
+  }
+
+  public Map<PTXKind, Set<VariableData>> getVariableTable() {
+    return variableTable;
+  }
+
+  public void setReturnVariable(Variable variable) {
+    PTXKind ptxKind = (PTXKind) variable.getPlatformKind();
+    returnVariables.computeIfAbsent(ptxKind, k -> new ArrayList<>()).add(variable);
+  }
+
+  public List<Variable> getReturnVariables(PTXKind kind) {
+    return returnVariables.get(kind);
+  }
+
+  public static class VariableData {
+    public boolean isArray;
+    public Variable variable;
+
+    public VariableData(Variable variable, boolean isArray) {
+      this.variable = variable;
+      this.isArray = isArray;
     }
-
-    public int insertVariableAndGetIndex(Variable variable, boolean isArray) {
-        guarantee(variable.getPlatformKind() instanceof PTXKind, "invalid variable kind: %s", variable.getValueKind());
-        PTXKind kind = (PTXKind) variable.getPlatformKind();
-
-        variableTable.computeIfAbsent(kind, k -> new HashSet<>()).add(new VariableData(variable, isArray));
-        int arrayCount = isArray ? 0 : (int) variableTable.get(kind).stream().filter(varData -> varData.isArray).count();
-        return variableTable.get(kind).size() - arrayCount - 1;
-    }
-
-    public Map<PTXKind, Set<VariableData>> getVariableTable() {
-        return variableTable;
-    }
-
-    public void setReturnVariable(Variable variable) {
-        PTXKind ptxKind = (PTXKind) variable.getPlatformKind();
-        returnVariables.computeIfAbsent(ptxKind, k -> new ArrayList<>()).add(variable);
-    }
-
-    public List<Variable> getReturnVariables(PTXKind kind) {
-        return returnVariables.get(kind);
-    }
-
-    public static class VariableData {
-        public boolean isArray;
-        public Variable variable;
-
-        public VariableData(Variable variable, boolean isArray) {
-            this.variable = variable;
-            this.isArray = isArray;
-        }
-    }
+  }
 }

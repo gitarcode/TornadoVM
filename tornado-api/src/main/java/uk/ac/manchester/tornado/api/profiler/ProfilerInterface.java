@@ -19,33 +19,33 @@ package uk.ac.manchester.tornado.api.profiler;
 
 public interface ProfilerInterface {
 
-    long getTotalTime();
+  long getTotalTime();
 
-    long getCompileTime();
+  long getCompileTime();
 
-    long getTornadoCompilerTime();
+  long getTornadoCompilerTime();
 
-    long getDriverInstallTime();
+  long getDriverInstallTime();
 
-    long getDataTransfersTime();
+  long getDataTransfersTime();
 
-    long getDeviceWriteTime();
+  long getDeviceWriteTime();
 
-    long getDeviceReadTime();
+  long getDeviceReadTime();
 
-    long getDataTransferDispatchTime();
+  long getDataTransferDispatchTime();
 
-    long getKernelDispatchTime();
+  long getKernelDispatchTime();
 
-    long getDeviceKernelTime();
+  long getDeviceKernelTime();
 
-    String getProfileLog();
+  String getProfileLog();
 
-    long getTotalBytesCopyIn();
+  long getTotalBytesCopyIn();
 
-    long getTotalBytesCopyOut();
+  long getTotalBytesCopyOut();
 
-    long getTotalBytesTransferred();
+  long getTotalBytesTransferred();
 
-    long getTotalDeviceMemoryUsage();
+  long getTotalDeviceMemoryUsage();
 }

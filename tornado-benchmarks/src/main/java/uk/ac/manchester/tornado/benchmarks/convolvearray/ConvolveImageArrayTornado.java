@@ -30,83 +30,90 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner convolvearray
  * </code>
  */
 public class ConvolveImageArrayTornado extends BenchmarkDriver {
 
-    private final int imageSizeX;
-    private final int imageSizeY;
-    private final int filterSize;
-    private FloatArray input;
-    private FloatArray output;
-    private FloatArray filter;
+  private final int imageSizeX;
+  private final int imageSizeY;
+  private final int filterSize;
+  private FloatArray input;
+  private FloatArray output;
+  private FloatArray filter;
 
-    public ConvolveImageArrayTornado(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
-        super(iterations);
-        this.imageSizeX = imageSizeX;
-        this.imageSizeY = imageSizeY;
-        this.filterSize = filterSize;
+  public ConvolveImageArrayTornado(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
+    super(iterations);
+    this.imageSizeX = imageSizeX;
+    this.imageSizeY = imageSizeY;
+    this.filterSize = filterSize;
+  }
+
+  @Override
+  public void setUp() {
+    input = new FloatArray(imageSizeX * imageSizeY);
+    output = new FloatArray(imageSizeX * imageSizeY);
+    filter = new FloatArray(filterSize * filterSize);
+
+    createImage(input, imageSizeX, imageSizeY);
+    createFilter(filter, filterSize, filterSize);
+
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, input, filter) //
+            .task(
+                "convolveImageArray",
+                GraphicsKernels::convolveImageArray,
+                input,
+                filter,
+                output,
+                imageSizeX,
+                imageSizeY,
+                filterSize,
+                filterSize) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
+
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+
+    input = null;
+    output = null;
+    filter = null;
+
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
+
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+
+    final FloatArray result = new FloatArray(imageSizeX * imageSizeY);
+
+    runBenchmark(device);
+
+    GraphicsKernels.convolveImageArray(
+        input, filter, result, imageSizeX, imageSizeY, filterSize, filterSize);
+
+    float maxULP = 0f;
+    for (int i = 0; i < output.getSize(); i++) {
+      final float ulp = FloatOps.findMaxULP(result.get(i), output.get(i));
+
+      if (ulp > maxULP) {
+        maxULP = ulp;
+      }
     }
-
-    @Override
-    public void setUp() {
-        input = new FloatArray(imageSizeX * imageSizeY);
-        output = new FloatArray(imageSizeX * imageSizeY);
-        filter = new FloatArray(filterSize * filterSize);
-
-        createImage(input, imageSizeX, imageSizeY);
-        createFilter(filter, filterSize, filterSize);
-
-        taskGraph = new TaskGraph("benchmark") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, input, filter) //
-                .task("convolveImageArray", GraphicsKernels::convolveImageArray, input, filter, output, imageSizeX, imageSizeY, filterSize, filterSize) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
-
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-
-        input = null;
-        output = null;
-        filter = null;
-
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-
-        final FloatArray result = new FloatArray(imageSizeX * imageSizeY);
-
-        runBenchmark(device);
-
-        GraphicsKernels.convolveImageArray(input, filter, result, imageSizeX, imageSizeY, filterSize, filterSize);
-
-        float maxULP = 0f;
-        for (int i = 0; i < output.getSize(); i++) {
-            final float ulp = FloatOps.findMaxULP(result.get(i), output.get(i));
-
-            if (ulp > maxULP) {
-                maxULP = ulp;
-            }
-        }
-        return Float.compare(maxULP, MAX_ULP) <= 0;
-    }
-
+    return Float.compare(maxULP, MAX_ULP) <= 0;
+  }
 }

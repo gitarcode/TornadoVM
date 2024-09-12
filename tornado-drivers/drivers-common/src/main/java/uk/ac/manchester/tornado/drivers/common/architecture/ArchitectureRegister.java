@@ -23,34 +23,32 @@ package uk.ac.manchester.tornado.drivers.common.architecture;
 
 import jdk.vm.ci.meta.PlatformKind;
 
-/**
- * Base Class for holding a Register for each architecture in TornadoVM.
- */
+/** Base Class for holding a Register for each architecture in TornadoVM. */
 public abstract class ArchitectureRegister {
 
-    protected final int number;
-    protected final String name;
-    protected final PlatformKind lirKind;
+  protected final int number;
+  protected final String name;
+  protected final PlatformKind lirKind;
 
-    protected ArchitectureRegister(int number, String name, PlatformKind lirKind) {
-        this.number = number;
-        this.name = name;
-        this.lirKind = lirKind;
-    }
+  protected ArchitectureRegister(int number, String name, PlatformKind lirKind) {
+    this.number = number;
+    this.name = name;
+    this.lirKind = lirKind;
+  }
 
-    public String getDeclaration() {
-        return String.format("%s %s", lirKind.toString(), name);
-    }
+  public String getDeclaration() {
+    return String.format("%s %s", lirKind.toString(), name);
+  }
 
-    public String getName() {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public int getNumber() {
-        return number;
-    }
+  public int getNumber() {
+    return number;
+  }
 
-    public PlatformKind getLirKind() {
-        return lirKind;
-    }
+  public PlatformKind getLirKind() {
+    return lirKind;
+  }
 }

@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.api.WorkerGrid;
 import uk.ac.manchester.tornado.api.common.Event;
@@ -60,521 +59,772 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class PTXDeviceContext implements TornadoDeviceContext {
 
-    private final PTXDevice device;
-    private final PTXMemoryManager memoryManager;
-    private final PTXCodeCache codeCache;
-    private final PTXScheduler scheduler;
-    private final TornadoBufferProvider bufferProvider;
-    private final PowerMetric powerMetric;
-    private final Map<Long, PTXStreamTable> streamTable;
-    private boolean wasReset;
-    private Set<Long> executionIDs;
+  private final PTXDevice device;
+  private final PTXMemoryManager memoryManager;
+  private final PTXCodeCache codeCache;
+  private final PTXScheduler scheduler;
+  private final TornadoBufferProvider bufferProvider;
+  private final PowerMetric powerMetric;
+  private final Map<Long, PTXStreamTable> streamTable;
+  private boolean wasReset;
+  private Set<Long> executionIDs;
 
-    public PTXDeviceContext(PTXDevice device) {
-        this.device = device;
-        streamTable = new ConcurrentHashMap<>();
-        this.scheduler = new PTXScheduler(device);
-        this.powerMetric = new PTXNvidiaPowerMetric(this);
-        codeCache = new PTXCodeCache(this);
-        memoryManager = new PTXMemoryManager(this);
-        bufferProvider = new PTXBufferProvider(this);
-        wasReset = false;
-        executionIDs = Collections.synchronizedSet(new HashSet<>());
+  public PTXDeviceContext(PTXDevice device) {
+    this.device = device;
+    streamTable = new ConcurrentHashMap<>();
+    this.scheduler = new PTXScheduler(device);
+    this.powerMetric = new PTXNvidiaPowerMetric(this);
+    codeCache = new PTXCodeCache(this);
+    memoryManager = new PTXMemoryManager(this);
+    bufferProvider = new PTXBufferProvider(this);
+    wasReset = false;
+    executionIDs = Collections.synchronizedSet(new HashSet<>());
+  }
+
+  @Override
+  public PTXMemoryManager getMemoryManager() {
+    return memoryManager;
+  }
+
+  public TornadoBufferProvider getBufferProvider() {
+    return bufferProvider;
+  }
+
+  @Override
+  public boolean wasReset() {
+    return wasReset;
+  }
+
+  @Override
+  public void setResetToFalse() {
+    wasReset = false;
+  }
+
+  @Override
+  public boolean isPlatformFPGA() {
+    return false;
+  }
+
+  @Override
+  public boolean isPlatformXilinxFPGA() {
+    return false;
+  }
+
+  @Override
+  public boolean isFP64Supported() {
+    return true;
+  }
+
+  public PTXTornadoDevice toDevice() {
+    return new PTXTornadoDevice(device.getDeviceIndex());
+  }
+
+  public TornadoInstalledCode installCode(PTXCompilationResult result, String resolvedMethodName) {
+    return codeCache.installSource(
+        result.getName(),
+        result.getTargetCode(),
+        resolvedMethodName,
+        result.metaData().isPrintKernelEnabled());
+  }
+
+  public TornadoInstalledCode installCode(
+      String name, byte[] code, String resolvedMethodName, boolean printKernel) {
+    return codeCache.installSource(name, code, resolvedMethodName, printKernel);
+  }
+
+  public TornadoInstalledCode getInstalledCode(String name) {
+    return codeCache.getCachedCode(name);
+  }
+
+  public PTXCodeCache getCodeCache() {
+    return codeCache;
+  }
+
+  public PTXDevice getDevice() {
+    return device;
+  }
+
+  @Override
+  public String getDeviceName() {
+    return device.getDeviceName();
+  }
+
+  @Override
+  public int getDeviceIndex() {
+    return device.getDeviceIndex();
+  }
+
+  @Override
+  public int getDriverIndex() {
+    return TornadoRuntimeProvider.getTornadoRuntime().getBackendIndex(PTXBackendImpl.class);
+  }
+
+  @Override
+  public Set<Long> getRegisteredPlanIds() {
+    return executionIDs;
+  }
+
+  @Override
+  public int getDevicePlatform() {
+    return 0;
+  }
+
+  public long getPowerUsage() {
+    long[] device = new long[1];
+    long[] powerUsage = new long[1];
+    powerMetric.getHandleByIndex(device);
+    powerMetric.getPowerUsage(device, powerUsage);
+    return powerUsage[0];
+  }
+
+  public ByteOrder getByteOrder() {
+    return device.getByteOrder();
+  }
+
+  public Event resolveEvent(long executionPlanId, int event) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.resolveEvent(event);
+  }
+
+  public void flushEvents(long executionPlanId) {
+    sync(executionPlanId);
+  }
+
+  /**
+   * Sync the CUDA Stream only if the Stream Exists
+   *
+   * @param executionPlanId
+   */
+  public void flushEventsIfNeeded(long executionPlanId) {
+    syncIfNeeded(executionPlanId);
+  }
+
+  public int enqueueBarrier(long executionPlanId) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueBarrier(executionPlanId);
+  }
+
+  public int enqueueBarrier(long executionPlanId, int[] events) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueBarrier(executionPlanId, events);
+  }
+
+  public int enqueueMarker(long executionPlanId) {
+    // Since streams are always in-order in CUDA there is no difference
+    // between marker and barrier
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueBarrier(executionPlanId);
+  }
+
+  public int enqueueMarker(long executionPlanId, int[] events) {
+    // Since streams are always in-order in CUDA there is no difference
+    // between marker and barrier
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueBarrier(executionPlanId, events);
+  }
+
+  public void sync(long executionPlanId) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.sync();
+  }
+
+  /**
+   * Sync the CUDA Stream only if the Stream Exists
+   *
+   * @param executionPlanId
+   */
+  public void syncIfNeeded(long executionPlanId) {
+    PTXStream stream = getStreamIfNeeded(executionPlanId);
+    if (stream != null) {
+      stream.sync();
+    }
+  }
+
+  public void flush(long executionPlanId) {
+    // I don't think there is anything like this in CUDA so I am calling sync
+    sync(executionPlanId);
+  }
+
+  @Override
+  public void reset(long executionPlanId) {
+    PTXStreamTable table = streamTable.get(executionPlanId);
+    if (table != null) {
+      table.cleanup(device);
+      if (table.size() == 0) {
+        streamTable.remove(executionPlanId);
+      }
+      executionIDs.remove(executionPlanId);
+    }
+    getMemoryManager().releaseKernelStackFrame(executionPlanId);
+    codeCache.reset();
+    wasReset = true;
+  }
+
+  public int enqueueKernelLaunch(
+      long executionPlanId,
+      PTXModule module,
+      KernelStackFrame kernelArgs,
+      TaskDataContext taskMeta,
+      long batchThreads) {
+    int[] blockDimension = {1, 1, 1};
+    int[] gridDimension = {1, 1, 1};
+    if (taskMeta.isWorkerGridAvailable()) {
+      WorkerGrid grid = taskMeta.getWorkerGrid(taskMeta.getId());
+      int[] global = Arrays.stream(grid.getGlobalWork()).mapToInt(l -> (int) l).toArray();
+      if (grid.getLocalWork() != null) {
+        blockDimension = Arrays.stream(grid.getLocalWork()).mapToInt(l -> (int) l).toArray();
+      } else {
+
+        blockDimension =
+            scheduler.calculateBlockDimension(
+                grid.getGlobalWork(),
+                module.getPotentialBlockSizeMaxOccupancy(),
+                grid.dimension(),
+                module.javaName);
+      }
+
+      PTXGridInfo gridInfo =
+          new PTXGridInfo(module, Arrays.stream(blockDimension).mapToLong(i -> i).toArray());
+      boolean checkedDimensions = gridInfo.checkGridDimensions();
+      if (!checkedDimensions) {
+        blockDimension =
+            scheduler.calculateBlockDimension(
+                grid.getGlobalWork(),
+                module.getPotentialBlockSizeMaxOccupancy(),
+                grid.dimension(),
+                module.javaName);
+        System.out.println(
+            "Warning: TornadoVM changed the user-defined local size to the following: ["
+                + blockDimension[0]
+                + ", "
+                + blockDimension[1]
+                + ", "
+                + blockDimension[2]
+                + "].");
+      }
+      gridDimension =
+          scheduler.calculateGridDimension(
+              module.javaName, grid.dimension(), global, blockDimension);
+    } else if (taskMeta.isParallel()) {
+      scheduler.calculateGlobalWork(taskMeta, batchThreads);
+      blockDimension = scheduler.calculateBlockDimension(module, taskMeta);
+      gridDimension = scheduler.calculateGridDimension(module, taskMeta, blockDimension);
     }
 
-    @Override
-    public PTXMemoryManager getMemoryManager() {
-        return memoryManager;
-    }
+    PTXStream stream = getStream(executionPlanId);
+    int kernelLaunchEvent =
+        stream.enqueueKernelLaunch(
+            executionPlanId,
+            module,
+            taskMeta,
+            writePTXKernelContextOnDevice(
+                executionPlanId, (PTXKernelStackFrame) kernelArgs, taskMeta),
+            gridDimension,
+            blockDimension);
+    updateProfiler(executionPlanId, kernelLaunchEvent, taskMeta);
+    return kernelLaunchEvent;
+  }
 
-    public TornadoBufferProvider getBufferProvider() {
-        return bufferProvider;
-    }
+  private byte[] writePTXKernelContextOnDevice(
+      long executionPlanId, PTXKernelStackFrame ptxKernelArgs, TaskDataContext meta) {
+    int capacity = Long.BYTES + ptxKernelArgs.getCallArguments().size() * Long.BYTES;
+    ByteBuffer args = ByteBuffer.allocate(capacity);
+    args.order(getByteOrder());
 
-    @Override
-    public boolean wasReset() {
-        return wasReset;
-    }
+    // Kernel context pointer
+    int kernelContextWriteEventId = ptxKernelArgs.enqueueWrite(executionPlanId);
+    updateProfilerKernelContextWrite(
+        executionPlanId, kernelContextWriteEventId, meta, ptxKernelArgs);
+    long address = ptxKernelArgs.toAbsoluteAddress();
+    args.putLong(address);
 
-    @Override
-    public void setResetToFalse() {
-        wasReset = false;
-    }
-
-    @Override
-    public boolean isPlatformFPGA() {
-        return false;
-    }
-
-    @Override
-    public boolean isPlatformXilinxFPGA() {
-        return false;
-    }
-
-    @Override
-    public boolean isFP64Supported() {
-        return true;
-    }
-
-    public PTXTornadoDevice toDevice() {
-        return new PTXTornadoDevice(device.getDeviceIndex());
-    }
-
-    public TornadoInstalledCode installCode(PTXCompilationResult result, String resolvedMethodName) {
-        return codeCache.installSource(result.getName(), result.getTargetCode(), resolvedMethodName, result.metaData().isPrintKernelEnabled());
-    }
-
-    public TornadoInstalledCode installCode(String name, byte[] code, String resolvedMethodName, boolean printKernel) {
-        return codeCache.installSource(name, code, resolvedMethodName, printKernel);
-    }
-
-    public TornadoInstalledCode getInstalledCode(String name) {
-        return codeCache.getCachedCode(name);
-    }
-
-    public PTXCodeCache getCodeCache() {
-        return codeCache;
-    }
-
-    public PTXDevice getDevice() {
-        return device;
-    }
-
-    @Override
-    public String getDeviceName() {
-        return device.getDeviceName();
-    }
-
-    @Override
-    public int getDeviceIndex() {
-        return device.getDeviceIndex();
-    }
-
-    @Override
-    public int getDriverIndex() {
-        return TornadoRuntimeProvider.getTornadoRuntime().getBackendIndex(PTXBackendImpl.class);
-    }
-
-    @Override
-    public Set<Long> getRegisteredPlanIds() {
-        return executionIDs;
-    }
-
-    @Override
-    public int getDevicePlatform() {
-        return 0;
-    }
-
-    public long getPowerUsage() {
-        long[] device = new long[1];
-        long[] powerUsage = new long[1];
-        powerMetric.getHandleByIndex(device);
-        powerMetric.getPowerUsage(device, powerUsage);
-        return powerUsage[0];
-    }
-
-    public ByteOrder getByteOrder() {
-        return device.getByteOrder();
-    }
-
-    public Event resolveEvent(long executionPlanId, int event) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.resolveEvent(event);
-    }
-
-    public void flushEvents(long executionPlanId) {
-        sync(executionPlanId);
-    }
-
-    /**
-     * Sync the CUDA Stream only if the Stream Exists
-     * 
-     * @param executionPlanId
-     */
-    public void flushEventsIfNeeded(long executionPlanId) {
-        syncIfNeeded(executionPlanId);
-    }
-
-    public int enqueueBarrier(long executionPlanId) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueBarrier(executionPlanId);
-    }
-
-    public int enqueueBarrier(long executionPlanId, int[] events) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueBarrier(executionPlanId, events);
-    }
-
-    public int enqueueMarker(long executionPlanId) {
-        // Since streams are always in-order in CUDA there is no difference
-        // between marker and barrier
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueBarrier(executionPlanId);
-    }
-
-    public int enqueueMarker(long executionPlanId, int[] events) {
-        // Since streams are always in-order in CUDA there is no difference
-        // between marker and barrier
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueBarrier(executionPlanId, events);
-    }
-
-    public void sync(long executionPlanId) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.sync();
-    }
-
-    /**
-     * Sync the CUDA Stream only if the Stream Exists
-     * 
-     * @param executionPlanId
-     */
-    public void syncIfNeeded(long executionPlanId) {
-        PTXStream stream = getStreamIfNeeded(executionPlanId);
-        if (stream != null) {
-            stream.sync();
-        }
-    }
-
-    public void flush(long executionPlanId) {
-        // I don't think there is anything like this in CUDA so I am calling sync
-        sync(executionPlanId);
-    }
-
-    @Override
-    public void reset(long executionPlanId) {
-        PTXStreamTable table = streamTable.get(executionPlanId);
-        if (table != null) {
-            table.cleanup(device);
-            if (table.size() == 0) {
-                streamTable.remove(executionPlanId);
-            }
-            executionIDs.remove(executionPlanId);
-        }
-        getMemoryManager().releaseKernelStackFrame(executionPlanId);
-        codeCache.reset();
-        wasReset = true;
-    }
-
-    public int enqueueKernelLaunch(long executionPlanId, PTXModule module, KernelStackFrame kernelArgs, TaskDataContext taskMeta, long batchThreads) {
-        int[] blockDimension = { 1, 1, 1 };
-        int[] gridDimension = { 1, 1, 1 };
-        if (taskMeta.isWorkerGridAvailable()) {
-            WorkerGrid grid = taskMeta.getWorkerGrid(taskMeta.getId());
-            int[] global = Arrays.stream(grid.getGlobalWork()).mapToInt(l -> (int) l).toArray();
-            if (grid.getLocalWork() != null) {
-                blockDimension = Arrays.stream(grid.getLocalWork()).mapToInt(l -> (int) l).toArray();
-            } else {
-
-                blockDimension = scheduler.calculateBlockDimension(grid.getGlobalWork(), module.getPotentialBlockSizeMaxOccupancy(), grid.dimension(), module.javaName);
-            }
-
-            PTXGridInfo gridInfo = new PTXGridInfo(module, Arrays.stream(blockDimension).mapToLong(i -> i).toArray());
-            boolean checkedDimensions = gridInfo.checkGridDimensions();
-            if (!checkedDimensions) {
-                blockDimension = scheduler.calculateBlockDimension(grid.getGlobalWork(), module.getPotentialBlockSizeMaxOccupancy(), grid.dimension(), module.javaName);
-                System.out.println("Warning: TornadoVM changed the user-defined local size to the following: [" + blockDimension[0] + ", " + blockDimension[1] + ", " + blockDimension[2] + "].");
-            }
-            gridDimension = scheduler.calculateGridDimension(module.javaName, grid.dimension(), global, blockDimension);
-        } else if (taskMeta.isParallel()) {
-            scheduler.calculateGlobalWork(taskMeta, batchThreads);
-            blockDimension = scheduler.calculateBlockDimension(module, taskMeta);
-            gridDimension = scheduler.calculateGridDimension(module, taskMeta, blockDimension);
-        }
-
-        PTXStream stream = getStream(executionPlanId);
-        int kernelLaunchEvent = stream.enqueueKernelLaunch(executionPlanId, module, taskMeta, writePTXKernelContextOnDevice(executionPlanId, (PTXKernelStackFrame) kernelArgs, taskMeta), gridDimension,
-                blockDimension);
-        updateProfiler(executionPlanId, kernelLaunchEvent, taskMeta);
-        return kernelLaunchEvent;
-    }
-
-    private byte[] writePTXKernelContextOnDevice(long executionPlanId, PTXKernelStackFrame ptxKernelArgs, TaskDataContext meta) {
-        int capacity = Long.BYTES + ptxKernelArgs.getCallArguments().size() * Long.BYTES;
-        ByteBuffer args = ByteBuffer.allocate(capacity);
-        args.order(getByteOrder());
-
-        // Kernel context pointer
-        int kernelContextWriteEventId = ptxKernelArgs.enqueueWrite(executionPlanId);
-        updateProfilerKernelContextWrite(executionPlanId, kernelContextWriteEventId, meta, ptxKernelArgs);
-        long address = ptxKernelArgs.toAbsoluteAddress();
+    // Parameters
+    for (int argIndex = 0; argIndex < ptxKernelArgs.getCallArguments().size(); argIndex++) {
+      KernelStackFrame.CallArgument arg = ptxKernelArgs.getCallArguments().get(argIndex);
+      if (arg.getValue() instanceof KernelStackFrame.KernelContextArgument) {
         args.putLong(address);
-
-        // Parameters
-        for (int argIndex = 0; argIndex < ptxKernelArgs.getCallArguments().size(); argIndex++) {
-            KernelStackFrame.CallArgument arg = ptxKernelArgs.getCallArguments().get(argIndex);
-            if (arg.getValue() instanceof KernelStackFrame.KernelContextArgument) {
-                args.putLong(address);
-                continue;
-            } else if (isBoxedPrimitive(arg.getValue()) || arg.getValue().getClass().isPrimitive()) {
-                if (arg.getValue() instanceof HalfFloat) {
-                    short halfFloat = ((HalfFloat) arg.getValue()).getHalfFloatValue();
-                    args.putLong(((Number) halfFloat).longValue());
-                } else if (arg.getValue() instanceof Number) {
-                    args.putLong(((Number) arg.getValue()).longValue());
-                } else if (arg.getValue() instanceof Character) {
-                    args.putLong((char) arg.getValue());
-                } else {
-                    shouldNotReachHere();
-                }
-            } else {
-                shouldNotReachHere();
-            }
+        continue;
+      } else if (isBoxedPrimitive(arg.getValue()) || arg.getValue().getClass().isPrimitive()) {
+        if (arg.getValue() instanceof HalfFloat) {
+          short halfFloat = ((HalfFloat) arg.getValue()).getHalfFloatValue();
+          args.putLong(((Number) halfFloat).longValue());
+        } else if (arg.getValue() instanceof Number) {
+          args.putLong(((Number) arg.getValue()).longValue());
+        } else if (arg.getValue() instanceof Character) {
+          args.putLong((char) arg.getValue());
+        } else {
+          shouldNotReachHere();
         }
-
-        return args.array();
+      } else {
+        shouldNotReachHere();
+      }
     }
 
-    private void updateProfilerKernelContextWrite(long executionPlanId, int kernelContextWriteEventId, TaskDataContext meta, PTXKernelStackFrame callWrapper) {
-        if (TornadoOptions.isProfilerEnabled()) {
-            TornadoProfiler profiler = meta.getProfiler();
-            Event event = resolveEvent(executionPlanId, kernelContextWriteEventId);
-            event.waitForEvents(executionPlanId);
-            long copyInTimer = meta.getProfiler().getTimer(ProfilerType.COPY_IN_TIME);
-            copyInTimer += event.getElapsedTime();
-            profiler.setTimer(ProfilerType.COPY_IN_TIME, copyInTimer);
-            profiler.addValueToMetric(ProfilerType.TOTAL_COPY_IN_SIZE_BYTES, meta.getId(), callWrapper.getSize());
+    return args.array();
+  }
 
-            long dispatchValue = profiler.getTimer(ProfilerType.TOTAL_DISPATCH_DATA_TRANSFERS_TIME);
-            dispatchValue += event.getDriverDispatchTime();
-            profiler.setTimer(ProfilerType.TOTAL_DISPATCH_DATA_TRANSFERS_TIME, dispatchValue);
-        }
+  private void updateProfilerKernelContextWrite(
+      long executionPlanId,
+      int kernelContextWriteEventId,
+      TaskDataContext meta,
+      PTXKernelStackFrame callWrapper) {
+    if (TornadoOptions.isProfilerEnabled()) {
+      TornadoProfiler profiler = meta.getProfiler();
+      Event event = resolveEvent(executionPlanId, kernelContextWriteEventId);
+      event.waitForEvents(executionPlanId);
+      long copyInTimer = meta.getProfiler().getTimer(ProfilerType.COPY_IN_TIME);
+      copyInTimer += event.getElapsedTime();
+      profiler.setTimer(ProfilerType.COPY_IN_TIME, copyInTimer);
+      profiler.addValueToMetric(
+          ProfilerType.TOTAL_COPY_IN_SIZE_BYTES, meta.getId(), callWrapper.getSize());
+
+      long dispatchValue = profiler.getTimer(ProfilerType.TOTAL_DISPATCH_DATA_TRANSFERS_TIME);
+      dispatchValue += event.getDriverDispatchTime();
+      profiler.setTimer(ProfilerType.TOTAL_DISPATCH_DATA_TRANSFERS_TIME, dispatchValue);
+    }
+  }
+
+  private void updateProfiler(
+      long executionPlanId, final int taskEvent, final TaskDataContext meta) {
+    if (TornadoOptions.isProfilerEnabled()) {
+      Event tornadoKernelEvent = resolveEvent(executionPlanId, taskEvent);
+      tornadoKernelEvent.waitForEvents(executionPlanId);
+      long timer = meta.getProfiler().getTimer(ProfilerType.TOTAL_KERNEL_TIME);
+      // Register globalTime
+      meta.getProfiler()
+          .setTimer(ProfilerType.TOTAL_KERNEL_TIME, timer + tornadoKernelEvent.getElapsedTime());
+      // Register the time for the task
+      meta.getProfiler()
+          .setTaskTimer(
+              ProfilerType.TASK_KERNEL_TIME, meta.getId(), tornadoKernelEvent.getElapsedTime());
+      // Register the dispatch time of the kernel
+      long dispatchValue = meta.getProfiler().getTimer(ProfilerType.TOTAL_DISPATCH_KERNEL_TIME);
+      dispatchValue += tornadoKernelEvent.getDriverDispatchTime();
+      meta.getProfiler().setTimer(ProfilerType.TOTAL_DISPATCH_KERNEL_TIME, dispatchValue);
+      meta.getProfiler()
+          .setTaskPowerUsage(ProfilerType.POWER_USAGE_mW, meta.getId(), getPowerUsage());
+    }
+  }
+
+  @Override
+  public boolean isCached(String methodName, SchedulableTask task) {
+    return codeCache.isCached(buildKernelName(methodName, task));
+  }
+
+  public void destroyStream(long executionPlanId) {
+    PTXStream stream = getStream(executionPlanId);
+    if (stream != null && !stream.isDestroy()) {
+      stream.cuDestroyStream();
+    }
+  }
+
+  /*
+   * SYNC READS
+   */
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long hostPointer,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(
+        executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
+  }
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      byte[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      short[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      char[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      int[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      float[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int readBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      double[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  /*
+   * ASYNC READS
+   */
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long hostPointer,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(
+        executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
+  }
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      byte[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      short[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      char[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      int[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      float[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueReadBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      double[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  /*
+   * SYNC WRITES
+   */
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      byte[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long hostPointer,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
+  }
+
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      short[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      char[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      int[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long[] array,
+      int hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      float[] array,
+      int hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public void writeBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      double[] array,
+      int hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  /*
+   * ASYNC WRITES
+   */
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long hostPointer,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
+  }
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      byte[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      short[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      char[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      int[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      long[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      float[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public int enqueueWriteBuffer(
+      long executionPlanId,
+      long address,
+      long length,
+      double[] array,
+      long hostOffset,
+      int[] waitEvents) {
+    PTXStream stream = getStream(executionPlanId);
+    return stream.enqueueAsyncWrite(
+        executionPlanId, address, length, array, hostOffset, waitEvents);
+  }
+
+  public void dumpEvents(long executionPlanId) {
+    PTXStream stream = getStream(executionPlanId);
+    List<PTXEvent> events = stream.getEventPool().getEvents();
+
+    final String deviceName = "PTX-" + device.getDeviceName();
+
+    System.out.printf("Found %d events on device %s:\n", events.size(), deviceName);
+    if (events.isEmpty()) {
+      return;
     }
 
-    private void updateProfiler(long executionPlanId, final int taskEvent, final TaskDataContext meta) {
-        if (TornadoOptions.isProfilerEnabled()) {
-            Event tornadoKernelEvent = resolveEvent(executionPlanId, taskEvent);
-            tornadoKernelEvent.waitForEvents(executionPlanId);
-            long timer = meta.getProfiler().getTimer(ProfilerType.TOTAL_KERNEL_TIME);
-            // Register globalTime
-            meta.getProfiler().setTimer(ProfilerType.TOTAL_KERNEL_TIME, timer + tornadoKernelEvent.getElapsedTime());
-            // Register the time for the task
-            meta.getProfiler().setTaskTimer(ProfilerType.TASK_KERNEL_TIME, meta.getId(), tornadoKernelEvent.getElapsedTime());
-            // Register the dispatch time of the kernel
-            long dispatchValue = meta.getProfiler().getTimer(ProfilerType.TOTAL_DISPATCH_KERNEL_TIME);
-            dispatchValue += tornadoKernelEvent.getDriverDispatchTime();
-            meta.getProfiler().setTimer(ProfilerType.TOTAL_DISPATCH_KERNEL_TIME, dispatchValue);
-            meta.getProfiler().setTaskPowerUsage(ProfilerType.POWER_USAGE_mW, meta.getId(), getPowerUsage());
-        }
+    System.out.println("event: device, type, info, status");
+    events.forEach(
+        (e) -> System.out.printf("event: %s, %s, %s\n", deviceName, e.getName(), e.getStatus()));
+  }
+
+  private PTXStream getStream(long executionPlanId) {
+    executionIDs.add(executionPlanId);
+    if (!streamTable.containsKey(executionPlanId)) {
+      PTXStreamTable ptxStreamTable = new PTXStreamTable();
+      ptxStreamTable.get(device);
+      streamTable.put(executionPlanId, ptxStreamTable);
     }
+    return streamTable.get(executionPlanId).get(device);
+  }
 
-    @Override
-    public boolean isCached(String methodName, SchedulableTask task) {
-        return codeCache.isCached(buildKernelName(methodName, task));
+  private PTXStream getStreamIfNeeded(long executionPlanId) {
+    if (!streamTable.containsKey(executionPlanId)) {
+      return null;
     }
-
-    public void destroyStream(long executionPlanId) {
-        PTXStream stream = getStream(executionPlanId);
-        if (stream != null && !stream.isDestroy()) {
-            stream.cuDestroyStream();
-        }
-    }
-
-    /*
-     * SYNC READS
-     */
-
-    public int readBuffer(long executionPlanId, long address, long length, long hostPointer, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
-    }
-
-    public int readBuffer(long executionPlanId, long address, long length, byte[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int readBuffer(long executionPlanId, long address, long length, short[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int readBuffer(long executionPlanId, long address, long length, char[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int readBuffer(long executionPlanId, long address, long length, int[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int readBuffer(long executionPlanId, long address, long length, long[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int readBuffer(long executionPlanId, long address, long length, float[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int readBuffer(long executionPlanId, long address, long length, double[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    /*
-     * ASYNC READS
-     */
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, long hostPointer, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
-    }
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, byte[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, short[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, char[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, int[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, long[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, float[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueReadBuffer(long executionPlanId, long address, long length, double[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncRead(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    /*
-     * SYNC WRITES
-     */
-    public void writeBuffer(long executionPlanId, long address, long length, byte[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public void writeBuffer(long executionPlanId, long address, long length, long hostPointer, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
-    }
-
-    public void writeBuffer(long executionPlanId, long address, long length, short[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public void writeBuffer(long executionPlanId, long address, long length, char[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public void writeBuffer(long executionPlanId, long address, long length, int[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public void writeBuffer(long executionPlanId, long address, long length, long[] array, int hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public void writeBuffer(long executionPlanId, long address, long length, float[] array, int hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public void writeBuffer(long executionPlanId, long address, long length, double[] array, int hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        stream.enqueueWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    /*
-     * ASYNC WRITES
-     */
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, long hostPointer, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, hostPointer, hostOffset, waitEvents);
-    }
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, byte[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, short[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, char[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, int[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, long[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, float[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public int enqueueWriteBuffer(long executionPlanId, long address, long length, double[] array, long hostOffset, int[] waitEvents) {
-        PTXStream stream = getStream(executionPlanId);
-        return stream.enqueueAsyncWrite(executionPlanId, address, length, array, hostOffset, waitEvents);
-    }
-
-    public void dumpEvents(long executionPlanId) {
-        PTXStream stream = getStream(executionPlanId);
-        List<PTXEvent> events = stream.getEventPool().getEvents();
-
-        final String deviceName = "PTX-" + device.getDeviceName();
-
-        System.out.printf("Found %d events on device %s:\n", events.size(), deviceName);
-        if (events.isEmpty()) {
-            return;
-        }
-
-        System.out.println("event: device, type, info, status");
-        events.forEach((e) -> System.out.printf("event: %s, %s, %s\n", deviceName, e.getName(), e.getStatus()));
-    }
-
-    private PTXStream getStream(long executionPlanId) {
-        executionIDs.add(executionPlanId);
-        if (!streamTable.containsKey(executionPlanId)) {
-            PTXStreamTable ptxStreamTable = new PTXStreamTable();
-            ptxStreamTable.get(device);
-            streamTable.put(executionPlanId, ptxStreamTable);
-        }
-        return streamTable.get(executionPlanId).get(device);
-    }
-
-    private PTXStream getStreamIfNeeded(long executionPlanId) {
-        if (!streamTable.containsKey(executionPlanId)) {
-            return null;
-        }
-        return streamTable.get(executionPlanId).get(device);
-    }
-
+    return streamTable.get(executionPlanId).get(device);
+  }
 }

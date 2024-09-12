@@ -19,96 +19,73 @@ package uk.ac.manchester.tornado.api.types.tensors;
 
 import java.lang.foreign.ValueLayout;
 
-/**
- * The {@code DType} enum represents the various data types can be found in models.
- */
+/** The {@code DType} enum represents the various data types can be found in models. */
 public enum DType {
-    // @formatter:off
-    /**
-     * Represents a half-precision floating-point data type using 2 bytes.
-     */
-    HALF_FLOAT(2, ValueLayout.JAVA_SHORT),
-    /**
-     * Represents a single-precision 32-bit IEEE floating-point data type using 4 bytes.
-     */
-    FLOAT(4, ValueLayout.JAVA_FLOAT),
-    /**
-     * Represents a double-precision 64-bit IEEE floating-point data type using 8 bytes.
-     */
-    DOUBLE(8, ValueLayout.JAVA_DOUBLE),
-    /**
-     * Represents an 8-bit signed integer data type using 1 byte.
-     */
-    INT8(1, ValueLayout.JAVA_BYTE),
-    /**
-     * Represents a 16-bit signed integer data type using 2 bytes.
-     */
-    INT16(2, ValueLayout.JAVA_SHORT),
-    /**
-     * Represents a 32-bit signed integer data type using 4 bytes.
-     */
-    INT32(4, ValueLayout.JAVA_INT),
-    /**
-     * Represents a 64-bit signed integer data type using 8 bytes.
-     */
-    INT64(8, ValueLayout.JAVA_LONG),
-    /**
-     * Represents an 8-bit unsigned integer data type using 1 byte.
-     */
-    UINT8(1, ValueLayout.JAVA_BYTE),
-    /**
-     * Represents a boolean data type using 1 byte for true/false values.
-     */
-    BOOL(1, ValueLayout.JAVA_BYTE),
-    /**
-     * Represents a quantized 8-bit signed integer used in specialized applications like machine learning, using 1 byte.
-     */
-    QINT8(1, ValueLayout.JAVA_BYTE),
-    /**
-     * Represents a quantized 8-bit unsigned integer used in specialized applications like machine learning, using 1 byte.
-     */
-    QUINT8(1, ValueLayout.JAVA_BYTE);
-    // @formatter:on
+  // @formatter:off
+  /** Represents a half-precision floating-point data type using 2 bytes. */
+  HALF_FLOAT(2, ValueLayout.JAVA_SHORT),
+  /** Represents a single-precision 32-bit IEEE floating-point data type using 4 bytes. */
+  FLOAT(4, ValueLayout.JAVA_FLOAT),
+  /** Represents a double-precision 64-bit IEEE floating-point data type using 8 bytes. */
+  DOUBLE(8, ValueLayout.JAVA_DOUBLE),
+  /** Represents an 8-bit signed integer data type using 1 byte. */
+  INT8(1, ValueLayout.JAVA_BYTE),
+  /** Represents a 16-bit signed integer data type using 2 bytes. */
+  INT16(2, ValueLayout.JAVA_SHORT),
+  /** Represents a 32-bit signed integer data type using 4 bytes. */
+  INT32(4, ValueLayout.JAVA_INT),
+  /** Represents a 64-bit signed integer data type using 8 bytes. */
+  INT64(8, ValueLayout.JAVA_LONG),
+  /** Represents an 8-bit unsigned integer data type using 1 byte. */
+  UINT8(1, ValueLayout.JAVA_BYTE),
+  /** Represents a boolean data type using 1 byte for true/false values. */
+  BOOL(1, ValueLayout.JAVA_BYTE),
+  /**
+   * Represents a quantized 8-bit signed integer used in specialized applications like machine
+   * learning, using 1 byte.
+   */
+  QINT8(1, ValueLayout.JAVA_BYTE),
+  /**
+   * Represents a quantized 8-bit unsigned integer used in specialized applications like machine
+   * learning, using 1 byte.
+   */
+  QUINT8(1, ValueLayout.JAVA_BYTE);
 
-    /**
-     * The size of the data type in bytes.
-     */
-    private final int size;
+  // @formatter:on
 
-    /**
-     * The layout of the data type in memory.
-     */
-    private final ValueLayout layout;
+  /** The size of the data type in bytes. */
+  private final int size;
 
-    /**
-     * Constructs an instance of the enum constant with the specified size and memory layout.
-     *
-     * @param size
-     *     The size of the data type in bytes.
-     * @param layout
-     *     The {@link ValueLayout} specifying how the data is laid out in memory.
-     */
-    DType(int size, ValueLayout layout) {
-        this.size = size;
-        this.layout = layout;
-    }
+  /** The layout of the data type in memory. */
+  private final ValueLayout layout;
 
-    /**
-     * Returns the size of the data type in bytes.
-     *
-     * @return The size of the data type.
-     */
-    public int getByteSize() {
-        return size;
-    }
+  /**
+   * Constructs an instance of the enum constant with the specified size and memory layout.
+   *
+   * @param size The size of the data type in bytes.
+   * @param layout The {@link ValueLayout} specifying how the data is laid out in memory.
+   */
+  DType(int size, ValueLayout layout) {
+    this.size = size;
+    this.layout = layout;
+  }
 
-    /**
-     * Returns the {@link ValueLayout} of the data type, which describes how the data is laid out in memory.
-     *
-     * @return The memory layout of the data type.
-     */
-    public ValueLayout getLayout() {
-        return layout;
-    }
+  /**
+   * Returns the size of the data type in bytes.
+   *
+   * @return The size of the data type.
+   */
+  public int getByteSize() {
+    return size;
+  }
 
+  /**
+   * Returns the {@link ValueLayout} of the data type, which describes how the data is laid out in
+   * memory.
+   *
+   * @return The memory layout of the data type.
+   */
+  public ValueLayout getLayout() {
+    return layout;
+  }
 }

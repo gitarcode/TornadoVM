@@ -17,14 +17,10 @@
  */
 package uk.ac.manchester.tornado.unittests.common;
 
-/**
- * Annotation at the method level for expressing optimizations that are still
- * not supported.
- */
+/** Annotation at the method level for expressing optimizations that are still not supported. */
 public class SPIRVOptNotSupported extends RuntimeException {
 
-    public SPIRVOptNotSupported(String message) {
-        super(message);
-    }
-
+  public SPIRVOptNotSupported(String message) {
+    super(message);
+  }
 }

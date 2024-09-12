@@ -29,10 +29,9 @@ import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstan
 import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstants.TAB;
 import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstants.UNI;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.lir.LIRInstructionClass;
 import org.graalvm.compiler.lir.LabelRef;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXCompilationResultBuilder;
@@ -40,80 +39,80 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt.AbstractInstruc
 
 public class PTXControlFlow {
 
-    protected static void emitBlockRef(LabelRef labelRef, PTXAssembler asm) {
-        asm.emitBlock(labelRef.label().getBlockId());
+  protected static void emitBlockRef(LabelRef labelRef, PTXAssembler asm) {
+    asm.emitBlock(labelRef.label().getBlockId());
+  }
+
+  public static class LoopLabel extends AbstractInstruction {
+    public static final LIRInstructionClass<LoopLabel> TYPE =
+        LIRInstructionClass.create(LoopLabel.class);
+
+    private final int blockId;
+
+    public LoopLabel(int blockId) {
+      super(TYPE);
+      this.blockId = blockId;
     }
 
-    public static class LoopLabel extends AbstractInstruction {
-        public static final LIRInstructionClass<LoopLabel> TYPE = LIRInstructionClass.create(LoopLabel.class);
+    @Override
+    public void emitCode(PTXCompilationResultBuilder crb, PTXAssembler asm) {
+      asm.emitLoopLabel(blockId);
+    }
+  }
 
-        private final int blockId;
+  public static class LoopBreakOp extends Branch {
 
-        public LoopLabel(int blockId) {
-            super(TYPE);
-            this.blockId = blockId;
-        }
+    public LoopBreakOp(LabelRef destination, boolean isConditional, boolean isLoopEdgeBack) {
+      super(destination, isConditional, isLoopEdgeBack);
+    }
+  }
 
-        @Override
-        public void emitCode(PTXCompilationResultBuilder crb, PTXAssembler asm) {
-            asm.emitLoopLabel(blockId);
-        }
+  public static class Branch extends AbstractInstruction {
+    public static final LIRInstructionClass<Branch> TYPE = LIRInstructionClass.create(Branch.class);
+    private final LabelRef destination;
+    private final boolean isConditional;
+    private final boolean isLoopEdgeBack;
+
+    public Branch(LabelRef destination, boolean isConditional, boolean isLoopEdgeBack) {
+      super(TYPE);
+      this.destination = destination;
+      this.isConditional = isConditional;
+      this.isLoopEdgeBack = isLoopEdgeBack;
     }
 
-    public static class LoopBreakOp extends Branch {
+    @Override
+    public void emitCode(PTXCompilationResultBuilder crb, PTXAssembler asm) {
+      asm.emitSymbol(TAB);
+      asm.emit(BRANCH);
+      if (!isConditional) {
+        asm.emit(DOT + UNI);
+      }
+      asm.emitSymbol(TAB);
 
-        public LoopBreakOp(LabelRef destination, boolean isConditional, boolean isLoopEdgeBack) {
-            super(destination, isConditional, isLoopEdgeBack);
-        }
+      if (isLoopEdgeBack) {
+        asm.emitLoop(destination.label().getBlockId());
+      } else {
+        emitBlockRef(destination, asm);
+      }
+      asm.delimiter();
+      asm.eol();
+    }
+  }
+
+  public static class DeoptOp extends AbstractInstruction {
+
+    public static final LIRInstructionClass<DeoptOp> TYPE =
+        LIRInstructionClass.create(DeoptOp.class);
+    @Use private final Value actionAndReason;
+
+    public DeoptOp(Value actionAndReason) {
+      super(TYPE);
+      this.actionAndReason = actionAndReason;
     }
 
-    public static class Branch extends AbstractInstruction {
-        public static final LIRInstructionClass<Branch> TYPE = LIRInstructionClass.create(Branch.class);
-        private final LabelRef destination;
-        private final boolean isConditional;
-        private final boolean isLoopEdgeBack;
-
-        public Branch(LabelRef destination, boolean isConditional, boolean isLoopEdgeBack) {
-            super(TYPE);
-            this.destination = destination;
-            this.isConditional = isConditional;
-            this.isLoopEdgeBack = isLoopEdgeBack;
-        }
-
-        @Override
-        public void emitCode(PTXCompilationResultBuilder crb, PTXAssembler asm) {
-            asm.emitSymbol(TAB);
-            asm.emit(BRANCH);
-            if (!isConditional) {
-                asm.emit(DOT + UNI);
-            }
-            asm.emitSymbol(TAB);
-
-            if (isLoopEdgeBack) {
-                asm.emitLoop(destination.label().getBlockId());
-            } else {
-                emitBlockRef(destination, asm);
-            }
-            asm.delimiter();
-            asm.eol();
-        }
+    @Override
+    public void emitCode(PTXCompilationResultBuilder crb, PTXAssembler asm) {
+      TornadoInternalError.unimplemented();
     }
-
-    public static class DeoptOp extends AbstractInstruction {
-
-        public static final LIRInstructionClass<DeoptOp> TYPE = LIRInstructionClass.create(DeoptOp.class);
-        @Use
-        private final Value actionAndReason;
-
-        public DeoptOp(Value actionAndReason) {
-            super(TYPE);
-            this.actionAndReason = actionAndReason;
-        }
-
-        @Override
-        public void emitCode(PTXCompilationResultBuilder crb, PTXAssembler asm) {
-            TornadoInternalError.unimplemented();
-        }
-
-    }
+  }
 }

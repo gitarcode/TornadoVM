@@ -20,45 +20,41 @@
 package uk.ac.manchester.tornado.examples.polyglot;
 
 import java.util.Arrays;
-
 import org.graalvm.polyglot.Context;
 
 /**
  * Example of GraalVM Polyglot using Ruby and Tornado.
- * 
- * The Ruby program calls MyCompute.compute() to accelerate vector addition on a
- * GPU/FPGA.
- * 
- * How to run:
- * 
- * <code>
+ *
+ * <p>The Ruby program calls MyCompute.compute() to accelerate vector addition on a GPU/FPGA.
+ *
+ * <p>How to run: <code>
  *     $ tornado --debug -m tornado.examples/uk.ac.manchester.tornado.examples.polyglot.HelloRuby
  * </code>
- * 
  */
 public class HelloRuby {
 
-    public static void runTornadoFromRuby() {
-        try (Context context = Context.newBuilder().allowAllAccess(true).build()) {
-            // @formatter:off
-            float[] v = context.eval("ruby",
-                    "myclass = Java.type('uk.ac.manchester.tornado.examples.polyglot.MyCompute')\n" +
-                            "output = myclass.compute()\n" +
-                            "puts (output.toString())\n" + "output")
-                    .asHostObject();
-            // @formatter:on
-            System.out.println(Arrays.toString(v));
-        }
+  public static void runTornadoFromRuby() {
+    try (Context context = Context.newBuilder().allowAllAccess(true).build()) {
+      // @formatter:off
+      float[] v =
+          context
+              .eval(
+                  "ruby",
+                  "myclass = Java.type('uk.ac.manchester.tornado.examples.polyglot.MyCompute')\n"
+                      + "output = myclass.compute()\n"
+                      + "puts (output.toString())\n"
+                      + "output")
+              .asHostObject();
+      // @formatter:on
+      System.out.println(Arrays.toString(v));
     }
+  }
 
-    public static void main(String[] args) {
-        System.out.println("Hello polyglot world Java!");
-        Context context = Context.newBuilder()
-                .allowAllAccess(true)
-                .build();
-        context.eval("ruby", "puts 'Hello polyglot world from Ruby!'");
-        context.close();
-        runTornadoFromRuby();
-    }
-
+  public static void main(String[] args) {
+    System.out.println("Hello polyglot world Java!");
+    Context context = Context.newBuilder().allowAllAccess(true).build();
+    context.eval("ruby", "puts 'Hello polyglot world from Ruby!'");
+    context.close();
+    runTornadoFromRuby();
+  }
 }

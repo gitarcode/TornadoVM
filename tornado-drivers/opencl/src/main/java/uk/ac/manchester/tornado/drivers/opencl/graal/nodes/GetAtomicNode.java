@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
@@ -29,8 +30,6 @@ import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
@@ -38,40 +37,40 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
 @NodeInfo(shortName = "GET_ATOMIC_VALUE")
 public class GetAtomicNode extends NodeAtomic implements LIRLowerable {
 
-    public static final NodeClass<GetAtomicNode> TYPE = NodeClass.create(GetAtomicNode.class);
+  public static final NodeClass<GetAtomicNode> TYPE = NodeClass.create(GetAtomicNode.class);
 
-    @Input
-    ValueNode atomicNode;
+  @Input ValueNode atomicNode;
 
-    public GetAtomicNode(ValueNode atomicValue) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        this.atomicNode = atomicValue;
+  public GetAtomicNode(ValueNode atomicValue) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    this.atomicNode = atomicValue;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+
+    if (atomicNode instanceof TornadoAtomicIntegerNode) {
+      TornadoAtomicIntegerNode atomicIntegerNode = (TornadoAtomicIntegerNode) atomicNode;
+
+      int indexFromGlobal = atomicIntegerNode.getIndexFromGlobalMemory();
+
+      OCLUnary.IntrinsicAtomicGet atomicGet =
+          new OCLUnary.IntrinsicAtomicGet( //
+              OCLAssembler.OCLUnaryIntrinsic.ATOMIC_GET, //
+              tool.getLIRKind(stamp), //
+              generator.operand(atomicNode), //
+              indexFromGlobal);
+
+      OCLLIRStmt.AssignStmt assignStmt = new OCLLIRStmt.AssignStmt(result, atomicGet);
+      tool.append(assignStmt);
+      generator.setResult(this, result);
     }
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-
-        if (atomicNode instanceof TornadoAtomicIntegerNode) {
-            TornadoAtomicIntegerNode atomicIntegerNode = (TornadoAtomicIntegerNode) atomicNode;
-
-            int indexFromGlobal = atomicIntegerNode.getIndexFromGlobalMemory();
-
-            OCLUnary.IntrinsicAtomicGet atomicGet = new OCLUnary.IntrinsicAtomicGet( //
-                    OCLAssembler.OCLUnaryIntrinsic.ATOMIC_GET, //
-                    tool.getLIRKind(stamp), //
-                    generator.operand(atomicNode), //
-                    indexFromGlobal);
-
-            OCLLIRStmt.AssignStmt assignStmt = new OCLLIRStmt.AssignStmt(result, atomicGet);
-            tool.append(assignStmt);
-            generator.setResult(this, result);
-        }
-    }
-
-    @Override
-    public ValueNode getAtomicNode() {
-        return atomicNode;
-    }
+  @Override
+  public ValueNode getAtomicNode() {
+    return atomicNode;
+  }
 }

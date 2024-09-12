@@ -24,7 +24,6 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.phases;
 import static uk.ac.manchester.tornado.runtime.TornadoCoreRuntime.getDebugContext;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.debug.DebugContext;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.iterators.NodeIterable;
@@ -35,90 +34,86 @@ import org.graalvm.compiler.nodes.StartNode;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.memory.WriteNode;
 import org.graalvm.compiler.phases.Phase;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.DecAtomicNode;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.IncAtomicNode;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.NodeAtomic;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.TornadoAtomicIntegerNode;
 
 /**
- * Compiler phase that relocates the TornadoAtomicIntegerNode(s) from the first
- * basic block (B0) to the basic block that requests the atomic (usually within
- * the same basic block that READ/WRITES the atomic value). This phase is needed
- * since the integration with the Graal 22.3.1 JIT compiler.
+ * Compiler phase that relocates the TornadoAtomicIntegerNode(s) from the first basic block (B0) to
+ * the basic block that requests the atomic (usually within the same basic block that READ/WRITES
+ * the atomic value). This phase is needed since the integration with the Graal 22.3.1 JIT compiler.
  *
- * <p>
- * This phase is expected to be invoked from the LIR of the
- * compilation/optimization pipeline.
- * </p>
+ * <p>This phase is expected to be invoked from the LIR of the compilation/optimization pipeline.
  *
  * @since v0.15.1
  */
 public class TornadoAtomicsScheduling extends Phase {
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
+
+  private Node getAtomicUsage(NodeAtomic nodeAtomic) {
+    Node atomicUsage = nodeAtomic.usages().first();
+    while (!(atomicUsage instanceof WriteNode)) {
+      atomicUsage = atomicUsage.usages().first();
+    }
+    return atomicUsage;
+  }
+
+  private void fixStartWithNext(StructuredGraph graph, TornadoAtomicIntegerNode atomic) {
+    StartNode startNode = graph.start();
+    Node first = atomic.successors().first();
+    while (first instanceof TornadoAtomicIntegerNode) {
+      first = first.successors().first();
     }
 
-    private Node getAtomicUsage(NodeAtomic nodeAtomic) {
-        Node atomicUsage = nodeAtomic.usages().first();
-        while (!(atomicUsage instanceof WriteNode)) {
-            atomicUsage = atomicUsage.usages().first();
-        }
-        return atomicUsage;
+    if (first != null && !(first instanceof StartNode)) {
+      first.replaceAtPredecessor(startNode);
+      startNode.setNext((EndNode) first);
     }
+  }
 
-    private void fixStartWithNext(StructuredGraph graph, TornadoAtomicIntegerNode atomic) {
-        StartNode startNode = graph.start();
-        Node first = atomic.successors().first();
-        while (first instanceof TornadoAtomicIntegerNode) {
-            first = first.successors().first();
-        }
+  private void moveAtomicNodeToWriteBasicBloc(Node atomicUsage, TornadoAtomicIntegerNode atomic) {
+    WriteNode writeNode = (WriteNode) atomicUsage;
 
-        if (first != null && !(first instanceof StartNode)) {
-            first.replaceAtPredecessor(startNode);
-            startNode.setNext((EndNode) first);
-        }
+    FixedWithNextNode pre = (FixedWithNextNode) writeNode.predecessor();
+    if (atomic.predecessor() != null) {
+      atomic.replaceAtPredecessor(null);
     }
+    writeNode.replaceAtPredecessor(atomic);
+    pre.setNext(atomic);
+    atomic.setNext(writeNode);
+  }
 
-    private void moveAtomicNodeToWriteBasicBloc(Node atomicUsage, TornadoAtomicIntegerNode atomic) {
-        WriteNode writeNode = (WriteNode) atomicUsage;
+  @Override
+  protected void run(StructuredGraph graph) {
+    NodeIterable<TornadoAtomicIntegerNode> filter =
+        graph.getNodes().filter(TornadoAtomicIntegerNode.class);
 
-        FixedWithNextNode pre = (FixedWithNextNode) writeNode.predecessor();
-        if (atomic.predecessor() != null) {
-            atomic.replaceAtPredecessor(null);
+    if (!filter.isEmpty()) {
+      for (TornadoAtomicIntegerNode atomic : filter) {
+        NodeIterable<Node> usages = atomic.usages();
+        int irCount = 1;
+        for (Node usage : usages) {
+          if (usage instanceof IncAtomicNode || usage instanceof DecAtomicNode) {
+            Node atomicUsage = getAtomicUsage((NodeAtomic) usage);
+
+            // Fix the link between the START with the next node that follows all atomic
+            // nodes.
+            fixStartWithNext(graph, atomic);
+
+            // Dump IR for Debugging
+            getDebugContext().dump(DebugContext.BASIC_LEVEL, graph, "Atomics #" + irCount++);
+
+            // Move the TornadoAtomicIntegerNode to the basic block that performs the
+            // writes.
+            // This will also move all data-flow nodes (FloatingNodes) associated with it.
+            moveAtomicNodeToWriteBasicBloc(atomicUsage, atomic);
+          }
         }
-        writeNode.replaceAtPredecessor(atomic);
-        pre.setNext(atomic);
-        atomic.setNext(writeNode);
+      }
     }
-
-    @Override
-    protected void run(StructuredGraph graph) {
-        NodeIterable<TornadoAtomicIntegerNode> filter = graph.getNodes().filter(TornadoAtomicIntegerNode.class);
-
-        if (!filter.isEmpty()) {
-            for (TornadoAtomicIntegerNode atomic : filter) {
-                NodeIterable<Node> usages = atomic.usages();
-                int irCount = 1;
-                for (Node usage : usages) {
-                    if (usage instanceof IncAtomicNode || usage instanceof DecAtomicNode) {
-                        Node atomicUsage = getAtomicUsage((NodeAtomic) usage);
-
-                        // Fix the link between the START with the next node that follows all atomic
-                        // nodes.
-                        fixStartWithNext(graph, atomic);
-
-                        // Dump IR for Debugging
-                        getDebugContext().dump(DebugContext.BASIC_LEVEL, graph, "Atomics #" + irCount++);
-
-                        // Move the TornadoAtomicIntegerNode to the basic block that performs the
-                        // writes.
-                        // This will also move all data-flow nodes (FloatingNodes) associated with it.
-                        moveAtomicNodeToWriteBasicBloc(atomicUsage, atomic);
-                    }
-                }
-            }
-        }
-    }
+  }
 }

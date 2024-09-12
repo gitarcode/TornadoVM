@@ -25,9 +25,9 @@ package uk.ac.manchester.tornado.drivers.common.power;
 
 public interface PowerMetric {
 
-    void initializePowerLibrary();
+  void initializePowerLibrary();
 
-    void getHandleByIndex(long[] device);
+  void getHandleByIndex(long[] device);
 
-    void getPowerUsage(long[] device, long[] powerUsage);
+  void getPowerUsage(long[] device, long[] powerUsage);
 }

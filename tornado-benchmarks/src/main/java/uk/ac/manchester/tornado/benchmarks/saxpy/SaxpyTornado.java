@@ -29,73 +29,69 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner saxpy
  * </code>
  */
 public class SaxpyTornado extends BenchmarkDriver {
 
-    private final int numElements;
+  private final int numElements;
 
-    private FloatArray x;
-    private FloatArray y;
-    private final float alpha = 2f;
+  private FloatArray x;
+  private FloatArray y;
+  private final float alpha = 2f;
 
-    public SaxpyTornado(int iterations, int numElements) {
-        super(iterations);
-        this.numElements = numElements;
+  public SaxpyTornado(int iterations, int numElements) {
+    super(iterations);
+    this.numElements = numElements;
+  }
+
+  @Override
+  public void setUp() {
+    x = new FloatArray(numElements);
+    y = new FloatArray(numElements);
+
+    for (int i = 0; i < numElements; i++) {
+      x.set(i, i);
     }
 
-    @Override
-    public void setUp() {
-        x = new FloatArray(numElements);
-        y = new FloatArray(numElements);
+    taskGraph = new TaskGraph("benchmark");
+    taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, x);
+    taskGraph.task("saxpy", LinearAlgebraArrays::saxpy, alpha, x, y);
+    taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, y);
 
-        for (int i = 0; i < numElements; i++) {
-            x.set(i, i);
-        }
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-        taskGraph = new TaskGraph("benchmark");
-        taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, x);
-        taskGraph.task("saxpy", LinearAlgebraArrays::saxpy, alpha, x, y);
-        taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, y);
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
+    x = null;
+    y = null;
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-        x = null;
-        y = null;
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+    final FloatArray result = new FloatArray(numElements);
 
-    @Override
-    public boolean validate(TornadoDevice device) {
+    runBenchmark(device);
+    executionPlan.clearProfiles();
 
-        final FloatArray result = new FloatArray(numElements);
+    saxpy(alpha, x, result);
 
-        runBenchmark(device);
-        executionPlan.clearProfiles();
-
-        saxpy(alpha, x, result);
-
-        final float ulp = findULPDistance(y, result);
-        return ulp < MAX_ULP;
-    }
-
+    final float ulp = findULPDistance(y, result);
+    return ulp < MAX_ULP;
+  }
 }

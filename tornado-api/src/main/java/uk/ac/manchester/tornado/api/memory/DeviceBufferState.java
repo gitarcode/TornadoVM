@@ -19,24 +19,23 @@ package uk.ac.manchester.tornado.api.memory;
 
 public interface DeviceBufferState {
 
-    void setXPUBuffer(XPUBuffer value);
+  void setXPUBuffer(XPUBuffer value);
 
-    boolean hasObjectBuffer();
+  boolean hasObjectBuffer();
 
-    XPUBuffer getXPUBuffer();
+  XPUBuffer getXPUBuffer();
 
-    boolean isAtomicRegionPresent();
+  boolean isAtomicRegionPresent();
 
-    void setAtomicRegion();
+  void setAtomicRegion();
 
-    boolean isLockedBuffer();
+  boolean isLockedBuffer();
 
-    boolean hasContent();
+  boolean hasContent();
 
-    void setContents(boolean value);
+  void setContents(boolean value);
 
-    void setPartialCopySize(long partialCopySize);
+  void setPartialCopySize(long partialCopySize);
 
-    long getPartialCopySize();
-
+  long getPartialCopySize();
 }

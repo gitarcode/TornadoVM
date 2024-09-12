@@ -53,102 +53,108 @@ import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstan
 import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstants.TAB;
 import static uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt.AssignStmt.shouldEmitMove;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.LIRInstruction.Use;
 import org.graalvm.compiler.lir.Variable;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXCompilationResultBuilder;
 
 public class PTXVectorAssign {
 
-    public static void doVectorToVectorAssign(PTXAssembler asm, PTXVectorSplit lhsVectorSplit, PTXVectorSplit rhsVectorSplit) {
-        PTXKind destElementKind = lhsVectorSplit.newKind;
-        PTXKind srcElementKind = rhsVectorSplit.newKind;
+  public static void doVectorToVectorAssign(
+      PTXAssembler asm, PTXVectorSplit lhsVectorSplit, PTXVectorSplit rhsVectorSplit) {
+    PTXKind destElementKind = lhsVectorSplit.newKind;
+    PTXKind srcElementKind = rhsVectorSplit.newKind;
 
-        for (int i = 0; i < rhsVectorSplit.vectorNames.length; i++) {
-            asm.emitSymbol(TAB);
-            if (shouldEmitMove(destElementKind, srcElementKind)) {
-                asm.emit(MOVE + "." + destElementKind.toString());
-            } else {
-                asm.emit(CONVERT + ".");
-                if ((destElementKind.isFloating() || srcElementKind.isFloating()) && getFPURoundingMode(destElementKind, srcElementKind) != null) {
-                    asm.emit(getFPURoundingMode(destElementKind, srcElementKind));
-                    asm.emitSymbol(DOT);
-                }
-                asm.emit(destElementKind.toString());
-                asm.emitSymbol(DOT);
-                asm.emit(srcElementKind.toString());
-            }
-            asm.emitSymbol(TAB);
-            asm.emitSymbol(lhsVectorSplit.vectorNames[i]);
-            asm.emitSymbol(COMMA);
-            asm.emitSymbol(SPACE);
-            asm.emitSymbol(rhsVectorSplit.vectorNames[i]);
-
-            if (i < rhsVectorSplit.vectorNames.length - 1) {
-                asm.delimiter();
-                asm.eol();
-            }
+    for (int i = 0; i < rhsVectorSplit.vectorNames.length; i++) {
+      asm.emitSymbol(TAB);
+      if (shouldEmitMove(destElementKind, srcElementKind)) {
+        asm.emit(MOVE + "." + destElementKind.toString());
+      } else {
+        asm.emit(CONVERT + ".");
+        if ((destElementKind.isFloating() || srcElementKind.isFloating())
+            && getFPURoundingMode(destElementKind, srcElementKind) != null) {
+          asm.emit(getFPURoundingMode(destElementKind, srcElementKind));
+          asm.emitSymbol(DOT);
         }
+        asm.emit(destElementKind.toString());
+        asm.emitSymbol(DOT);
+        asm.emit(srcElementKind.toString());
+      }
+      asm.emitSymbol(TAB);
+      asm.emitSymbol(lhsVectorSplit.vectorNames[i]);
+      asm.emitSymbol(COMMA);
+      asm.emitSymbol(SPACE);
+      asm.emitSymbol(rhsVectorSplit.vectorNames[i]);
+
+      if (i < rhsVectorSplit.vectorNames.length - 1) {
+        asm.delimiter();
+        asm.eol();
+      }
+    }
+  }
+
+  /** PTX vector assignment expression */
+  public static class AssignVectorExpr extends PTXLIROp {
+
+    @Use protected Value[] values;
+
+    public AssignVectorExpr(PTXKind ptxKind, Value... values) {
+      super(LIRKind.value(ptxKind));
+      this.values = values;
     }
 
-    /**
-     * PTX vector assignment expression
-     */
-    public static class AssignVectorExpr extends PTXLIROp {
+    @Override
+    public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
+      PTXKind destElementKind = ((PTXKind) dest.getPlatformKind()).getElementKind();
+      PTXVectorSplit vectorSplitData = new PTXVectorSplit(dest);
 
-        @Use
-        protected Value[] values;
-
-        public AssignVectorExpr(PTXKind ptxKind, Value... values) {
-            super(LIRKind.value(ptxKind));
-            this.values = values;
+      for (int i = 0; i < vectorSplitData.vectorNames.length; i++) {
+        Value[] intermValues = new Value[vectorSplitData.newKind.getVectorLength()];
+        if (vectorSplitData.newKind.getVectorLength() >= 0) {
+          System.arraycopy(
+              values,
+              i * vectorSplitData.newKind.getVectorLength(),
+              intermValues,
+              0,
+              vectorSplitData.newKind.getVectorLength());
         }
+        PTXKind valueKind =
+            (PTXKind) values[i * vectorSplitData.newKind.getVectorLength()].getPlatformKind();
 
-        @Override
-        public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
-            PTXKind destElementKind = ((PTXKind) dest.getPlatformKind()).getElementKind();
-            PTXVectorSplit vectorSplitData = new PTXVectorSplit(dest);
-
-            for (int i = 0; i < vectorSplitData.vectorNames.length; i++) {
-                Value[] intermValues = new Value[vectorSplitData.newKind.getVectorLength()];
-                if (vectorSplitData.newKind.getVectorLength() >= 0) {
-                    System.arraycopy(values, i * vectorSplitData.newKind.getVectorLength(), intermValues, 0, vectorSplitData.newKind.getVectorLength());
-                }
-                PTXKind valueKind = (PTXKind) values[i * vectorSplitData.newKind.getVectorLength()].getPlatformKind();
-
-                asm.emitSymbol(TAB);
-                if (shouldEmitMove(destElementKind, valueKind)) {
-                    asm.emit(MOVE + "." + destElementKind.toString());
-                } else {
-                    asm.emit(CONVERT + ".");
-                    if ((destElementKind.isFloating() || valueKind.isFloating() || (destElementKind.isB16() && valueKind.isU64()) || (destElementKind.isB16() && valueKind
-                            .isS32())) && getFPURoundingMode(destElementKind, valueKind) != null) {
-                        asm.emit(getFPURoundingMode(destElementKind, valueKind));
-                        asm.emitSymbol(DOT);
-                    }
-                    if (destElementKind.isB16()) {
-                        asm.emit("f16");
-                    } else {
-                        asm.emit(destElementKind.toString());
-                    }
-                    asm.emitSymbol(DOT);
-                    asm.emit(valueKind.toString());
-                }
-                asm.emitSymbol(TAB);
-                asm.emitSymbol(vectorSplitData.vectorNames[i]);
-                asm.emitSymbol(COMMA);
-                asm.emitSymbol(SPACE);
-                asm.emitValuesOrOp(crb, intermValues, dest);
-
-                if (i < vectorSplitData.vectorNames.length - 1) {
-                    asm.delimiter();
-                    asm.eol();
-                }
-            }
+        asm.emitSymbol(TAB);
+        if (shouldEmitMove(destElementKind, valueKind)) {
+          asm.emit(MOVE + "." + destElementKind.toString());
+        } else {
+          asm.emit(CONVERT + ".");
+          if ((destElementKind.isFloating()
+                  || valueKind.isFloating()
+                  || (destElementKind.isB16() && valueKind.isU64())
+                  || (destElementKind.isB16() && valueKind.isS32()))
+              && getFPURoundingMode(destElementKind, valueKind) != null) {
+            asm.emit(getFPURoundingMode(destElementKind, valueKind));
+            asm.emitSymbol(DOT);
+          }
+          if (destElementKind.isB16()) {
+            asm.emit("f16");
+          } else {
+            asm.emit(destElementKind.toString());
+          }
+          asm.emitSymbol(DOT);
+          asm.emit(valueKind.toString());
         }
+        asm.emitSymbol(TAB);
+        asm.emitSymbol(vectorSplitData.vectorNames[i]);
+        asm.emitSymbol(COMMA);
+        asm.emitSymbol(SPACE);
+        asm.emitValuesOrOp(crb, intermValues, dest);
+
+        if (i < vectorSplitData.vectorNames.length - 1) {
+          asm.delimiter();
+          asm.eol();
+        }
+      }
     }
-
+  }
 }

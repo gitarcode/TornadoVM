@@ -30,40 +30,44 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
+import jdk.vm.ci.code.CallingConvention;
 import org.graalvm.compiler.core.common.CompilationIdentifier;
 import org.graalvm.compiler.core.common.alloc.RegisterAllocationConfig;
 import org.graalvm.compiler.lir.LIR;
 import org.graalvm.compiler.lir.Variable;
 import org.graalvm.compiler.lir.framemap.FrameMapBuilder;
 import org.graalvm.compiler.lir.gen.LIRGenerationResult;
-
-import jdk.vm.ci.code.CallingConvention;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 
 public class SPIRVLIRGenerationResult extends LIRGenerationResult {
 
-    private final Map<SPIRVKind, Set<Variable>> variableTable;
-    private int methodIndex;
+  private final Map<SPIRVKind, Set<Variable>> variableTable;
+  private int methodIndex;
 
-    public SPIRVLIRGenerationResult(CompilationIdentifier compilationId, LIR lir, FrameMapBuilder frameMapBuilder, RegisterAllocationConfig registerAllocationConfig,
-            CallingConvention callingConvention) {
-        super(compilationId, lir, frameMapBuilder, registerAllocationConfig, callingConvention);
-        variableTable = new HashMap<>();
-    }
+  public SPIRVLIRGenerationResult(
+      CompilationIdentifier compilationId,
+      LIR lir,
+      FrameMapBuilder frameMapBuilder,
+      RegisterAllocationConfig registerAllocationConfig,
+      CallingConvention callingConvention) {
+    super(compilationId, lir, frameMapBuilder, registerAllocationConfig, callingConvention);
+    variableTable = new HashMap<>();
+  }
 
-    public void insertVariable(Variable variable) {
-        guarantee(variable.getPlatformKind() instanceof SPIRVKind, "invalid variable kind: %s", variable.getValueKind());
-        SPIRVKind kind = (SPIRVKind) variable.getPlatformKind();
-        variableTable.computeIfAbsent(kind, k -> new HashSet<>()).add(variable);
-    }
+  public void insertVariable(Variable variable) {
+    guarantee(
+        variable.getPlatformKind() instanceof SPIRVKind,
+        "invalid variable kind: %s",
+        variable.getValueKind());
+    SPIRVKind kind = (SPIRVKind) variable.getPlatformKind();
+    variableTable.computeIfAbsent(kind, k -> new HashSet<>()).add(variable);
+  }
 
-    public int getMethodIndex() {
-        return this.methodIndex;
-    }
+  public int getMethodIndex() {
+    return this.methodIndex;
+  }
 
-    public void setMethodIndex(int methodIndex) {
-        this.methodIndex = methodIndex;
-    }
-
+  public void setMethodIndex(int methodIndex) {
+    this.methodIndex = methodIndex;
+  }
 }

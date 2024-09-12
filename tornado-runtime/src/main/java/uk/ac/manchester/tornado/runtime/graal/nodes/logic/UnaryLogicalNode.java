@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.nodes.logic;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.graph.IterableNodeType;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.NodeClass;
@@ -31,45 +32,43 @@ import org.graalvm.compiler.nodes.LogicNode;
 import org.graalvm.compiler.nodes.spi.Canonicalizable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.LogicalCompareNode;
 
 @NodeInfo
-public abstract class UnaryLogicalNode extends LogicNode implements IterableNodeType, Canonicalizable.Unary<LogicNode>, LogicalCompareNode {
+public abstract class UnaryLogicalNode extends LogicNode
+    implements IterableNodeType, Canonicalizable.Unary<LogicNode>, LogicalCompareNode {
 
-    public static final NodeClass<UnaryLogicalNode> TYPE = NodeClass.create(UnaryLogicalNode.class);
+  public static final NodeClass<UnaryLogicalNode> TYPE = NodeClass.create(UnaryLogicalNode.class);
 
-    @Input(InputType.Condition)
-    LogicNode value;
+  @Input(InputType.Condition)
+  LogicNode value;
 
-    protected UnaryLogicalNode(NodeClass<? extends UnaryLogicalNode> type, LogicNode value) {
-        super(type);
-        this.value = value;
-    }
+  protected UnaryLogicalNode(NodeClass<? extends UnaryLogicalNode> type, LogicNode value) {
+    super(type);
+    this.value = value;
+  }
 
-    @Override
-    public final void generate(NodeLIRBuilderTool builder) {
-        Value x = builder.operand(getValue());
-        Value result = generate(builder.getLIRGeneratorTool(), x);
-        builder.setResult(this, result);
-    }
+  @Override
+  public final void generate(NodeLIRBuilderTool builder) {
+    Value x = builder.operand(getValue());
+    Value result = generate(builder.getLIRGeneratorTool(), x);
+    builder.setResult(this, result);
+  }
 
-    public abstract Value generate(LIRGeneratorTool gen, Value x);
+  public abstract Value generate(LIRGeneratorTool gen, Value x);
 
-    @Override
-    public Node canonical(CanonicalizerTool tool, LogicNode forValue) {
-        return this;
-    }
+  @Override
+  public Node canonical(CanonicalizerTool tool, LogicNode forValue) {
+    return this;
+  }
 
-    @Override
-    public LogicNode getValue() {
-        return value;
-    }
+  @Override
+  public LogicNode getValue() {
+    return value;
+  }
 
-    @Override
-    public LogicNode canonical(CanonicalizerTool tool) {
-        return this;
-    }
-
+  @Override
+  public LogicNode canonical(CanonicalizerTool tool) {
+    return this;
+  }
 }

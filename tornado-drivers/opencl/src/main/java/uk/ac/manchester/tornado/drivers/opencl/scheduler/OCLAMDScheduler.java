@@ -31,76 +31,97 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class OCLAMDScheduler extends OCLKernelScheduler {
 
-    private static final int WARP_SIZE = 64;
-    private boolean ADJUST_IRREGULAR = false;
+  private static final int WARP_SIZE = 64;
+  private boolean ADJUST_IRREGULAR = false;
 
-    private final long[] maxWorkItemSizes;
+  private final long[] maxWorkItemSizes;
 
-    public OCLAMDScheduler(final OCLDeviceContext context) {
-        super(context);
-        OCLTargetDevice device = context.getDevice();
-        maxWorkItemSizes = device.getDeviceMaxWorkItemSizes();
+  public OCLAMDScheduler(final OCLDeviceContext context) {
+    super(context);
+    OCLTargetDevice device = context.getDevice();
+    maxWorkItemSizes = device.getDeviceMaxWorkItemSizes();
+  }
+
+  @Override
+  public int launch(
+      long executionPlanId,
+      OCLKernel kernel,
+      TaskDataContext meta,
+      int[] waitEvents,
+      long batchThreads) {
+    if (meta.isWorkerGridAvailable()) {
+      WorkerGrid grid = meta.getWorkerGrid(meta.getId());
+      long[] global = grid.getGlobalWork();
+      long[] offset = grid.getGlobalOffset();
+      long[] local = grid.getLocalWork();
+      return deviceContext.enqueueNDRangeKernel(
+          executionPlanId, kernel, grid.dimension(), offset, global, local, waitEvents);
+    } else {
+      return deviceContext.enqueueNDRangeKernel(
+          executionPlanId,
+          kernel,
+          meta.getDims(),
+          meta.getGlobalOffset(),
+          meta.getGlobalWork(),
+          null,
+          waitEvents);
     }
+  }
 
-    @Override
-    public int launch(long executionPlanId, OCLKernel kernel, TaskDataContext meta, int[] waitEvents, long batchThreads) {
-        if (meta.isWorkerGridAvailable()) {
-            WorkerGrid grid = meta.getWorkerGrid(meta.getId());
-            long[] global = grid.getGlobalWork();
-            long[] offset = grid.getGlobalOffset();
-            long[] local = grid.getLocalWork();
-            return deviceContext.enqueueNDRangeKernel(executionPlanId, kernel, grid.dimension(), offset, global, local, waitEvents);
-        } else {
-            return deviceContext.enqueueNDRangeKernel(executionPlanId, kernel, meta.getDims(), meta.getGlobalOffset(), meta.getGlobalWork(), null, waitEvents);
-        }
+  @Override
+  public void calculateGlobalWork(final TaskDataContext meta, long batchThreads) {
+    final long[] globalWork = meta.getGlobalWork();
+    for (int i = 0; i < meta.getDims(); i++) {
+      long value =
+          (batchThreads <= 0) ? (long) (meta.getDomain().get(i).cardinality()) : batchThreads;
+      // adjust for irregular problem sizes
+      if (ADJUST_IRREGULAR && (value % WARP_SIZE != 0)) {
+        value = ((value / WARP_SIZE) + 1) * WARP_SIZE;
+      }
+      globalWork[i] = value;
     }
+  }
 
-    @Override
-    public void calculateGlobalWork(final TaskDataContext meta, long batchThreads) {
-        final long[] globalWork = meta.getGlobalWork();
-        for (int i = 0; i < meta.getDims(); i++) {
-            long value = (batchThreads <= 0) ? (long) (meta.getDomain().get(i).cardinality()) : batchThreads;
-            // adjust for irregular problem sizes
-            if (ADJUST_IRREGULAR && (value % WARP_SIZE != 0)) {
-                value = ((value / WARP_SIZE) + 1) * WARP_SIZE;
-            }
-            globalWork[i] = value;
-        }
+  @Override
+  public void calculateLocalWork(final TaskDataContext meta) {
+    final long[] localWork = meta.initLocalWork();
+    switch (meta.getDims()) {
+      case 3:
+        localWork[2] =
+            calculateGroupSize(
+                maxWorkItemSizes[2], meta.getOpenCLGpuBlock2DY(), meta.getGlobalWork()[2]);
+      case 2:
+        localWork[1] =
+            calculateGroupSize(
+                maxWorkItemSizes[1], meta.getOpenCLGpuBlock2DY(), meta.getGlobalWork()[1]);
+        localWork[0] =
+            calculateGroupSize(
+                maxWorkItemSizes[0], meta.getOpenCLGpuBlock2DX(), meta.getGlobalWork()[0]);
+        break;
+      case 1:
+        localWork[0] =
+            calculateGroupSize(
+                maxWorkItemSizes[0], meta.getOpenCLGpuBlockX(), meta.getGlobalWork()[0]);
+        break;
+      default:
+        break;
     }
+  }
 
-    @Override
-    public void calculateLocalWork(final TaskDataContext meta) {
-        final long[] localWork = meta.initLocalWork();
-        switch (meta.getDims()) {
-            case 3:
-                localWork[2] = calculateGroupSize(maxWorkItemSizes[2], meta.getOpenCLGpuBlock2DY(), meta.getGlobalWork()[2]);
-            case 2:
-                localWork[1] = calculateGroupSize(maxWorkItemSizes[1], meta.getOpenCLGpuBlock2DY(), meta.getGlobalWork()[1]);
-                localWork[0] = calculateGroupSize(maxWorkItemSizes[0], meta.getOpenCLGpuBlock2DX(), meta.getGlobalWork()[0]);
-                break;
-            case 1:
-                localWork[0] = calculateGroupSize(maxWorkItemSizes[0], meta.getOpenCLGpuBlockX(), meta.getGlobalWork()[0]);
-                break;
-            default:
-                break;
-        }
-    }
+  @Override
+  public void checkAndAdaptLocalWork(TaskDataContext meta) {}
 
-    @Override
-    public void checkAndAdaptLocalWork(TaskDataContext meta) {
+  private int calculateGroupSize(long maxBlockSize, long customBlockSize, long globalWorkSize) {
+    if (maxBlockSize == globalWorkSize) {
+      maxBlockSize /= 4;
     }
-
-    private int calculateGroupSize(long maxBlockSize, long customBlockSize, long globalWorkSize) {
-        if (maxBlockSize == globalWorkSize) {
-            maxBlockSize /= 4;
-        }
-        int value = (int) Math.min(Math.max(maxBlockSize, customBlockSize), globalWorkSize);
-        if (value == 0) {
-            return 1;
-        }
-        while (globalWorkSize % value != 0) {
-            value--;
-        }
-        return value;
+    int value = (int) Math.min(Math.max(maxBlockSize, customBlockSize), globalWorkSize);
+    if (value == 0) {
+      return 1;
     }
+    while (globalWorkSize % value != 0) {
+      value--;
+    }
+    return value;
+  }
 }

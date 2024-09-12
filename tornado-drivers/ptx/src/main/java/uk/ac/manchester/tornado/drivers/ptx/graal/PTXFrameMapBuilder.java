@@ -27,7 +27,8 @@ import org.graalvm.compiler.lir.framemap.FrameMap;
 import org.graalvm.compiler.lir.framemap.FrameMapBuilderImpl;
 
 public class PTXFrameMapBuilder extends FrameMapBuilderImpl {
-    public PTXFrameMapBuilder(FrameMap frameMap, CodeCacheProvider codeCache, RegisterConfig registerConfig) {
-        super(frameMap, codeCache, registerConfig);
-    }
+  public PTXFrameMapBuilder(
+      FrameMap frameMap, CodeCacheProvider codeCache, RegisterConfig registerConfig) {
+    super(frameMap, codeCache, registerConfig);
+  }
 }

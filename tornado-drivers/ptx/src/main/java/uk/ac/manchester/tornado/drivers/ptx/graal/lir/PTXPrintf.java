@@ -20,10 +20,9 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.lir;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.Opcode;
-
-import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.lir.Variable;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstants;
@@ -32,23 +31,23 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXCompilationResultB
 @Opcode("PRINTF")
 public class PTXPrintf extends PTXLIROp {
 
-    private final Value formatParam;
-    private final Value valList;
+  private final Value formatParam;
+  private final Value valList;
 
-    public PTXPrintf(Value formatParam, Value valList) {
-        super(LIRKind.Illegal);
-        this.formatParam = formatParam;
-        this.valList = valList;
-    }
+  public PTXPrintf(Value formatParam, Value valList) {
+    super(LIRKind.Illegal);
+    this.formatParam = formatParam;
+    this.valList = valList;
+  }
 
-    @Override
-    public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
-        asm.emitSymbol(PTXAssemblerConstants.TAB);
-        asm.emit("call (_), vprintf, (");
-        asm.emitValue(formatParam);
-        asm.emitSymbol(PTXAssemblerConstants.COMMA);
-        asm.emitSymbol(PTXAssemblerConstants.SPACE);
-        asm.emitValue(valList);
-        asm.emit(")");
-    }
+  @Override
+  public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
+    asm.emitSymbol(PTXAssemblerConstants.TAB);
+    asm.emit("call (_), vprintf, (");
+    asm.emitValue(formatParam);
+    asm.emitSymbol(PTXAssemblerConstants.COMMA);
+    asm.emitSymbol(PTXAssemblerConstants.SPACE);
+    asm.emitValue(valList);
+    asm.emit(")");
+  }
 }

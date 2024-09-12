@@ -25,24 +25,22 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.compiler;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimplemented;
 
+import jdk.vm.ci.meta.Constant;
 import org.graalvm.compiler.code.DataSection.Data;
 import org.graalvm.compiler.lir.asm.DataBuilder;
 
-import jdk.vm.ci.meta.Constant;
-
 public class OCLDataBuilder extends DataBuilder {
 
-    private static final int MAX_DATA_ALIGNMENT = 64;
+  private static final int MAX_DATA_ALIGNMENT = 64;
 
-    @Override
-    public Data createDataItem(Constant constant) {
-        unimplemented("Create Data item in OpenCLDataBuilder not supported yet.");
-        return null;
-    }
+  @Override
+  public Data createDataItem(Constant constant) {
+    unimplemented("Create Data item in OpenCLDataBuilder not supported yet.");
+    return null;
+  }
 
-    @Override
-    public int getMaxSupportedAlignment() {
-        return MAX_DATA_ALIGNMENT;
-    }
-
+  @Override
+  public int getMaxSupportedAlignment() {
+    return MAX_DATA_ALIGNMENT;
+  }
 }

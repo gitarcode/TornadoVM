@@ -21,6 +21,8 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.nodes;
 
+import static uk.ac.manchester.tornado.drivers.ptx.graal.PTXArchitecture.globalSpace;
+
 import jdk.vm.ci.meta.JavaConstant;
 import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.LIRKind;
@@ -40,34 +42,44 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXUnary;
 
-import static uk.ac.manchester.tornado.drivers.ptx.graal.PTXArchitecture.globalSpace;
-
 @NodeInfo
 public class PTXKernelContextAccessNode extends FloatingNode implements LIRLowerable {
 
-    @Input
-    private ConstantNode index;
+  @Input private ConstantNode index;
 
-    public static final NodeClass<PTXKernelContextAccessNode> TYPE = NodeClass.create(PTXKernelContextAccessNode.class);
+  public static final NodeClass<PTXKernelContextAccessNode> TYPE =
+      NodeClass.create(PTXKernelContextAccessNode.class);
 
-    public PTXKernelContextAccessNode(ConstantNode index) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        this.index = index;
-    }
+  public PTXKernelContextAccessNode(ConstantNode index) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    this.index = index;
+  }
 
-    public ConstantNode getIndex() {
-        return this.index;
-    }
+  public ConstantNode getIndex() {
+    return this.index;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        PTXLIRGenerator tool = (PTXLIRGenerator) gen.getLIRGeneratorTool();
-        LIRKind resultKind = tool.getLIRKind(stamp);
-        Variable result = tool.newVariable(resultKind);
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    PTXLIRGenerator tool = (PTXLIRGenerator) gen.getLIRGeneratorTool();
+    LIRKind resultKind = tool.getLIRKind(stamp);
+    Variable result = tool.newVariable(resultKind);
 
-        ConstantValue indexValue = new ConstantValue(resultKind, JavaConstant.forInt(((ConstantValue) gen.operand(index)).getJavaConstant().asInt() * PTXKind.U64.getSizeInBytes()));
+    ConstantValue indexValue =
+        new ConstantValue(
+            resultKind,
+            JavaConstant.forInt(
+                ((ConstantValue) gen.operand(index)).getJavaConstant().asInt()
+                    * PTXKind.U64.getSizeInBytes()));
 
-        tool.append(new PTXLIRStmt.LoadStmt(new PTXUnary.MemoryAccess(globalSpace, tool.getParameterAllocation(PTXArchitecture.KERNEL_CONTEXT), indexValue), result, PTXAssembler.PTXNullaryOp.LDU));
-        gen.setResult(this, result);
-    }
+    tool.append(
+        new PTXLIRStmt.LoadStmt(
+            new PTXUnary.MemoryAccess(
+                globalSpace,
+                tool.getParameterAllocation(PTXArchitecture.KERNEL_CONTEXT),
+                indexValue),
+            result,
+            PTXAssembler.PTXNullaryOp.LDU));
+    gen.setResult(this, result);
+  }
 }

@@ -27,73 +27,74 @@ import uk.ac.manchester.tornado.drivers.common.utils.Colour;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 
 /**
- * Class for logging internals of the JIT Compiler, code generation, LIR Builder
- * and TornadoVM runtime.
+ * Class for logging internals of the JIT Compiler, code generation, LIR Builder and TornadoVM
+ * runtime.
  */
 public class Logger {
 
-    /**
-     * Method to track the code generation.
-     *
-     * @param backend
-     *     Backend selection
-     * @param message
-     *     String message with code gen trace
-     * @param args
-     *     Arguments to the string message
-     */
-    public static void traceCodeGen(final BACKEND backend, final String message, final Object... args) {
-        if (TornadoOptions.TRACE_CODE_GEN) {
-            System.out.printf(Colour.CYAN + "[" + backend.backendName() + "-CodeGen] " + message + Colour.RESET + "\n", args);
-        }
+  /**
+   * Method to track the code generation.
+   *
+   * @param backend Backend selection
+   * @param message String message with code gen trace
+   * @param args Arguments to the string message
+   */
+  public static void traceCodeGen(
+      final BACKEND backend, final String message, final Object... args) {
+    if (TornadoOptions.TRACE_CODE_GEN) {
+      System.out.printf(
+          Colour.CYAN + "[" + backend.backendName() + "-CodeGen] " + message + Colour.RESET + "\n",
+          args);
+    }
+  }
+
+  /**
+   * Method to track SPIR-V IR Builder (from last IR phase to IR Builder for codegen).
+   *
+   * @param backend Backend selection
+   * @param message String message with the IR Builder
+   * @param args Arguments to the string message
+   */
+  public static void traceBuildLIR(final BACKEND backend, String message, final Object... args) {
+    if (TornadoOptions.TRACE_BUILD_LIR) {
+      System.out.printf(
+          Colour.GREEN
+              + "["
+              + backend.backendName()
+              + "-BuildLIR] "
+              + message
+              + Colour.RESET
+              + "\n",
+          args);
+    }
+  }
+
+  /**
+   * Method to track internal calls in the TornadoVM Runtime for running the SPIR-V code.
+   *
+   * @param backend Backend selection
+   * @param message String track message
+   * @param args Arguments to the string.
+   */
+  public static void traceRuntime(final BACKEND backend, String message, final Object... args) {
+    System.out.printf(
+        Colour.YELLOW + "[" + backend.backendName() + "-Runtime] " + message + Colour.RESET + "\n",
+        args);
+  }
+
+  public enum BACKEND {
+    OpenCL("OpenCL"), //
+    PTX("PTX"), //
+    SPIRV("SPIRV"); //
+
+    String backendName;
+
+    BACKEND(String name) {
+      this.backendName = name;
     }
 
-    /**
-     * Method to track SPIR-V IR Builder (from last IR phase to IR Builder for
-     * codegen).
-     *
-     * @param backend
-     *     Backend selection
-     * @param message
-     *     String message with the IR Builder
-     * @param args
-     *     Arguments to the string message
-     */
-    public static void traceBuildLIR(final BACKEND backend, String message, final Object... args) {
-        if (TornadoOptions.TRACE_BUILD_LIR) {
-            System.out.printf(Colour.GREEN + "[" + backend.backendName() + "-BuildLIR] " + message + Colour.RESET + "\n", args);
-        }
+    public String backendName() {
+      return this.backendName;
     }
-
-    /**
-     * Method to track internal calls in the TornadoVM Runtime for running the
-     * SPIR-V code.
-     *
-     * @param backend
-     *     Backend selection
-     * @param message
-     *     String track message
-     * @param args
-     *     Arguments to the string.
-     */
-    public static void traceRuntime(final BACKEND backend, String message, final Object... args) {
-        System.out.printf(Colour.YELLOW + "[" + backend.backendName() + "-Runtime] " + message + Colour.RESET + "\n", args);
-    }
-
-    public enum BACKEND {
-
-        OpenCL("OpenCL"), //
-        PTX("PTX"), //
-        SPIRV("SPIRV"); //
-
-        String backendName;
-
-        BACKEND(String name) {
-            this.backendName = name;
-        }
-
-        public String backendName() {
-            return this.backendName;
-        }
-    }
+  }
 }

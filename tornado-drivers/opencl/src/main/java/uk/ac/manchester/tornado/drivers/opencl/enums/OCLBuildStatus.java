@@ -24,30 +24,29 @@
 package uk.ac.manchester.tornado.drivers.opencl.enums;
 
 public enum OCLBuildStatus {
-    CL_BUILD_SUCCESS(0), //
-    CL_BUILD_NONE(-1), //
-    CL_BUILD_ERROR(-2), //
-    CL_BUILD_IN_PROGRESS(-3), //
-    CL_BUILD_UNKNOWN(-4);
+  CL_BUILD_SUCCESS(0), //
+  CL_BUILD_NONE(-1), //
+  CL_BUILD_ERROR(-2), //
+  CL_BUILD_IN_PROGRESS(-3), //
+  CL_BUILD_UNKNOWN(-4);
 
-    private final int buildStatusCode;
+  private final int buildStatusCode;
 
-    OCLBuildStatus(final int v) {
-        buildStatusCode = v;
-    }
+  OCLBuildStatus(final int v) {
+    buildStatusCode = v;
+  }
 
-    public int getBuildStatusCode() {
-        return buildStatusCode;
-    }
+  public int getBuildStatusCode() {
+    return buildStatusCode;
+  }
 
-    public static OCLBuildStatus toEnum(final int errorCode) {
-        return switch (errorCode) {
-            case 0 -> OCLBuildStatus.CL_BUILD_SUCCESS;
-            case -1 -> OCLBuildStatus.CL_BUILD_NONE;
-            case -2 -> OCLBuildStatus.CL_BUILD_ERROR;
-            case -3 -> OCLBuildStatus.CL_BUILD_IN_PROGRESS;
-            default -> null;
-        };
-    }
-
+  public static OCLBuildStatus toEnum(final int errorCode) {
+    return switch (errorCode) {
+      case 0 -> OCLBuildStatus.CL_BUILD_SUCCESS;
+      case -1 -> OCLBuildStatus.CL_BUILD_NONE;
+      case -2 -> OCLBuildStatus.CL_BUILD_ERROR;
+      case -3 -> OCLBuildStatus.CL_BUILD_IN_PROGRESS;
+      default -> null;
+    };
+  }
 }

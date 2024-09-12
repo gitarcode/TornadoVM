@@ -24,7 +24,6 @@
 package uk.ac.manchester.tornado.runtime.graal.phases.sketcher;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.NodeView;
@@ -32,31 +31,33 @@ import org.graalvm.compiler.nodes.PhiNode;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoSketchTierContext;
 
 public class TornadoStampResolver extends BasePhase<TornadoSketchTierContext> {
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
+  @Override
+  protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
 
-        graph.getNodes().filter(PhiNode.class).forEach((PhiNode phi) -> {
-            Stamp stamp = phi.stamp(NodeView.DEFAULT);
-            if (stamp.isEmpty()) {
+    graph
+        .getNodes()
+        .filter(PhiNode.class)
+        .forEach(
+            (PhiNode phi) -> {
+              Stamp stamp = phi.stamp(NodeView.DEFAULT);
+              if (stamp.isEmpty()) {
                 for (ValueNode n : phi.values()) {
-                    if (stamp.isEmpty()) {
-                        stamp = n.stamp(NodeView.DEFAULT);
-                    } else {
-                        stamp = stamp.meet(n.stamp(NodeView.DEFAULT));
-                    }
+                  if (stamp.isEmpty()) {
+                    stamp = n.stamp(NodeView.DEFAULT);
+                  } else {
+                    stamp = stamp.meet(n.stamp(NodeView.DEFAULT));
+                  }
                 }
                 phi.setStamp(stamp);
-            }
-        });
-    }
-
+              }
+            });
+  }
 }

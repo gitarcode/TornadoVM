@@ -31,19 +31,19 @@ import org.graalvm.compiler.lir.Variable;
 @Opcode("VSEL")
 public class PTXVectorElementSelect extends Value {
 
-    private final Variable vector;
-    private final int laneId;
-    private final PTXVectorSplit vectorSplitData;
+  private final Variable vector;
+  private final int laneId;
+  private final PTXVectorSplit vectorSplitData;
 
-    public PTXVectorElementSelect(LIRKind lirKind, Variable vector, int laneId) {
-        super(lirKind);
-        this.vector = vector;
-        this.laneId = laneId;
-        this.vectorSplitData = new PTXVectorSplit(vector);
-    }
+  public PTXVectorElementSelect(LIRKind lirKind, Variable vector, int laneId) {
+    super(lirKind);
+    this.vector = vector;
+    this.laneId = laneId;
+    this.vectorSplitData = new PTXVectorSplit(vector);
+  }
 
-    @Override
-    public String toString() {
-        return vectorSplitData.getVectorElement(laneId);
-    }
+  @Override
+  public String toString() {
+    return vectorSplitData.getVectorElement(laneId);
+  }
 }

@@ -22,19 +22,19 @@ import uk.ac.manchester.tornado.api.enums.TornadoVMBackendType;
 
 public interface TornadoRuntime {
 
-    TornadoBackend getBackend(int index);
+  TornadoBackend getBackend(int index);
 
-    void setDefaultBackend(int index);
+  void setDefaultBackend(int index);
 
-    TornadoVMBackendType getBackendType(int index);
+  TornadoVMBackendType getBackendType(int index);
 
-    <D extends TornadoBackend> D getBackend(Class<D> type);
+  <D extends TornadoBackend> D getBackend(Class<D> type);
 
-    int getNumBackends();
+  int getNumBackends();
 
-    TornadoDevice getDefaultDevice();
+  TornadoDevice getDefaultDevice();
 
-    <D extends TornadoBackend> int getBackendIndex(Class<D> driverClass);
+  <D extends TornadoBackend> int getBackendIndex(Class<D> driverClass);
 
-    boolean isProfilerEnabled();
+  boolean isProfilerEnabled();
 }

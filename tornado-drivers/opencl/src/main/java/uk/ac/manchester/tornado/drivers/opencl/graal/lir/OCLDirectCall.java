@@ -23,13 +23,12 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.LIRFrameState;
 import org.graalvm.compiler.lir.LIRInstruction.Def;
 import org.graalvm.compiler.lir.LIRInstruction.Use;
 import org.graalvm.compiler.nodes.DirectCallTargetNode;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLArchitecture;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLUtils;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
@@ -37,40 +36,39 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResu
 
 public class OCLDirectCall extends OCLLIROp {
 
-    protected DirectCallTargetNode target;
-    protected LIRFrameState frameState;
-    @Def
-    protected Value result;
-    @Use
-    protected Value[] parameters;
+  protected DirectCallTargetNode target;
+  protected LIRFrameState frameState;
+  @Def protected Value result;
+  @Use protected Value[] parameters;
 
-    public OCLDirectCall(DirectCallTargetNode target, Value result, Value[] parameters, LIRFrameState frameState) {
-        super(LIRKind.value(result.getPlatformKind()));
-        this.result = result;
-        this.parameters = parameters;
-        this.target = target;
-        this.frameState = frameState;
-    }
+  public OCLDirectCall(
+      DirectCallTargetNode target, Value result, Value[] parameters, LIRFrameState frameState) {
+    super(LIRKind.value(result.getPlatformKind()));
+    this.result = result;
+    this.parameters = parameters;
+    this.target = target;
+    this.frameState = frameState;
+  }
 
-    @Override
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+  @Override
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
 
-        final String methodName = OCLUtils.makeMethodName(target.targetMethod());
+    final String methodName = OCLUtils.makeMethodName(target.targetMethod());
 
-        asm.emit(methodName);
-        asm.emit("(");
-        int paramCounter = 0;
-        asm.emit(((OCLArchitecture) crb.target.arch).getCallingConvention());
+    asm.emit(methodName);
+    asm.emit("(");
+    int paramCounter = 0;
+    asm.emit(((OCLArchitecture) crb.target.arch).getCallingConvention());
+    asm.emit(", ");
+    for (Value param : parameters) {
+      asm.emit(asm.toString(param));
+      if (paramCounter < parameters.length - 1) {
         asm.emit(", ");
-        for (Value param : parameters) {
-            asm.emit(asm.toString(param));
-            if (paramCounter < parameters.length - 1) {
-                asm.emit(", ");
-            }
-            paramCounter++;
-        }
-        asm.emit(")");
-
-        crb.addNonInlinedMethod(target.targetMethod());
+      }
+      paramCounter++;
     }
+    asm.emit(")");
+
+    crb.addNonInlinedMethod(target.targetMethod());
+  }
 }

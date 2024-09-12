@@ -20,29 +20,28 @@ package uk.ac.manchester.tornado.api;
 import uk.ac.manchester.tornado.api.common.Access;
 
 /**
- * Definition of accessor for the Prebuilt-Task API.
- * It defines the accessor of each object for all input parameter to the task.
+ * Definition of accessor for the Prebuilt-Task API. It defines the accessor of each object for all
+ * input parameter to the task.
  */
 public class AccessorParameters {
 
-    private final PairAccessor[] accessors;
+  private final PairAccessor[] accessors;
 
-    public AccessorParameters(int numParameters) {
-        accessors = new PairAccessor[numParameters];
-    }
+  public AccessorParameters(int numParameters) {
+    accessors = new PairAccessor[numParameters];
+  }
 
-    public void set(int index, Object object, Access access) {
-        accessors[index] = new PairAccessor(object, access);
-    }
+  public void set(int index, Object object, Access access) {
+    accessors[index] = new PairAccessor(object, access);
+  }
 
-    public int numAccessors() {
-        return accessors.length;
-    }
+  public int numAccessors() {
+    return accessors.length;
+  }
 
-    public PairAccessor getAccessor(int index) {
-        return accessors[index];
-    }
+  public PairAccessor getAccessor(int index) {
+    return accessors[index];
+  }
 
-    public record PairAccessor(Object object, Access access) {
-    }
+  public record PairAccessor(Object object, Access access) {}
 }

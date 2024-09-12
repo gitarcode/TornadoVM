@@ -36,7 +36,6 @@ import org.graalvm.compiler.phases.common.IterativeConditionalEliminationPhase;
 import org.graalvm.compiler.phases.common.LowTierLoweringPhase;
 import org.graalvm.compiler.phases.common.UseTrappingNullChecksPhase;
 import org.graalvm.compiler.phases.schedule.SchedulePhase;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.analysis.TornadoFeatureExtraction;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.loops.TornadoLoopCanonicalization;
@@ -49,58 +48,63 @@ import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoLowTier;
 
 public class SPIRVLowTier extends TornadoLowTier {
 
-    public SPIRVLowTier(OptionValues options, TornadoDeviceContext deviceContext, AddressLoweringByNodePhase.AddressLowering addressLowering) {
-        CanonicalizerPhase canonicalizer = getCannonicalizer(options);
+  public SPIRVLowTier(
+      OptionValues options,
+      TornadoDeviceContext deviceContext,
+      AddressLoweringByNodePhase.AddressLowering addressLowering) {
+    CanonicalizerPhase canonicalizer = getCannonicalizer(options);
 
-        appendPhase(new SPIRVFP64SupportPhase(deviceContext));
+    appendPhase(new SPIRVFP64SupportPhase(deviceContext));
 
-        appendPhase(new LowTierLoweringPhase(canonicalizer));
+    appendPhase(new LowTierLoweringPhase(canonicalizer));
 
-        if (ConditionalElimination.getValue(options)) {
-            appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
-        }
-
-        appendPhase(new TornadoHalfFloatVectorOffset());
-
-        appendPhase(new FixReadsPhase(true, new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS)));
-
-        appendPhase(new UseTrappingNullChecksPhase());
-
-        appendPhase(new TornadoFixedArrayCopyPhase());
-
-        appendPhase(new AddressLoweringByNodePhase(addressLowering));
-
-        appendPhase(new DeadCodeEliminationPhase(Required));
-
-        if (deviceContext.isPlatformFPGA()) {
-            appendPhase(new OCLFPGAPragmaPhase(deviceContext));
-            appendPhase(new OCLFPGAThreadScheduler());
-        }
-
-        appendPhase(new TornadoLoopCanonicalization());
-
-        if (TornadoOptions.ENABLE_FMA) {
-            appendPhase(new SPIRVFMAPhase());
-        }
-
-        if (TornadoOptions.MATH_OPTIMIZATIONS) {
-            appendPhase(new InverseSquareRootPhase());
-        }
-
-        // TODO Atomics Phase for SPIRV (this is the last thing to support)
-
-        appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS));
-
-        if (TornadoOptions.FEATURE_EXTRACTION) {
-            appendPhase(new TornadoFeatureExtraction(deviceContext));
-        }
-
-        if (TornadoOptions.DUMP_LOW_TIER_WITH_IGV) {
-            appendPhase(new DumpLowTierGraph());
-        }
+    if (ConditionalElimination.getValue(options)) {
+      appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
     }
 
-    private CanonicalizerPhase getCannonicalizer(OptionValues options) {
-        return CanonicalizerPhase.create();
+    appendPhase(new TornadoHalfFloatVectorOffset());
+
+    appendPhase(
+        new FixReadsPhase(
+            true, new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS)));
+
+    appendPhase(new UseTrappingNullChecksPhase());
+
+    appendPhase(new TornadoFixedArrayCopyPhase());
+
+    appendPhase(new AddressLoweringByNodePhase(addressLowering));
+
+    appendPhase(new DeadCodeEliminationPhase(Required));
+
+    if (deviceContext.isPlatformFPGA()) {
+      appendPhase(new OCLFPGAPragmaPhase(deviceContext));
+      appendPhase(new OCLFPGAThreadScheduler());
     }
+
+    appendPhase(new TornadoLoopCanonicalization());
+
+    if (TornadoOptions.ENABLE_FMA) {
+      appendPhase(new SPIRVFMAPhase());
+    }
+
+    if (TornadoOptions.MATH_OPTIMIZATIONS) {
+      appendPhase(new InverseSquareRootPhase());
+    }
+
+    // TODO Atomics Phase for SPIRV (this is the last thing to support)
+
+    appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS));
+
+    if (TornadoOptions.FEATURE_EXTRACTION) {
+      appendPhase(new TornadoFeatureExtraction(deviceContext));
+    }
+
+    if (TornadoOptions.DUMP_LOW_TIER_WITH_IGV) {
+      appendPhase(new DumpLowTierGraph());
+    }
+  }
+
+  private CanonicalizerPhase getCannonicalizer(OptionValues options) {
+    return CanonicalizerPhase.create();
+  }
 }

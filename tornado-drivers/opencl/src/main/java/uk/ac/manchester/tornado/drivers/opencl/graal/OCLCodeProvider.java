@@ -37,53 +37,53 @@ import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 public class OCLCodeProvider implements CodeCacheProvider {
 
-    private final TargetDescription target;
+  private final TargetDescription target;
 
-    public OCLCodeProvider(TargetDescription target) {
-        this.target = target;
-    }
+  public OCLCodeProvider(TargetDescription target) {
+    this.target = target;
+  }
 
-    @Override
-    public SpeculationLog createSpeculationLog() {
-        return null;
-    }
+  @Override
+  public SpeculationLog createSpeculationLog() {
+    return null;
+  }
 
-    @Override
-    public long getMaxCallTargetOffset(long l) {
-        unimplemented("Max call target offset not implemented yet.");
-        return -1;
-    }
+  @Override
+  public long getMaxCallTargetOffset(long l) {
+    unimplemented("Max call target offset not implemented yet.");
+    return -1;
+  }
 
-    @Override
-    public int getMinimumOutgoingSize() {
-        return 0;
-    }
+  @Override
+  public int getMinimumOutgoingSize() {
+    return 0;
+  }
 
-    @Override
-    public RegisterConfig getRegisterConfig() {
-        return new OCLRegisterConfig();
-    }
+  @Override
+  public RegisterConfig getRegisterConfig() {
+    return new OCLRegisterConfig();
+  }
 
-    @Override
-    public OCLTargetDescription getTarget() {
-        return (OCLTargetDescription) target;
-    }
+  @Override
+  public OCLTargetDescription getTarget() {
+    return (OCLTargetDescription) target;
+  }
 
-    @Override
-    public InstalledCode installCode(ResolvedJavaMethod rjm, CompiledCode cc, InstalledCode ic, SpeculationLog sl, boolean bln) {
-        unimplemented("waiting for CompiledCode to be implemented first");
-        return null;
-    }
+  @Override
+  public InstalledCode installCode(
+      ResolvedJavaMethod rjm, CompiledCode cc, InstalledCode ic, SpeculationLog sl, boolean bln) {
+    unimplemented("waiting for CompiledCode to be implemented first");
+    return null;
+  }
 
-    @Override
-    public void invalidateInstalledCode(InstalledCode ic) {
-        ic.invalidate();
-    }
+  @Override
+  public void invalidateInstalledCode(InstalledCode ic) {
+    ic.invalidate();
+  }
 
-    @Override
-    public boolean shouldDebugNonSafepoints() {
-        new TornadoLogger().warn("Debug non safe points not implemented yet.");
-        return false;
-    }
-
+  @Override
+  public boolean shouldDebugNonSafepoints() {
+    new TornadoLogger().warn("Debug non safe points not implemented yet.");
+    return false;
+  }
 }

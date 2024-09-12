@@ -18,16 +18,33 @@
 package uk.ac.manchester.tornado.api.types.vectors;
 
 import java.nio.Buffer;
-
 import uk.ac.manchester.tornado.api.types.common.PrimitiveStorage;
 
 public sealed interface TornadoVectorsInterface<T extends Buffer> //
-        extends PrimitiveStorage<T> //
-                permits Byte3, Byte4, //
-        Double2, Double3, Double4, Double8, Double16, //
-        Float2, Float3, Float4, Float8, Float16, //
-        Int2, Int3, Int4, Int8, Int16, //
-        Short2, Short3, Half2, Half3, Half4, Half8, Half16 {
-    long getNumBytes();
-
+    extends PrimitiveStorage<T> //
+    permits Byte3,
+        Byte4, //
+        Double2,
+        Double3,
+        Double4,
+        Double8,
+        Double16, //
+        Float2,
+        Float3,
+        Float4,
+        Float8,
+        Float16, //
+        Int2,
+        Int3,
+        Int4,
+        Int8,
+        Int16, //
+        Short2,
+        Short3,
+        Half2,
+        Half3,
+        Half4,
+        Half8,
+        Half16 {
+  long getNumBytes();
 }

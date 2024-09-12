@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.FrameState;
@@ -41,8 +41,6 @@ import org.graalvm.compiler.nodes.loop.InductionVariable;
 import org.graalvm.compiler.nodes.loop.LoopEx;
 import org.graalvm.compiler.nodes.loop.LoopsData;
 import org.graalvm.compiler.phases.BasePhase;
-
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.enums.TornadoDeviceType;
 import uk.ac.manchester.tornado.api.exceptions.TornadoBailoutRuntimeException;
@@ -58,129 +56,163 @@ import uk.ac.manchester.tornado.runtime.graal.phases.TornadoSketchTierContext;
 
 public class TornadoApiReplacement extends BasePhase<TornadoSketchTierContext> {
 
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
+
+  /*
+   * A singleton is used because we don't need to support all the logic of loading
+   * the desired class bytecode and instantiating the helper classes for the ASM
+   * library. Therefore, we use the singleton to call
+   * ASMClassVisitor::getParallelAnnotations which will handle everything in the
+   * right module. We can't have ASMClassVisitor::getParallelAnnotations be a
+   * static method because we dynamically load the class and the interface does
+   * not allow it.
+   */
+  private static ASMClassVisitorProvider asmClassVisitorProvider;
+
+  static {
+    try {
+      String tornadoAnnotationImplementation =
+          System.getProperty("tornado.load.annotation.implementation");
+      Class<?> klass = Class.forName(tornadoAnnotationImplementation);
+      Constructor<?> constructor = klass.getConstructor();
+      asmClassVisitorProvider = (ASMClassVisitorProvider) constructor.newInstance();
+    } catch (ClassNotFoundException
+        | InstantiationException
+        | IllegalAccessException
+        | NoSuchMethodException
+        | SecurityException
+        | IllegalArgumentException
+        | InvocationTargetException e) {
+      throw new RuntimeException("[ERROR] Tornado Annotation Implementation class not found", e);
     }
+  }
 
-    /*
-     * A singleton is used because we don't need to support all the logic of loading
-     * the desired class bytecode and instantiating the helper classes for the ASM
-     * library. Therefore, we use the singleton to call
-     * ASMClassVisitor::getParallelAnnotations which will handle everything in the
-     * right module. We can't have ASMClassVisitor::getParallelAnnotations be a
-     * static method because we dynamically load the class and the interface does
-     * not allow it.
-     */
-    private static ASMClassVisitorProvider asmClassVisitorProvider;
+  @Override
+  protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
+    replaceLocalAnnotations(graph, context);
+  }
 
-    static {
-        try {
-            String tornadoAnnotationImplementation = System.getProperty("tornado.load.annotation.implementation");
-            Class<?> klass = Class.forName(tornadoAnnotationImplementation);
-            Constructor<?> constructor = klass.getConstructor();
-            asmClassVisitorProvider = (ASMClassVisitorProvider) constructor.newInstance();
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
-            throw new RuntimeException("[ERROR] Tornado Annotation Implementation class not found", e);
-        }
+  private void replaceLocalAnnotations(StructuredGraph graph, TornadoSketchTierContext context)
+      throws TornadoCompilationException {
+    Map<Node, ParallelAnnotationProvider> parallelNodes = getAnnotatedNodes(graph, context);
+    addParallelProcessingNodes(graph, parallelNodes, context.getDevice());
+  }
+
+  private Map<Node, ParallelAnnotationProvider> getAnnotatedNodes(
+      StructuredGraph graph, TornadoSketchTierContext context) {
+    Map<ResolvedJavaMethod, ParallelAnnotationProvider[]> methodToAnnotations = new HashMap<>();
+
+    methodToAnnotations.put(
+        context.getMethod(), asmClassVisitorProvider.getParallelAnnotations(context.getMethod()));
+
+    for (ResolvedJavaMethod resolvedJavaMethod : graph.getMethods()) {
+      ParallelAnnotationProvider[] inlineParallelAnnotations =
+          asmClassVisitorProvider.getParallelAnnotations(resolvedJavaMethod);
+      if (inlineParallelAnnotations.length > 0) {
+        methodToAnnotations.put(resolvedJavaMethod, inlineParallelAnnotations);
+      }
     }
+    Map<Node, ParallelAnnotationProvider> parallelNodes = new HashMap<>();
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
-        replaceLocalAnnotations(graph, context);
-    }
-
-    private void replaceLocalAnnotations(StructuredGraph graph, TornadoSketchTierContext context) throws TornadoCompilationException {
-        Map<Node, ParallelAnnotationProvider> parallelNodes = getAnnotatedNodes(graph, context);
-        addParallelProcessingNodes(graph, parallelNodes, context.getDevice());
-    }
-
-    private Map<Node, ParallelAnnotationProvider> getAnnotatedNodes(StructuredGraph graph, TornadoSketchTierContext context) {
-        Map<ResolvedJavaMethod, ParallelAnnotationProvider[]> methodToAnnotations = new HashMap<>();
-
-        methodToAnnotations.put(context.getMethod(), asmClassVisitorProvider.getParallelAnnotations(context.getMethod()));
-
-        for (ResolvedJavaMethod resolvedJavaMethod : graph.getMethods()) {
-            ParallelAnnotationProvider[] inlineParallelAnnotations = asmClassVisitorProvider.getParallelAnnotations(resolvedJavaMethod);
-            if (inlineParallelAnnotations.length > 0) {
-                methodToAnnotations.put(resolvedJavaMethod, inlineParallelAnnotations);
-            }
-        }
-        Map<Node, ParallelAnnotationProvider> parallelNodes = new HashMap<>();
-
-        graph.getNodes().filter(FrameState.class).forEach(frameState -> {
-            if (methodToAnnotations.containsKey(frameState.getMethod())) {
-                for (ParallelAnnotationProvider annotation : methodToAnnotations.get(frameState.getMethod())) {
-                    if (frameState.bci >= annotation.getStart() && frameState.bci < annotation.getStart() + annotation.getLength()) {
-                        Node localNode = frameState.localAt(annotation.getIndex());
-                        if (!parallelNodes.containsKey(localNode)) {
-                            parallelNodes.put(localNode, annotation);
-                        }
+    graph
+        .getNodes()
+        .filter(FrameState.class)
+        .forEach(
+            frameState -> {
+              if (methodToAnnotations.containsKey(frameState.getMethod())) {
+                for (ParallelAnnotationProvider annotation :
+                    methodToAnnotations.get(frameState.getMethod())) {
+                  if (frameState.bci >= annotation.getStart()
+                      && frameState.bci < annotation.getStart() + annotation.getLength()) {
+                    Node localNode = frameState.localAt(annotation.getIndex());
+                    if (!parallelNodes.containsKey(localNode)) {
+                      parallelNodes.put(localNode, annotation);
                     }
+                  }
                 }
-            }
-        });
-        return parallelNodes;
-    }
+              }
+            });
+    return parallelNodes;
+  }
 
-    private void addParallelProcessingNodes(StructuredGraph graph, Map<Node, ParallelAnnotationProvider> parallelNodes, TornadoDevice device) {
-        if (graph.hasLoops()) {
-            final LoopsData data = new TornadoLoopsData(graph);
-            data.detectCountedLoops();
-            int loopIndex = 0;
-            final List<LoopEx> loops = data.outerFirst();
+  private void addParallelProcessingNodes(
+      StructuredGraph graph,
+      Map<Node, ParallelAnnotationProvider> parallelNodes,
+      TornadoDevice device) {
+    if (graph.hasLoops()) {
+      final LoopsData data = new TornadoLoopsData(graph);
+      data.detectCountedLoops();
+      int loopIndex = 0;
+      final List<LoopEx> loops = data.outerFirst();
 
-            // Enable loop interchange - Parallel Loops are processed in the IR reversed order
-            // to set the ranges and offset of the corresponding <thread-ids> for each dimension.
-            if (device.getDeviceType() != TornadoDeviceType.CPU && TornadoOptions.TORNADO_LOOP_INTERCHANGE) {
-                Collections.reverse(loops);
-            }
+      // Enable loop interchange - Parallel Loops are processed in the IR reversed order
+      // to set the ranges and offset of the corresponding <thread-ids> for each dimension.
+      if (device.getDeviceType() != TornadoDeviceType.CPU
+          && TornadoOptions.TORNADO_LOOP_INTERCHANGE) {
+        Collections.reverse(loops);
+      }
 
-            for (LoopEx loop : loops) {
-                for (InductionVariable iv : loop.getInductionVariables().getValues()) {
-                    if (!parallelNodes.containsKey(iv.valueNode())) {
-                        continue;
-                    }
-                    List<IntegerLessThanNode> conditions = iv.valueNode().usages().filter(IntegerLessThanNode.class).snapshot();
-                    final IntegerLessThanNode lessThan = conditions.getFirst();
-                    ValueNode maxIterations = lessThan.getY();
-                    parallelizationReplacement(graph, iv, loopIndex, maxIterations, conditions);
-                    loopIndex++;
-                }
-            }
+      for (LoopEx loop : loops) {
+        for (InductionVariable iv : loop.getInductionVariables().getValues()) {
+          if (!parallelNodes.containsKey(iv.valueNode())) {
+            continue;
+          }
+          List<IntegerLessThanNode> conditions =
+              iv.valueNode().usages().filter(IntegerLessThanNode.class).snapshot();
+          final IntegerLessThanNode lessThan = conditions.getFirst();
+          ValueNode maxIterations = lessThan.getY();
+          parallelizationReplacement(graph, iv, loopIndex, maxIterations, conditions);
+          loopIndex++;
         }
+      }
     }
+  }
 
-    private void parallelizationReplacement(StructuredGraph graph, InductionVariable inductionVar, int loopIndex, ValueNode maxIterations, List<IntegerLessThanNode> conditions)
-            throws TornadoCompilationException {
-        if (inductionVar.isConstantInit() && inductionVar.isConstantStride()) {
+  private void parallelizationReplacement(
+      StructuredGraph graph,
+      InductionVariable inductionVar,
+      int loopIndex,
+      ValueNode maxIterations,
+      List<IntegerLessThanNode> conditions)
+      throws TornadoCompilationException {
+    if (inductionVar.isConstantInit() && inductionVar.isConstantStride()) {
 
-            final ConstantNode newInit = graph.addWithoutUnique(ConstantNode.forInt((int) inductionVar.constantInit()));
+      final ConstantNode newInit =
+          graph.addWithoutUnique(ConstantNode.forInt((int) inductionVar.constantInit()));
 
-            final ConstantNode newStride = graph.addWithoutUnique(ConstantNode.forInt((int) inductionVar.constantStride()));
+      final ConstantNode newStride =
+          graph.addWithoutUnique(ConstantNode.forInt((int) inductionVar.constantStride()));
 
-            final ParallelOffsetNode offset = graph.addWithoutUnique(new ParallelOffsetNode(loopIndex, newInit));
+      final ParallelOffsetNode offset =
+          graph.addWithoutUnique(new ParallelOffsetNode(loopIndex, newInit));
 
-            final ParallelStrideNode stride = graph.addWithoutUnique(new ParallelStrideNode(loopIndex, newStride));
+      final ParallelStrideNode stride =
+          graph.addWithoutUnique(new ParallelStrideNode(loopIndex, newStride));
 
-            final ParallelRangeNode range = graph.addWithoutUnique(new ParallelRangeNode(loopIndex, maxIterations, offset, stride));
+      final ParallelRangeNode range =
+          graph.addWithoutUnique(new ParallelRangeNode(loopIndex, maxIterations, offset, stride));
 
-            final ValuePhiNode phi = (ValuePhiNode) inductionVar.valueNode();
+      final ValuePhiNode phi = (ValuePhiNode) inductionVar.valueNode();
 
-            final ValueNode oldStride = phi.singleBackValueOrThis();
+      final ValueNode oldStride = phi.singleBackValueOrThis();
 
-            if (oldStride.usages().count() > 1) {
-                final ValueNode duplicateStride = (ValueNode) oldStride.copyWithInputs(true);
-                oldStride.replaceAtMatchingUsages(duplicateStride, usage -> !usage.equals(phi));
-            }
+      if (oldStride.usages().count() > 1) {
+        final ValueNode duplicateStride = (ValueNode) oldStride.copyWithInputs(true);
+        oldStride.replaceAtMatchingUsages(duplicateStride, usage -> !usage.equals(phi));
+      }
 
-            inductionVar.initNode().replaceAtMatchingUsages(offset, node -> node.equals(phi));
-            inductionVar.strideNode().replaceAtMatchingUsages(stride, node -> node.equals(oldStride));
-            // only replace this node in the loop condition
-            maxIterations.replaceAtMatchingUsages(range, node -> node.equals(conditions.getFirst()));
+      inductionVar.initNode().replaceAtMatchingUsages(offset, node -> node.equals(phi));
+      inductionVar.strideNode().replaceAtMatchingUsages(stride, node -> node.equals(oldStride));
+      // only replace this node in the loop condition
+      maxIterations.replaceAtMatchingUsages(range, node -> node.equals(conditions.getFirst()));
 
-        } else {
-            throw new TornadoBailoutRuntimeException("Failed to parallelize because of non-constant loop strides. \nSequential code will run on the device!");
-        }
+    } else {
+      throw new TornadoBailoutRuntimeException(
+          "Failed to parallelize because of non-constant loop strides. \n"
+              + "Sequential code will run on the device!");
     }
+  }
 }

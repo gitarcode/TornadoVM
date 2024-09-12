@@ -21,32 +21,30 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
-import org.graalvm.compiler.core.common.LIRKind;
-
 import jdk.vm.ci.meta.PlatformKind;
 import jdk.vm.ci.meta.Value;
+import org.graalvm.compiler.core.common.LIRKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 
 public abstract class OCLLIROp extends Value {
 
-    public OCLLIROp(LIRKind lirKind) {
-        super(lirKind);
-    }
+  public OCLLIROp(LIRKind lirKind) {
+    super(lirKind);
+  }
 
-    public final void emit(OCLCompilationResultBuilder crb) {
-        emit(crb, crb.getAssembler());
-    }
+  public final void emit(OCLCompilationResultBuilder crb) {
+    emit(crb, crb.getAssembler());
+  }
 
-    public abstract void emit(OCLCompilationResultBuilder crb, OCLAssembler asm);
+  public abstract void emit(OCLCompilationResultBuilder crb, OCLAssembler asm);
 
-    public LIRKind getLIRKind() {
-        return (LIRKind) this.getValueKind();
-    }
+  public LIRKind getLIRKind() {
+    return (LIRKind) this.getValueKind();
+  }
 
-    public OCLKind getOCLPlatformKind() {
-        PlatformKind platformKind = getPlatformKind();
-        return (platformKind instanceof OCLKind) ? (OCLKind) platformKind : OCLKind.ILLEGAL;
-    }
-
+  public OCLKind getOCLPlatformKind() {
+    PlatformKind platformKind = getPlatformKind();
+    return (platformKind instanceof OCLKind) ? (OCLKind) platformKind : OCLKind.ILLEGAL;
+  }
 }

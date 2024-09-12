@@ -27,49 +27,75 @@ import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.ptx.PTXDeviceContext;
 
 public class PTXLongArrayWrapper extends PTXArrayWrapper<long[]> {
-    private long setSubRegionSize;
+  private long setSubRegionSize;
 
-    public PTXLongArrayWrapper(PTXDeviceContext deviceContext) {
-        super(deviceContext, JavaKind.Long);
-    }
+  public PTXLongArrayWrapper(PTXDeviceContext deviceContext) {
+    super(deviceContext, JavaKind.Long);
+  }
 
-    @Override
-    protected int readArrayData(long executionPlanId, long address, long bytes, long[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.readBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected int readArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      long[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.readBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected void writeArrayData(long executionPlanId, long address, long bytes, long[] value, int hostOffset, int[] waitEvents) {
-        deviceContext.writeBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected void writeArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      long[] value,
+      int hostOffset,
+      int[] waitEvents) {
+    deviceContext.writeBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected int enqueueReadArrayData(long executionPlanId, long address, long bytes, long[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.enqueueReadBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected int enqueueReadArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      long[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.enqueueReadBuffer(
+        executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected int enqueueWriteArrayData(long executionPlanId, long address, long bytes, long[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.enqueueWriteBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected int enqueueWriteArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      long[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.enqueueWriteBuffer(
+        executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    public long getSizeSubRegionSize() {
-        return setSubRegionSize;
-    }
+  @Override
+  public long getSizeSubRegionSize() {
+    return setSubRegionSize;
+  }
 
-    @Override
-    public void setSizeSubRegion(long batchSize) {
-        this.setSubRegionSize = batchSize;
-    }
+  @Override
+  public void setSizeSubRegion(long batchSize) {
+    this.setSubRegionSize = batchSize;
+  }
 
-    @Override
-    public int[] getIntBuffer() {
-        return super.getIntBuffer();
-    }
+  @Override
+  public int[] getIntBuffer() {
+    return super.getIntBuffer();
+  }
 
-    @Override
-    public void setIntBuffer(int[] arr) {
-        super.setIntBuffer(arr);
-    }
+  @Override
+  public void setIntBuffer(int[] arr) {
+    super.setIntBuffer(arr);
+  }
 }

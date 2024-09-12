@@ -25,9 +25,9 @@ package uk.ac.manchester.tornado.runtime.common;
 
 public interface ParallelAnnotationProvider {
 
-    int getStart();
+  int getStart();
 
-    int getLength();
+  int getLength();
 
-    int getIndex();
+  int getIndex();
 }

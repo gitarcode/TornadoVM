@@ -23,22 +23,21 @@
 package uk.ac.manchester.tornado.drivers.ptx;
 
 import java.util.Arrays;
-
 import uk.ac.manchester.tornado.drivers.common.GridInfo;
 
 public class PTXGridInfo implements GridInfo {
-    public final PTXModule ptxModule;
-    public final long[] localWork;
+  public final PTXModule ptxModule;
+  public final long[] localWork;
 
-    public PTXGridInfo(PTXModule ptxModule, long[] localWork) {
-        this.ptxModule = ptxModule;
-        this.localWork = localWork;
-    }
+  public PTXGridInfo(PTXModule ptxModule, long[] localWork) {
+    this.ptxModule = ptxModule;
+    this.localWork = localWork;
+  }
 
-    @Override
-    public final boolean checkGridDimensions() {
-        long maxWorkGroupSize = ptxModule.getPotentialBlockSizeMaxOccupancy();
-        long totalThreads = Arrays.stream(localWork).reduce(1, (a, b) -> a * b);
-        return totalThreads <= maxWorkGroupSize;
-    }
+  @Override
+  public final boolean checkGridDimensions() {
+    long maxWorkGroupSize = ptxModule.getPotentialBlockSizeMaxOccupancy();
+    long totalThreads = Arrays.stream(localWork).reduce(1, (a, b) -> a * b);
+    return totalThreads <= maxWorkGroupSize;
+  }
 }

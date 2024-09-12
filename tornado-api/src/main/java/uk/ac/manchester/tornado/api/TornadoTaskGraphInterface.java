@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.api;
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Consumer;
-
 import uk.ac.manchester.tornado.api.common.SchedulableTask;
 import uk.ac.manchester.tornado.api.common.TaskPackage;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
@@ -32,97 +31,97 @@ import uk.ac.manchester.tornado.api.runtime.TaskContextInterface;
 
 public interface TornadoTaskGraphInterface extends ProfilerInterface {
 
-    SchedulableTask getTask(String taskNameID);
+  SchedulableTask getTask(String taskNameID);
 
-    TornadoDevice getDevice();
+  TornadoDevice getDevice();
 
-    void setDevice(TornadoDevice device);
+  void setDevice(TornadoDevice device);
 
-    void setDevice(String taskName, TornadoDevice device);
+  void setDevice(String taskName, TornadoDevice device);
 
-    TornadoDevice getDeviceForTask(String id);
+  TornadoDevice getDeviceForTask(String id);
 
-    void addInner(SchedulableTask task);
+  void addInner(SchedulableTask task);
 
-    boolean isLastDeviceListEmpty();
+  boolean isLastDeviceListEmpty();
 
-    void scheduleInner();
+  void scheduleInner();
 
-    void withBatch(String batchSize);
+  void withBatch(String batchSize);
 
-    void withMemoryLimit(String memoryLimit);
+  void withMemoryLimit(String memoryLimit);
 
-    void withoutMemoryLimit();
+  void withoutMemoryLimit();
 
-    void apply(Consumer<SchedulableTask> consumer);
+  void apply(Consumer<SchedulableTask> consumer);
 
-    void mapAllToInner(TornadoDevice device);
+  void mapAllToInner(TornadoDevice device);
 
-    void dumpTimes();
+  void dumpTimes();
 
-    void dumpProfiles();
+  void dumpProfiles();
 
-    void dumpEvents();
+  void dumpEvents();
 
-    void clearProfiles();
+  void clearProfiles();
 
-    void waitOn();
+  void waitOn();
 
-    void transferToDevice(int mode, Object... objects);
+  void transferToDevice(int mode, Object... objects);
 
-    void transferToHost(int mode, Object... objects);
+  void transferToHost(int mode, Object... objects);
 
-    void dump();
+  void dump();
 
-    void warmup();
+  void warmup();
 
-    void freeDeviceMemory();
+  void freeDeviceMemory();
 
-    void syncRuntimeTransferToHost(Object... objects);
+  void syncRuntimeTransferToHost(Object... objects);
 
-    void syncRuntimeTransferToHost(Object objects, long offset, long partialCopySize);
+  void syncRuntimeTransferToHost(Object objects, long offset, long partialCopySize);
 
-    String getId();
+  String getId();
 
-    TaskContextInterface meta();
+  TaskContextInterface meta();
 
-    TornadoTaskGraphInterface execute(ExecutorFrame executionPackage);
+  TornadoTaskGraphInterface execute(ExecutorFrame executionPackage);
 
-    void addTask(TaskPackage taskPackage);
+  void addTask(TaskPackage taskPackage);
 
-    void addPrebuiltTask(TaskPackage taskPackage);
+  void addPrebuiltTask(TaskPackage taskPackage);
 
-    String getTaskGraphName();
+  String getTaskGraphName();
 
-    void useDefaultThreadScheduler(boolean use);
+  void useDefaultThreadScheduler(boolean use);
 
-    boolean isFinished();
+  boolean isFinished();
 
-    Set<Object> getArgumentsLookup();
+  Set<Object> getArgumentsLookup();
 
-    TornadoTaskGraphInterface createImmutableTaskGraph();
+  TornadoTaskGraphInterface createImmutableTaskGraph();
 
-    Collection<?> getOutputs();
+  Collection<?> getOutputs();
 
-    void enableProfiler(ProfilerMode profilerMode);
+  void enableProfiler(ProfilerMode profilerMode);
 
-    void disableProfiler(ProfilerMode profilerMode);
+  void disableProfiler(ProfilerMode profilerMode);
 
-    void withConcurrentDevices();
+  void withConcurrentDevices();
 
-    void withoutConcurrentDevices();
+  void withoutConcurrentDevices();
 
-    void withThreadInfo();
+  void withThreadInfo();
 
-    void withoutThreadInfo();
+  void withoutThreadInfo();
 
-    void withPrintKernel();
+  void withPrintKernel();
 
-    void withoutPrintKernel();
+  void withoutPrintKernel();
 
-    void withGridScheduler(GridScheduler gridScheduler);
+  void withGridScheduler(GridScheduler gridScheduler);
 
-    long getCurrentDeviceMemoryUsage();
+  long getCurrentDeviceMemoryUsage();
 
-    void withCompilerFlags(TornadoVMBackendType backendType, String compilerFlags);
+  void withCompilerFlags(TornadoVMBackendType backendType, String compilerFlags);
 }

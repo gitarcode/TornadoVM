@@ -33,9 +33,16 @@ import org.graalvm.compiler.nodes.ValueNode;
 @NodeInfo
 public class TornadoDirectCallTargetNode extends DirectCallTargetNode {
 
-    public static final NodeClass<TornadoDirectCallTargetNode> TYPE = NodeClass.create(TornadoDirectCallTargetNode.class);
+  public static final NodeClass<TornadoDirectCallTargetNode> TYPE =
+      NodeClass.create(TornadoDirectCallTargetNode.class);
 
-    public TornadoDirectCallTargetNode(ValueNode[] arguments, StampPair returnStamp, JavaType[] signature, ResolvedJavaMethod target, Type callType, InvokeKind invokeKind) {
-        super(TYPE, arguments, returnStamp, signature, target, callType, invokeKind);
-    }
+  public TornadoDirectCallTargetNode(
+      ValueNode[] arguments,
+      StampPair returnStamp,
+      JavaType[] signature,
+      ResolvedJavaMethod target,
+      Type callType,
+      InvokeKind invokeKind) {
+    super(TYPE, arguments, returnStamp, signature, target, callType, invokeKind);
+  }
 }

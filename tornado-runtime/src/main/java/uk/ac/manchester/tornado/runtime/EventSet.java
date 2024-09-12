@@ -26,54 +26,53 @@
 package uk.ac.manchester.tornado.runtime;
 
 import java.util.BitSet;
-
 import uk.ac.manchester.tornado.api.common.Event;
 import uk.ac.manchester.tornado.api.common.TornadoEvents;
 import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
 
 public class EventSet implements TornadoEvents {
 
-    private final TornadoXPUDevice device;
-    private final BitSet profiles;
-    private int index;
-    private Event event;
+  private final TornadoXPUDevice device;
+  private final BitSet profiles;
+  private int index;
+  private Event event;
 
-    private long executionPlanId;
+  private long executionPlanId;
 
-    public EventSet(TornadoXPUDevice device, BitSet profiles, long executionPlanId) {
-        this.device = device;
-        this.profiles = profiles;
-        this.executionPlanId = executionPlanId;
-        index = profiles.nextSetBit(0);
-        event = device.resolveEvent(executionPlanId, index);
+  public EventSet(TornadoXPUDevice device, BitSet profiles, long executionPlanId) {
+    this.device = device;
+    this.profiles = profiles;
+    this.executionPlanId = executionPlanId;
+    index = profiles.nextSetBit(0);
+    event = device.resolveEvent(executionPlanId, index);
+  }
+
+  public int cardinality() {
+    return profiles.cardinality();
+  }
+
+  public void reset() {
+    index = profiles.nextSetBit(0);
+  }
+
+  public boolean hasNext() {
+    return index != -1;
+  }
+
+  public Event next() {
+    if (index == -1) {
+      return null;
     }
+    event = device.resolveEvent(executionPlanId, index);
+    index = profiles.nextSetBit(index);
+    return event;
+  }
 
-    public int cardinality() {
-        return profiles.cardinality();
-    }
+  public TornadoXPUDevice getDevice() {
+    return device;
+  }
 
-    public void reset() {
-        index = profiles.nextSetBit(0);
-    }
-
-    public boolean hasNext() {
-        return index != -1;
-    }
-
-    public Event next() {
-        if (index == -1) {
-            return null;
-        }
-        event = device.resolveEvent(executionPlanId, index);
-        index = profiles.nextSetBit(index);
-        return event;
-    }
-
-    public TornadoXPUDevice getDevice() {
-        return device;
-    }
-
-    public BitSet getProfiles() {
-        return profiles;
-    }
+  public BitSet getProfiles() {
+    return profiles;
+  }
 }

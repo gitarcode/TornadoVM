@@ -30,92 +30,95 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoBailoutRuntimeException;
 import uk.ac.manchester.tornado.drivers.common.utils.EventDescriptor;
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 public class PTXEventPool {
 
-    private final PTXEvent[] events;
-    private final BitSet retain;
-    private int eventIndex;
-    private int eventPoolSize;
+  private final PTXEvent[] events;
+  private final BitSet retain;
+  private int eventIndex;
+  private int eventPoolSize;
 
-    protected PTXEventPool(int poolSize) {
-        this.eventPoolSize = poolSize;
-        this.retain = new BitSet(poolSize);
-        this.retain.clear();
-        this.events = new PTXEvent[poolSize];
-        this.eventIndex = 0;
+  protected PTXEventPool(int poolSize) {
+    this.eventPoolSize = poolSize;
+    this.retain = new BitSet(poolSize);
+    this.retain.clear();
+    this.events = new PTXEvent[poolSize];
+    this.eventIndex = 0;
+  }
+
+  protected int registerEvent(byte[][] eventWrapper, EventDescriptor descriptorId) {
+    if (retain.get(eventIndex)) {
+      findNextEventSlot();
+    }
+    final int currentEvent = eventIndex;
+    guarantee(!retain.get(currentEvent), "overwriting retained event");
+
+    if (eventWrapper == null) {
+      TornadoLogger logger = new TornadoLogger();
+      logger.fatal("invalid event: description=%s\n", descriptorId.getNameDescription());
+      logger.fatal("terminating application as system integrity has been compromised.");
+      throw new TornadoBailoutRuntimeException(
+          "[ERROR] NULL event received from the CUDA driver !");
     }
 
-    protected int registerEvent(byte[][] eventWrapper, EventDescriptor descriptorId) {
-        if (retain.get(eventIndex)) {
-            findNextEventSlot();
-        }
-        final int currentEvent = eventIndex;
-        guarantee(!retain.get(currentEvent), "overwriting retained event");
+    if (events[currentEvent] != null && !retain.get(currentEvent)) {
+      events[currentEvent].waitForEvents(0);
+      events[currentEvent].destroy();
+      events[currentEvent] = null;
+    }
+    events[currentEvent] = new PTXEvent(eventWrapper, descriptorId);
 
-        if (eventWrapper == null) {
-            TornadoLogger logger = new TornadoLogger();
-            logger.fatal("invalid event: description=%s\n", descriptorId.getNameDescription());
-            logger.fatal("terminating application as system integrity has been compromised.");
-            throw new TornadoBailoutRuntimeException("[ERROR] NULL event received from the CUDA driver !");
-        }
+    findNextEventSlot();
+    return currentEvent;
+  }
 
-        if (events[currentEvent] != null && !retain.get(currentEvent)) {
-            events[currentEvent].waitForEvents(0);
-            events[currentEvent].destroy();
-            events[currentEvent] = null;
-        }
-        events[currentEvent] = new PTXEvent(eventWrapper, descriptorId);
+  private void findNextEventSlot() {
+    eventIndex = retain.nextClearBit(eventIndex + 1);
 
-        findNextEventSlot();
-        return currentEvent;
+    if (CIRCULAR_EVENTS && (eventIndex >= events.length)) {
+      eventIndex = 0;
     }
 
-    private void findNextEventSlot() {
-        eventIndex = retain.nextClearBit(eventIndex + 1);
+    guarantee(
+        eventIndex != -1,
+        "event window is full (retained=%d, capacity=%d)",
+        retain.cardinality(),
+        eventPoolSize);
+  }
 
-        if (CIRCULAR_EVENTS && (eventIndex >= events.length)) {
-            eventIndex = 0;
-        }
-
-        guarantee(eventIndex != -1, "event window is full (retained=%d, capacity=%d)", retain.cardinality(), eventPoolSize);
+  protected void reset() {
+    for (PTXEvent event : events) {
+      if (event != null) {
+        event.destroy();
+      }
     }
+    Arrays.fill(events, null);
+    eventIndex = 0;
+  }
 
-    protected void reset() {
-        for (PTXEvent event : events) {
-            if (event != null) {
-                event.destroy();
-            }
-        }
-        Arrays.fill(events, null);
-        eventIndex = 0;
+  private void releaseEvent(int localEventID) {
+    retain.clear(localEventID);
+  }
+
+  private void retainEvent(int localEventID) {
+    retain.set(localEventID);
+  }
+
+  protected PTXEvent getEvent(int localEventID) {
+    return events[localEventID];
+  }
+
+  public List<PTXEvent> getEvents() {
+    List<PTXEvent> result = new ArrayList<>();
+    for (int i = 0; i < eventIndex; i++) {
+      if (events[i] == null) {
+        continue;
+      }
+      result.add(events[i]);
     }
-
-    private void releaseEvent(int localEventID) {
-        retain.clear(localEventID);
-    }
-
-    private void retainEvent(int localEventID) {
-        retain.set(localEventID);
-    }
-
-    protected PTXEvent getEvent(int localEventID) {
-        return events[localEventID];
-    }
-
-    public List<PTXEvent> getEvents() {
-        List<PTXEvent> result = new ArrayList<>();
-        for (int i = 0; i < eventIndex; i++) {
-            if (events[i] == null) {
-                continue;
-            }
-            result.add(events[i]);
-        }
-        return result;
-    }
-
+    return result;
+  }
 }

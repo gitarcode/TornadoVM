@@ -25,36 +25,35 @@ package uk.ac.manchester.tornado.drivers.opencl;
 import static uk.ac.manchester.tornado.drivers.opencl.scheduler.OCLFPGAScheduler.DEFAULT_LOCAL_WORK_SIZE;
 
 import java.util.Arrays;
-
 import uk.ac.manchester.tornado.drivers.common.GridInfo;
 
 public class OCLGridInfo implements GridInfo {
-    OCLDeviceContext deviceContext;
-    public final long[] localWork;
+  OCLDeviceContext deviceContext;
+  public final long[] localWork;
 
-    public OCLGridInfo(OCLDeviceContext deviceContext, long[] localWork) {
-        this.deviceContext = deviceContext;
-        this.localWork = localWork;
+  public OCLGridInfo(OCLDeviceContext deviceContext, long[] localWork) {
+    this.deviceContext = deviceContext;
+    this.localWork = localWork;
+  }
+
+  private boolean checkFPGADefaultLocalWorkGroup() {
+    if (Arrays.equals(localWork, DEFAULT_LOCAL_WORK_SIZE)) {
+      return true;
+    } else {
+      return false;
     }
+  }
 
-    private boolean checkFPGADefaultLocalWorkGroup() {
-        if (Arrays.equals(localWork, DEFAULT_LOCAL_WORK_SIZE)) {
-            return true;
-        } else {
-            return false;
-        }
+  @Override
+  public boolean checkGridDimensions() {
+    if (deviceContext.isPlatformFPGA()) {
+      return checkFPGADefaultLocalWorkGroup();
+    } else {
+      long[] blockMaxWorkGroupSize = deviceContext.getDevice().getDeviceMaxWorkGroupSize();
+      long maxWorkGroupSize = Arrays.stream(blockMaxWorkGroupSize).sum();
+      long totalThreads = Arrays.stream(localWork).reduce(1, (a, b) -> a * b);
+
+      return totalThreads <= maxWorkGroupSize;
     }
-
-    @Override
-    public boolean checkGridDimensions() {
-        if (deviceContext.isPlatformFPGA()) {
-            return checkFPGADefaultLocalWorkGroup();
-        } else {
-            long[] blockMaxWorkGroupSize = deviceContext.getDevice().getDeviceMaxWorkGroupSize();
-            long maxWorkGroupSize = Arrays.stream(blockMaxWorkGroupSize).sum();
-            long totalThreads = Arrays.stream(localWork).reduce(1, (a, b) -> a * b);
-
-            return totalThreads <= maxWorkGroupSize;
-        }
-    }
+  }
 }

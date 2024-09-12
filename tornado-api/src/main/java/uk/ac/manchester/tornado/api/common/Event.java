@@ -19,13 +19,9 @@ package uk.ac.manchester.tornado.api.common;
 
 public interface Event extends ProfiledAction {
 
-    /**
-     * Wait for the instanced event to be resolved.
-     */
-    void waitForEvents(long executionPlanId);
+  /** Wait for the instanced event to be resolved. */
+  void waitForEvents(long executionPlanId);
 
-    /**
-     * Call to native wait depending on internal state.
-     */
-    void waitOn();
+  /** Call to native wait depending on internal state. */
+  void waitOn();
 }

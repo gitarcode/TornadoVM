@@ -21,219 +21,212 @@ import static uk.ac.manchester.tornado.api.types.vectors.Float8.add;
 
 import java.lang.foreign.MemorySegment;
 import java.nio.FloatBuffer;
-
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.types.vectors.Float8;
 
 public final class VectorFloat8 implements TornadoCollectionInterface<FloatBuffer> {
 
-    public static final Class<VectorFloat8> TYPE = VectorFloat8.class;
+  public static final Class<VectorFloat8> TYPE = VectorFloat8.class;
 
-    private static final int ELEMENT_SIZE = 8;
-    /**
-     * backing array.
-     */
-    private final FloatArray storage;
-    /**
-     * number of elements in the storage.
-     */
-    private final int numElements;
+  private static final int ELEMENT_SIZE = 8;
 
-    /**
-     * Creates a vector using the provided backing array.
-     *
-     * @param numElements
-     * @param array
-     */
-    VectorFloat8(int numElements, FloatArray array) {
-        this.numElements = numElements;
-        this.storage = array;
+  /** backing array. */
+  private final FloatArray storage;
+
+  /** number of elements in the storage. */
+  private final int numElements;
+
+  /**
+   * Creates a vector using the provided backing array.
+   *
+   * @param numElements
+   * @param array
+   */
+  VectorFloat8(int numElements, FloatArray array) {
+    this.numElements = numElements;
+    this.storage = array;
+  }
+
+  /** Creates a vector using the provided backing array. */
+  public VectorFloat8(FloatArray array) {
+    this((array.getSize() / ELEMENT_SIZE), array);
+  }
+
+  /**
+   * Creates an empty vector with.
+   *
+   * @param numElements
+   */
+  public VectorFloat8(int numElements) {
+    this(numElements, new FloatArray(numElements * ELEMENT_SIZE));
+  }
+
+  public int vectorWidth() {
+    return ELEMENT_SIZE;
+  }
+
+  private int toIndex(int index) {
+    return (index * ELEMENT_SIZE);
+  }
+
+  /**
+   * Returns the float at the given index of this vector.
+   *
+   * @param index int
+   * @return value
+   */
+  public Float8 get(int index) {
+    return loadFromArray(storage, toIndex(index));
+  }
+
+  private Float8 loadFromArray(final FloatArray array, int index) {
+    final Float8 result = new Float8();
+    result.setS0(array.get(index));
+    result.setS1(array.get(index + 1));
+    result.setS2(array.get(index + 2));
+    result.setS3(array.get(index + 3));
+    result.setS4(array.get(index + 4));
+    result.setS5(array.get(index + 5));
+    result.setS6(array.get(index + 6));
+    result.setS7(array.get(index + 7));
+    return result;
+  }
+
+  /**
+   * Sets the float at the given index of this vector.
+   *
+   * @param index
+   * @param value
+   */
+  public void set(int index, Float8 value) {
+    storeToArray(value, storage, toIndex(index));
+  }
+
+  private void storeToArray(Float8 value, FloatArray array, int index) {
+    for (int i = 0; i < ELEMENT_SIZE; i++) {
+      array.set(index + i, value.get(i));
     }
+  }
 
-    /**
-     * Creates a vector using the provided backing array.
-     */
-    public VectorFloat8(FloatArray array) {
-        this((array.getSize() / ELEMENT_SIZE), array);
+  /**
+   * Sets the elements of this vector to that of the provided vector.
+   *
+   * @param values
+   */
+  public void set(VectorFloat8 values) {
+    for (int i = 0; i < numElements; i++) {
+      set(i, values.get(i));
     }
+  }
 
-    /**
-     * Creates an empty vector with.
-     *
-     * @param numElements
-     */
-    public VectorFloat8(int numElements) {
-        this(numElements, new FloatArray(numElements * ELEMENT_SIZE));
+  /**
+   * Sets the elements of this vector to that of the provided array.
+   *
+   * @param values
+   */
+  public void set(FloatArray values) {
+    VectorFloat8 vector = new VectorFloat8(values);
+    for (int i = 0; i < numElements; i++) {
+      set(i, vector.get(i));
     }
+  }
 
-    public int vectorWidth() {
-        return ELEMENT_SIZE;
+  public void fill(float value) {
+    for (int i = 0; i < storage.getSize(); i++) {
+      storage.set(i, value);
     }
+  }
 
-    private int toIndex(int index) {
-        return (index * ELEMENT_SIZE);
-    }
+  /**
+   * Duplicates this vector.
+   *
+   * @return
+   */
+  public VectorFloat8 duplicate() {
+    VectorFloat8 vector = new VectorFloat8(numElements);
+    vector.set(this);
+    return vector;
+  }
 
-    /**
-     * Returns the float at the given index of this vector.
-     *
-     * @param index
-     *     int
-     *
-     * @return value
-     */
-    public Float8 get(int index) {
-        return loadFromArray(storage, toIndex(index));
+  public String toString() {
+    if (this.numElements > ELEMENT_SIZE) {
+      return String.format("VectorFloat8 <%d>", this.numElements);
     }
+    StringBuilder tempString = new StringBuilder();
+    for (int i = 0; i < numElements; i++) {
+      tempString.append(" ").append(this.get(i).toString());
+    }
+    return tempString.toString();
+  }
 
-    private Float8 loadFromArray(final FloatArray array, int index) {
-        final Float8 result = new Float8();
-        result.setS0(array.get(index));
-        result.setS1(array.get(index + 1));
-        result.setS2(array.get(index + 2));
-        result.setS3(array.get(index + 3));
-        result.setS4(array.get(index + 4));
-        result.setS5(array.get(index + 5));
-        result.setS6(array.get(index + 6));
-        result.setS7(array.get(index + 7));
-        return result;
+  public Float8 sum() {
+    Float8 result = new Float8();
+    for (int i = 0; i < numElements; i++) {
+      result = add(result, get(i));
     }
+    return result;
+  }
 
-    /**
-     * Sets the float at the given index of this vector.
-     *
-     * @param index
-     * @param value
-     */
-    public void set(int index, Float8 value) {
-        storeToArray(value, storage, toIndex(index));
+  public Float8 min() {
+    Float8 result = new Float8();
+    for (int i = 0; i < numElements; i++) {
+      result = Float8.min(result, get(i));
     }
+    return result;
+  }
 
-    private void storeToArray(Float8 value, FloatArray array, int index) {
-        for (int i = 0; i < ELEMENT_SIZE; i++) {
-            array.set(index + i, value.get(i));
-        }
+  public Float8 max() {
+    Float8 result = new Float8();
+    for (int i = 0; i < numElements; i++) {
+      result = Float8.max(result, get(i));
     }
+    return result;
+  }
 
-    /**
-     * Sets the elements of this vector to that of the provided vector.
-     *
-     * @param values
-     */
-    public void set(VectorFloat8 values) {
-        for (int i = 0; i < numElements; i++) {
-            set(i, values.get(i));
-        }
-    }
+  @Override
+  public void loadFromBuffer(FloatBuffer buffer) {
+    asBuffer().put(buffer);
+  }
 
-    /**
-     * Sets the elements of this vector to that of the provided array.
-     *
-     * @param values
-     */
-    public void set(FloatArray values) {
-        VectorFloat8 vector = new VectorFloat8(values);
-        for (int i = 0; i < numElements; i++) {
-            set(i, vector.get(i));
-        }
-    }
+  @Override
+  public FloatBuffer asBuffer() {
+    return FloatBuffer.wrap(storage.toHeapArray());
+  }
 
-    public void fill(float value) {
-        for (int i = 0; i < storage.getSize(); i++) {
-            storage.set(i, value);
-        }
-    }
+  @Override
+  public int size() {
+    return storage.getSize();
+  }
 
-    /**
-     * Duplicates this vector.
-     *
-     * @return
-     */
-    public VectorFloat8 duplicate() {
-        VectorFloat8 vector = new VectorFloat8(numElements);
-        vector.set(this);
-        return vector;
-    }
+  public int getLength() {
+    return numElements;
+  }
 
-    public String toString() {
-        if (this.numElements > ELEMENT_SIZE) {
-            return String.format("VectorFloat8 <%d>", this.numElements);
-        }
-        StringBuilder tempString = new StringBuilder();
-        for (int i = 0; i < numElements; i++) {
-            tempString.append(" ").append(this.get(i).toString());
-        }
-        return tempString.toString();
-    }
+  public FloatArray getArray() {
+    return storage;
+  }
 
-    public Float8 sum() {
-        Float8 result = new Float8();
-        for (int i = 0; i < numElements; i++) {
-            result = add(result, get(i));
-        }
-        return result;
-    }
+  public void clear() {
+    storage.clear();
+  }
 
-    public Float8 min() {
-        Float8 result = new Float8();
-        for (int i = 0; i < numElements; i++) {
-            result = Float8.min(result, get(i));
-        }
-        return result;
-    }
+  @Override
+  public long getNumBytes() {
+    return storage.getNumBytesOfSegment();
+  }
 
-    public Float8 max() {
-        Float8 result = new Float8();
-        for (int i = 0; i < numElements; i++) {
-            result = Float8.max(result, get(i));
-        }
-        return result;
-    }
+  @Override
+  public long getNumBytesWithHeader() {
+    return storage.getNumBytesOfSegmentWithHeader();
+  }
 
-    @Override
-    public void loadFromBuffer(FloatBuffer buffer) {
-        asBuffer().put(buffer);
-    }
+  @Override
+  public MemorySegment getSegment() {
+    return getArray().getSegment();
+  }
 
-    @Override
-    public FloatBuffer asBuffer() {
-        return FloatBuffer.wrap(storage.toHeapArray());
-    }
-
-    @Override
-    public int size() {
-        return storage.getSize();
-    }
-
-    public int getLength() {
-        return numElements;
-    }
-
-    public FloatArray getArray() {
-        return storage;
-    }
-
-    public void clear() {
-        storage.clear();
-    }
-
-    @Override
-    public long getNumBytes() {
-        return storage.getNumBytesOfSegment();
-    }
-
-    @Override
-    public long getNumBytesWithHeader() {
-        return storage.getNumBytesOfSegmentWithHeader();
-    }
-
-    @Override
-    public MemorySegment getSegment() {
-        return getArray().getSegment();
-    }
-
-    @Override
-    public MemorySegment getSegmentWithHeader() {
-        return getArray().getSegmentWithHeader();
-    }
+  @Override
+  public MemorySegment getSegmentWithHeader() {
+    return getArray().getSegmentWithHeader();
+  }
 }

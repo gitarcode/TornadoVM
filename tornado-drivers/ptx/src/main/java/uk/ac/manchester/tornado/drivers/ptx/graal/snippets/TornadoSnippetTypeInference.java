@@ -29,14 +29,13 @@ import org.graalvm.compiler.replacements.SnippetTemplate.SnippetInfo;
 
 public interface TornadoSnippetTypeInference {
 
-    SnippetInfo inferIntSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferIntSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo inferLongSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferLongSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo inferFloatSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferFloatSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo inferDoubleSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferDoubleSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo getSnippetInstance(JavaKind elementKind, ValueNode value, ValueNode extra);
-
+  SnippetInfo getSnippetInstance(JavaKind elementKind, ValueNode value, ValueNode extra);
 }

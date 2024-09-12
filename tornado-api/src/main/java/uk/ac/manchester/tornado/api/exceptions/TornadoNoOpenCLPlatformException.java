@@ -19,14 +19,14 @@ package uk.ac.manchester.tornado.api.exceptions;
 
 public class TornadoNoOpenCLPlatformException extends RuntimeException {
 
-    private final String message;
+  private final String message;
 
-    public TornadoNoOpenCLPlatformException(final String msg) {
-        message = msg;
-    }
+  public TornadoNoOpenCLPlatformException(final String msg) {
+    message = msg;
+  }
 
-    @Override
-    public String getMessage() {
-        return message;
-    }
+  @Override
+  public String getMessage() {
+    return message;
+  }
 }

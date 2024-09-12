@@ -26,65 +26,63 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner mandelbrot
  * </code>
  */
 public class MandelbrotTornado extends BenchmarkDriver {
-    int size;
-    ShortArray output;
+  int size;
+  ShortArray output;
 
-    public MandelbrotTornado(int iterations, int size) {
-        super(iterations);
-        this.size = size;
-    }
+  public MandelbrotTornado(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
 
-    @Override
-    public void setUp() {
-        output = new ShortArray(size * size);
-        taskGraph = new TaskGraph("benchmark") //
-                .task("t0", ComputeKernels::mandelbrot, size, output) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
+  @Override
+  public void setUp() {
+    output = new ShortArray(size * size);
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .task("t0", ComputeKernels::mandelbrot, size, output) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        output = null;
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    output = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        boolean val = true;
-        ShortArray result = new ShortArray(size * size);
+  @Override
+  public boolean validate(TornadoDevice device) {
+    boolean val = true;
+    ShortArray result = new ShortArray(size * size);
 
-        executionPlan.withDevice(device).execute();
-        executionPlan.clearProfiles();
+    executionPlan.withDevice(device).execute();
+    executionPlan.clearProfiles();
 
-        ComputeKernels.mandelbrot(size, result);
+    ComputeKernels.mandelbrot(size, result);
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (Math.abs(output.get(i * size + j) - result.get(i * size + j)) > 0.01) {
-                    val = false;
-                    break;
-                }
-            }
+    for (int i = 0; i < size; i++) {
+      for (int j = 0; j < size; j++) {
+        if (Math.abs(output.get(i * size + j) - result.get(i * size + j)) > 0.01) {
+          val = false;
+          break;
         }
-        System.out.printf("Number validation: " + val + "\n");
-        return val;
+      }
     }
+    System.out.printf("Number validation: " + val + "\n");
+    return val;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 }

@@ -24,84 +24,89 @@
 package uk.ac.manchester.tornado.drivers.ptx.mm;
 
 import java.nio.ByteBuffer;
-
 import uk.ac.manchester.tornado.drivers.ptx.PTXDeviceContext;
 import uk.ac.manchester.tornado.runtime.common.RuntimeUtilities;
 
 public class PTXByteBuffer {
-    protected ByteBuffer buffer;
-    private final long address;
-    private final long bytes;
-    private final long offset;
-    protected final PTXDeviceContext deviceContext;
+  protected ByteBuffer buffer;
+  private final long address;
+  private final long bytes;
+  private final long offset;
+  protected final PTXDeviceContext deviceContext;
 
-    public PTXByteBuffer(long address, long bytes, long offset, PTXDeviceContext deviceContext) {
-        this.address = address;
-        this.bytes = bytes;
-        this.offset = offset;
-        this.deviceContext = deviceContext;
+  public PTXByteBuffer(long address, long bytes, long offset, PTXDeviceContext deviceContext) {
+    this.address = address;
+    this.bytes = bytes;
+    this.offset = offset;
+    this.deviceContext = deviceContext;
 
-        this.buffer = ByteBuffer.allocate((int) bytes);
-        this.buffer.order(deviceContext.getByteOrder());
-    }
+    this.buffer = ByteBuffer.allocate((int) bytes);
+    this.buffer.order(deviceContext.getByteOrder());
+  }
 
-    public long getSize() {
-        return bytes;
-    }
+  public long getSize() {
+    return bytes;
+  }
 
-    public void read(long executionPlanId) {
-        read(executionPlanId, null);
-    }
+  public void read(long executionPlanId) {
+    read(executionPlanId, null);
+  }
 
-    private void read(long executionPlanId, int[] events) {
-        deviceContext.readBuffer(executionPlanId, getAddress() + offset, bytes, buffer.array(), 0, events);
-    }
+  private void read(long executionPlanId, int[] events) {
+    deviceContext.readBuffer(
+        executionPlanId, getAddress() + offset, bytes, buffer.array(), 0, events);
+  }
 
-    public int getInt(int offset) {
-        return buffer.getInt(offset);
-    }
+  public int getInt(int offset) {
+    return buffer.getInt(offset);
+  }
 
-    public void dump(int width) {
-        buffer.position(buffer.capacity());
-        System.out.printf("Buffer  : capacity = %s, in use = %s, device = %s \n", RuntimeUtilities.humanReadableByteCount(bytes, true), RuntimeUtilities.humanReadableByteCount(buffer.position(),
-                true), deviceContext.getDevice().getDeviceName());
-        for (int i = 0; i < buffer.position(); i += width) {
-            System.out.printf("[0x%04x]: ", i + toAbsoluteAddress());
-            for (int j = 0; j < Math.min(buffer.capacity() - i, width); j++) {
-                if (j % 2 == 0) {
-                    System.out.print(" ");
-                }
-                if (j < buffer.position() - i) {
-                    System.out.printf("%02x", buffer.get(i + j));
-                } else {
-                    System.out.print("..");
-                }
-            }
-            System.out.println();
+  public void dump(int width) {
+    buffer.position(buffer.capacity());
+    System.out.printf(
+        "Buffer  : capacity = %s, in use = %s, device = %s \n",
+        RuntimeUtilities.humanReadableByteCount(bytes, true),
+        RuntimeUtilities.humanReadableByteCount(buffer.position(), true),
+        deviceContext.getDevice().getDeviceName());
+    for (int i = 0; i < buffer.position(); i += width) {
+      System.out.printf("[0x%04x]: ", i + toAbsoluteAddress());
+      for (int j = 0; j < Math.min(buffer.capacity() - i, width); j++) {
+        if (j % 2 == 0) {
+          System.out.print(" ");
         }
+        if (j < buffer.position() - i) {
+          System.out.printf("%02x", buffer.get(i + j));
+        } else {
+          System.out.print("..");
+        }
+      }
+      System.out.println();
     }
+  }
 
-    public long toAbsoluteAddress() {
-        return getAddress() + offset;
-    }
+  public long toAbsoluteAddress() {
+    return getAddress() + offset;
+  }
 
-    public void write(long executionPlanId) {
-        write(executionPlanId, null);
-    }
+  public void write(long executionPlanId) {
+    write(executionPlanId, null);
+  }
 
-    public void write(long executionPlanId, int[] events) {
-        deviceContext.writeBuffer(executionPlanId, getAddress() + offset, bytes, buffer.array(), 0, events);
-    }
+  public void write(long executionPlanId, int[] events) {
+    deviceContext.writeBuffer(
+        executionPlanId, getAddress() + offset, bytes, buffer.array(), 0, events);
+  }
 
-    protected long getAddress() {
-        return address;
-    }
+  protected long getAddress() {
+    return address;
+  }
 
-    public int enqueueWrite(long executionPlanId) {
-        return enqueueWrite(executionPlanId, null);
-    }
+  public int enqueueWrite(long executionPlanId) {
+    return enqueueWrite(executionPlanId, null);
+  }
 
-    public int enqueueWrite(long executionPlanId, int[] events) {
-        return deviceContext.enqueueWriteBuffer(executionPlanId, getAddress() + offset, bytes, buffer.array(), 0, events);
-    }
+  public int enqueueWrite(long executionPlanId, int[] events) {
+    return deviceContext.enqueueWriteBuffer(
+        executionPlanId, getAddress() + offset, bytes, buffer.array(), 0, events);
+  }
 }

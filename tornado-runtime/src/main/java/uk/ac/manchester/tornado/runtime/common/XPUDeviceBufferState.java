@@ -30,87 +30,90 @@ import uk.ac.manchester.tornado.api.memory.XPUBuffer;
 
 public class XPUDeviceBufferState implements DeviceBufferState {
 
-    private XPUBuffer xpuBuffer;
-    private boolean atomicRegionPresent;
+  private XPUBuffer xpuBuffer;
+  private boolean atomicRegionPresent;
 
-    private boolean bufferHasContent;
-    private boolean lockBuffer;
-    private long partialSize;
+  private boolean bufferHasContent;
+  private boolean lockBuffer;
+  private long partialSize;
 
-    @Override
-    public void setXPUBuffer(XPUBuffer value) {
-        xpuBuffer = value;
+  @Override
+  public void setXPUBuffer(XPUBuffer value) {
+    xpuBuffer = value;
+  }
+
+  public void setAtomicRegion(XPUBuffer buffer) {
+    this.xpuBuffer = buffer;
+    atomicRegionPresent = true;
+  }
+
+  @Override
+  public boolean hasObjectBuffer() {
+    return xpuBuffer != null;
+  }
+
+  @Override
+  public XPUBuffer getXPUBuffer() {
+    return xpuBuffer;
+  }
+
+  @Override
+  public boolean isLockedBuffer() {
+    return lockBuffer;
+  }
+
+  public void setLockBuffer(boolean lockBuffer) {
+    this.lockBuffer = lockBuffer;
+  }
+
+  @Override
+  public boolean hasContent() {
+    return bufferHasContent;
+  }
+
+  @Override
+  public void setContents(boolean content) {
+    bufferHasContent = content;
+  }
+
+  @Override
+  public boolean isAtomicRegionPresent() {
+    return atomicRegionPresent;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    if (hasObjectBuffer()) {
+      sb.append(
+          String.format(
+              " buffer=0x%x, size=%s ",
+              xpuBuffer.toBuffer(), humanReadableByteCount(xpuBuffer.size(), true)));
+    } else {
+      sb.append(" <unbuffered>");
     }
 
-    public void setAtomicRegion(XPUBuffer buffer) {
-        this.xpuBuffer = buffer;
-        atomicRegionPresent = true;
-    }
+    return sb.toString();
+  }
 
-    @Override
-    public boolean hasObjectBuffer() {
-        return xpuBuffer != null;
-    }
+  @Override
+  public void setAtomicRegion() {
+    this.atomicRegionPresent = true;
+  }
 
-    @Override
-    public XPUBuffer getXPUBuffer() {
-        return xpuBuffer;
-    }
+  @Override
+  public void setPartialCopySize(long partialCopySize) {
+    this.partialSize = partialCopySize;
+  }
 
-    @Override
-    public boolean isLockedBuffer() {
-        return lockBuffer;
-    }
+  @Override
+  public long getPartialCopySize() {
+    return this.partialSize;
+  }
 
-    public void setLockBuffer(boolean lockBuffer) {
-        this.lockBuffer = lockBuffer;
-    }
-
-    @Override
-    public boolean hasContent() {
-        return bufferHasContent;
-    }
-
-    @Override
-    public void setContents(boolean content) {
-        bufferHasContent = content;
-    }
-
-    @Override
-    public boolean isAtomicRegionPresent() {
-        return atomicRegionPresent;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        if (hasObjectBuffer()) {
-            sb.append(String.format(" buffer=0x%x, size=%s ", xpuBuffer.toBuffer(), humanReadableByteCount(xpuBuffer.size(), true)));
-        } else {
-            sb.append(" <unbuffered>");
-        }
-
-        return sb.toString();
-    }
-
-    @Override
-    public void setAtomicRegion() {
-        this.atomicRegionPresent = true;
-    }
-
-    @Override
-    public void setPartialCopySize(long partialCopySize) {
-        this.partialSize = partialCopySize;
-    }
-
-    @Override
-    public long getPartialCopySize() {
-        return this.partialSize;
-    }
-
-    public XPUDeviceBufferState createSnapshot() {
-        XPUDeviceBufferState xpuDeviceBufferState = new XPUDeviceBufferState();
-        xpuDeviceBufferState.setLockBuffer(this.isLockedBuffer());
-        return xpuDeviceBufferState;
-    }
+  public XPUDeviceBufferState createSnapshot() {
+    XPUDeviceBufferState xpuDeviceBufferState = new XPUDeviceBufferState();
+    xpuDeviceBufferState.setLockBuffer(this.isLockedBuffer());
+    return xpuDeviceBufferState;
+  }
 }

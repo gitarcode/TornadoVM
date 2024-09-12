@@ -29,52 +29,51 @@ import uk.ac.manchester.tornado.drivers.opencl.TornadoPlatformInterface;
 
 public class VirtualOCLPlatform implements TornadoPlatformInterface {
 
-    private final int index;
-    private final OCLTargetDevice device;
-    private VirtualOCLContext context;
+  private final int index;
+  private final OCLTargetDevice device;
+  private VirtualOCLContext context;
 
-    public VirtualOCLPlatform(VirtualDeviceDescriptor info) {
-        this.index = 0;
-        this.device = new VirtualOCLDevice(info);
+  public VirtualOCLPlatform(VirtualDeviceDescriptor info) {
+    this.index = 0;
+    this.device = new VirtualOCLDevice(info);
+  }
+
+  public OCLContextInterface createContext() {
+    context = new VirtualOCLContext(this, device);
+    return context;
+  }
+
+  public void cleanup() {
+    if (context != null) {
+      context.cleanup();
     }
+  }
 
-    public OCLContextInterface createContext() {
-        context = new VirtualOCLContext(this, device);
-        return context;
-    }
+  public String getName() {
+    return getClass().getName();
+  }
 
-    public void cleanup() {
-        if (context != null) {
-            context.cleanup();
-        }
-    }
+  @Override
+  public String getVendor() {
+    return null;
+  }
 
-    public String getName() {
-        return getClass().getName();
-    }
+  @Override
+  public String getVersion() {
+    return null;
+  }
 
-    @Override
-    public String getVendor() {
-        return null;
-    }
+  @Override
+  public boolean isSPIRVSupported() {
+    return true;
+  }
 
-    @Override
-    public String getVersion() {
-        return null;
-    }
+  @Override
+  public String toString() {
+    return getClass().getName();
+  }
 
-    @Override
-    public boolean isSPIRVSupported() {
-        return true;
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getName();
-    }
-
-    public int getIndex() {
-        return index;
-    }
-
+  public int getIndex() {
+    return index;
+  }
 }

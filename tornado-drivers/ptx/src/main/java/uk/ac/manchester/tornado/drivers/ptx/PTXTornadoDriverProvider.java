@@ -24,9 +24,8 @@
 
 package uk.ac.manchester.tornado.drivers.ptx;
 
-import org.graalvm.compiler.options.OptionValues;
-
 import jdk.vm.ci.hotspot.HotSpotJVMCIRuntime;
+import org.graalvm.compiler.options.OptionValues;
 import uk.ac.manchester.tornado.runtime.TornadoAcceleratorBackend;
 import uk.ac.manchester.tornado.runtime.TornadoBackendProvider;
 import uk.ac.manchester.tornado.runtime.TornadoVMConfigAccess;
@@ -34,28 +33,27 @@ import uk.ac.manchester.tornado.runtime.common.enums.TornadoBackends;
 
 public class PTXTornadoDriverProvider implements TornadoBackendProvider {
 
-    /**
-     * Check {@link TornadoBackendProvider} for documentation on priority.
-     */
-    private final TornadoBackends priority = TornadoBackends.PTX;
+  /** Check {@link TornadoBackendProvider} for documentation on priority. */
+  private final TornadoBackends priority = TornadoBackends.PTX;
 
-    @Override
-    public String getName() {
-        return "PTX Driver Provider";
-    }
+  @Override
+  public String getName() {
+    return "PTX Driver Provider";
+  }
 
-    @Override
-    public TornadoAcceleratorBackend createBackend(OptionValues options, HotSpotJVMCIRuntime hostRuntime, TornadoVMConfigAccess config) {
-        return new PTXBackendImpl(options, hostRuntime, config);
-    }
+  @Override
+  public TornadoAcceleratorBackend createBackend(
+      OptionValues options, HotSpotJVMCIRuntime hostRuntime, TornadoVMConfigAccess config) {
+    return new PTXBackendImpl(options, hostRuntime, config);
+  }
 
-    @Override
-    public TornadoBackends getDevicePriority() {
-        return priority;
-    }
+  @Override
+  public TornadoBackends getDevicePriority() {
+    return priority;
+  }
 
-    @Override
-    public int compareTo(TornadoBackendProvider o) {
-        return o.getDevicePriority().value() - priority.value();
-    }
+  @Override
+  public int compareTo(TornadoBackendProvider o) {
+    return o.getDevicePriority().value() - priority.value();
+  }
 }

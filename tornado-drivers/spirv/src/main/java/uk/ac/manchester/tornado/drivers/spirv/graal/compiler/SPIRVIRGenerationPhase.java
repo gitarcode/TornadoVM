@@ -25,7 +25,7 @@
 package uk.ac.manchester.tornado.drivers.spirv.graal.compiler;
 
 import java.util.List;
-
+import jdk.vm.ci.code.TargetDescription;
 import org.graalvm.compiler.core.common.cfg.BlockMap;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.lir.gen.LIRGenerationResult;
@@ -37,54 +37,68 @@ import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.cfg.HIRBlock;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 
-import jdk.vm.ci.code.TargetDescription;
-
 public class SPIRVIRGenerationPhase extends LIRPhase<SPIRVIRGenerationPhase.LIRGenerationContext> {
 
-    private static void emitBlock(SPIRVNodeLIRBuilder nodeLirBuilder, LIRGenerationResult lirGenRes, HIRBlock block, StructuredGraph graph, BlockMap<List<Node>> blockMap, boolean isKernel) {
-        if (lirGenRes.getLIR().getLIRforBlock(block) == null) {
-            int predecessors = block.getPredecessorCount();
-            for (int i = 0; i < predecessors; i++) {
-                HIRBlock pred = block.getPredecessorAt(i);
-                if (!block.isLoopHeader() || !pred.isLoopEnd()) {
-                    emitBlock(nodeLirBuilder, lirGenRes, pred, graph, blockMap, isKernel);
-                }
-            }
-            nodeLirBuilder.doBlock(block, graph, blockMap, isKernel);
+  private static void emitBlock(
+      SPIRVNodeLIRBuilder nodeLirBuilder,
+      LIRGenerationResult lirGenRes,
+      HIRBlock block,
+      StructuredGraph graph,
+      BlockMap<List<Node>> blockMap,
+      boolean isKernel) {
+    if (lirGenRes.getLIR().getLIRforBlock(block) == null) {
+      int predecessors = block.getPredecessorCount();
+      for (int i = 0; i < predecessors; i++) {
+        HIRBlock pred = block.getPredecessorAt(i);
+        if (!block.isLoopHeader() || !pred.isLoopEnd()) {
+          emitBlock(nodeLirBuilder, lirGenRes, pred, graph, blockMap, isKernel);
         }
+      }
+      nodeLirBuilder.doBlock(block, graph, blockMap, isKernel);
     }
+  }
 
-    @Override
-    protected void run(TargetDescription target, LIRGenerationResult lirGenRes, LIRGenerationContext context) {
-        final NodeLIRBuilderTool nodeLirBuilder = context.nodeLirBuilder;
-        final StructuredGraph graph = context.graph;
-        final StructuredGraph.ScheduleResult schedule = context.schedule;
-        final BlockMap<List<Node>> blockMap = schedule.getBlockToNodesMap();
+  @Override
+  protected void run(
+      TargetDescription target, LIRGenerationResult lirGenRes, LIRGenerationContext context) {
+    final NodeLIRBuilderTool nodeLirBuilder = context.nodeLirBuilder;
+    final StructuredGraph graph = context.graph;
+    final StructuredGraph.ScheduleResult schedule = context.schedule;
+    final BlockMap<List<Node>> blockMap = schedule.getBlockToNodesMap();
 
-        for (int b : lirGenRes.getLIR().linearScanOrder()) {
-            emitBlock((SPIRVNodeLIRBuilder) nodeLirBuilder, lirGenRes, (HIRBlock) lirGenRes.getLIR().getBlockById(b), graph, blockMap, context.isKernel);
-        }
-        ((LIRGenerator) context.lirGen).beforeRegisterAllocation();
-
-        assert SSAUtil.verifySSAForm(lirGenRes.getLIR());
+    for (int b : lirGenRes.getLIR().linearScanOrder()) {
+      emitBlock(
+          (SPIRVNodeLIRBuilder) nodeLirBuilder,
+          lirGenRes,
+          (HIRBlock) lirGenRes.getLIR().getBlockById(b),
+          graph,
+          blockMap,
+          context.isKernel);
     }
+    ((LIRGenerator) context.lirGen).beforeRegisterAllocation();
 
-    // FIXME <REFACTOR> This class is common for all three backends
-    public static final class LIRGenerationContext {
-        private final StructuredGraph graph;
-        private final LIRGeneratorTool lirGen;
-        private final NodeLIRBuilderTool nodeLirBuilder;
-        private final StructuredGraph.ScheduleResult schedule;
-        private final boolean isKernel;
+    assert SSAUtil.verifySSAForm(lirGenRes.getLIR());
+  }
 
-        public LIRGenerationContext(final LIRGeneratorTool lirGen, final NodeLIRBuilderTool nodeLirBuilder, final StructuredGraph graph, final StructuredGraph.ScheduleResult schedule,
-                final boolean isKernel) {
-            this.nodeLirBuilder = nodeLirBuilder;
-            this.lirGen = lirGen;
-            this.graph = graph;
-            this.schedule = schedule;
-            this.isKernel = isKernel;
-        }
+  // FIXME <REFACTOR> This class is common for all three backends
+  public static final class LIRGenerationContext {
+    private final StructuredGraph graph;
+    private final LIRGeneratorTool lirGen;
+    private final NodeLIRBuilderTool nodeLirBuilder;
+    private final StructuredGraph.ScheduleResult schedule;
+    private final boolean isKernel;
+
+    public LIRGenerationContext(
+        final LIRGeneratorTool lirGen,
+        final NodeLIRBuilderTool nodeLirBuilder,
+        final StructuredGraph graph,
+        final StructuredGraph.ScheduleResult schedule,
+        final boolean isKernel) {
+      this.nodeLirBuilder = nodeLirBuilder;
+      this.lirGen = lirGen;
+      this.graph = graph;
+      this.schedule = schedule;
+      this.isKernel = isKernel;
     }
-
+  }
 }

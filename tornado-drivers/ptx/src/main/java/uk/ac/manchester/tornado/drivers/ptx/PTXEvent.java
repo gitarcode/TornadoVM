@@ -30,136 +30,134 @@ import uk.ac.manchester.tornado.runtime.common.RuntimeUtilities;
 
 public class PTXEvent implements Event {
 
-    /**
-     * Wrapper containing two serialized CUevent structs. Between the two events, on
-     * the same CUDA stream has been registered another API call described by the
-     * value of {@link PTXEvent#description}. We measure the time difference between
-     * the two events to get the duration of the API call.
-     *
-     * <p>
-     * - The first position (eventWrapper[0]) contains the beforeEvent.
-     * 
-     * - The second position (eventWrapper[1]) contains the afterEvent.
-     * </p>
-     */
-    private final byte[][] eventWrapper;
-    private final String description;
-    private final String name;
-    private boolean isCompleted;
+  /**
+   * Wrapper containing two serialized CUevent structs. Between the two events, on the same CUDA
+   * stream has been registered another API call described by the value of {@link
+   * PTXEvent#description}. We measure the time difference between the two events to get the
+   * duration of the API call.
+   *
+   * <p>- The first position (eventWrapper[0]) contains the beforeEvent.
+   *
+   * <p>- The second position (eventWrapper[1]) contains the afterEvent.
+   */
+  private final byte[][] eventWrapper;
 
-    public PTXEvent(byte[][] bytes, EventDescriptor descriptorId) {
-        eventWrapper = bytes;
-        this.description = descriptorId.getNameDescription();
-        this.name = String.format("%s: ", description);
-        isCompleted = false;
+  private final String description;
+  private final String name;
+  private boolean isCompleted;
+
+  public PTXEvent(byte[][] bytes, EventDescriptor descriptorId) {
+    eventWrapper = bytes;
+    this.description = descriptorId.getNameDescription();
+    this.name = String.format("%s: ", description);
+    isCompleted = false;
+  }
+
+  private static native long cuEventDestroy(byte[] eventWrapper);
+
+  private static native void tornadoCUDAEventsSynchronize(byte[][] wrappers);
+
+  private static native long cuEventQuery(byte[] eventWrapper);
+
+  /**
+   * Returns the time in nanoseconds between two events. We convert from milliseconds to nanoseconds
+   * because the tornado profiler uses this measurement unit.
+   */
+  private static native long cuEventElapsedTime(byte[][] wrappers);
+
+  public static void waitForEventArray(PTXEvent[] events) {
+    byte[][] wrappers = new byte[events.length][];
+    for (int i = 0; i < events.length; i++) {
+      wrappers[i] = events[i].eventWrapper[1];
     }
 
-    private native static long cuEventDestroy(byte[] eventWrapper);
+    tornadoCUDAEventsSynchronize(wrappers);
+  }
 
-    private native static void tornadoCUDAEventsSynchronize(byte[][] wrappers);
+  @Override
+  public void waitForEvents(long executionPlanId) {
+    waitForEventArray(new PTXEvent[] {this});
+  }
 
-    private native static long cuEventQuery(byte[] eventWrapper);
+  @Override
+  public String getName() {
+    return name;
+  }
 
-    /**
-     * Returns the time in nanoseconds between two events. We convert from
-     * milliseconds to nanoseconds because the tornado profiler uses this
-     * measurement unit.
-     */
-    private native static long cuEventElapsedTime(byte[][] wrappers);
+  /**
+   * The CUDA API does not provide any call to get such information. Therefore, this method always
+   * returns -1.
+   */
+  @Override
+  public long getQueuedTime() {
+    return -1;
+  }
 
-    public static void waitForEventArray(PTXEvent[] events) {
-        byte[][] wrappers = new byte[events.length][];
-        for (int i = 0; i < events.length; i++) {
-            wrappers[i] = events[i].eventWrapper[1];
-        }
+  /**
+   * The CUDA API does not provide any call to get such information. Therefore, this method always
+   * returns -1.
+   */
+  @Override
+  public long getSubmitTime() {
+    return -1;
+  }
 
-        tornadoCUDAEventsSynchronize(wrappers);
+  /**
+   * The CUDA API does not provide any call to get such information. Therefore, this method always
+   * returns -1.
+   */
+  @Override
+  public long getStartTime() {
+    return -1;
+  }
+
+  /**
+   * The CUDA API does not provide any call to get such information. Therefore, this method always
+   * returns -1.
+   */
+  @Override
+  public long getEndTime() {
+    return -1;
+  }
+
+  @Override
+  public long getElapsedTime() {
+    return cuEventElapsedTime(eventWrapper);
+  }
+
+  @Override
+  public long getDriverDispatchTime() {
+    return 0;
+  }
+
+  @Override
+  public double getElapsedTimeInSeconds() {
+    return RuntimeUtilities.elapsedTimeInSeconds(cuEventElapsedTime(eventWrapper));
+  }
+
+  @Override
+  public TornadoExecutionStatus getStatus() {
+    if (!isCompleted) {
+      PTXEventStatus status = PTXEventStatus.getStatus(cuEventQuery(eventWrapper[1]));
+
+      isCompleted = (status == PTXEventStatus.CUDA_SUCCESS);
+      return status.toTornadoExecutionStatus();
     }
+    return TornadoExecutionStatus.COMPLETE;
+  }
 
-    @Override
-    public void waitForEvents(long executionPlanId) {
-        waitForEventArray(new PTXEvent[] { this });
-    }
+  @Override
+  public double getTotalTimeInSeconds() {
+    return getElapsedTimeInSeconds();
+  }
 
-    @Override
-    public String getName() {
-        return name;
-    }
+  @Override
+  public void waitOn() {
+    waitForEvents(0);
+  }
 
-    /**
-     * The CUDA API does not provide any call to get such information. Therefore,
-     * this method always returns -1.
-     */
-    @Override
-    public long getQueuedTime() {
-        return -1;
-    }
-
-    /**
-     * The CUDA API does not provide any call to get such information. Therefore,
-     * this method always returns -1.
-     */
-    @Override
-    public long getSubmitTime() {
-        return -1;
-    }
-
-    /**
-     * The CUDA API does not provide any call to get such information. Therefore,
-     * this method always returns -1.
-     */
-    @Override
-    public long getStartTime() {
-        return -1;
-    }
-
-    /**
-     * The CUDA API does not provide any call to get such information. Therefore,
-     * this method always returns -1.
-     */
-    @Override
-    public long getEndTime() {
-        return -1;
-    }
-
-    @Override
-    public long getElapsedTime() {
-        return cuEventElapsedTime(eventWrapper);
-    }
-
-    @Override
-    public long getDriverDispatchTime() {
-        return 0;
-    }
-
-    @Override
-    public double getElapsedTimeInSeconds() {
-        return RuntimeUtilities.elapsedTimeInSeconds(cuEventElapsedTime(eventWrapper));
-    }
-
-    @Override
-    public TornadoExecutionStatus getStatus() {
-        if (!isCompleted) {
-            PTXEventStatus status = PTXEventStatus.getStatus(cuEventQuery(eventWrapper[1]));
-
-            isCompleted = (status == PTXEventStatus.CUDA_SUCCESS);
-            return status.toTornadoExecutionStatus();
-        }
-        return TornadoExecutionStatus.COMPLETE;
-    }
-
-    @Override
-    public double getTotalTimeInSeconds() {
-        return getElapsedTimeInSeconds();
-    }
-
-    @Override
-    public void waitOn() {
-        waitForEvents(0);
-    }
-
-    public void destroy() {
-        cuEventDestroy(eventWrapper[0]);
-        cuEventDestroy(eventWrapper[1]);
-    }
+  public void destroy() {
+    cuEventDestroy(eventWrapper[0]);
+    cuEventDestroy(eventWrapper[1]);
+  }
 }

@@ -20,68 +20,65 @@ package uk.ac.manchester.tornado.benchmarks.dgemm;
 import static uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays.dgemm;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.types.arrays.DoubleArray;
 import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class DgemmJava extends BenchmarkDriver {
 
-    private final int m;
-    private final int n;
+  private final int m;
+  private final int n;
 
-    private DoubleArray a;
-    private DoubleArray b;
-    private DoubleArray c;
+  private DoubleArray a;
+  private DoubleArray b;
+  private DoubleArray c;
 
-    public DgemmJava(int iterations, int m, int n) {
-        super(iterations);
-        this.m = m;
-        this.n = n;
+  public DgemmJava(int iterations, int m, int n) {
+    super(iterations);
+    this.m = m;
+    this.n = n;
+  }
+
+  @Override
+  public void setUp() {
+    a = new DoubleArray(m * n);
+    b = new DoubleArray(m * n);
+    c = new DoubleArray(m * n);
+
+    final Random random = new Random();
+
+    for (int i = 0; i < m; i++) {
+      a.set(i * (m + 1), 1);
     }
 
-    @Override
-    public void setUp() {
-        a = new DoubleArray(m * n);
-        b = new DoubleArray(m * n);
-        c = new DoubleArray(m * n);
-
-        final Random random = new Random();
-
-        for (int i = 0; i < m; i++) {
-            a.set(i * (m + 1), 1);
-        }
-
-        for (int i = 0; i < m * n; i++) {
-            b.set(i, random.nextFloat());
-        }
-
+    for (int i = 0; i < m * n; i++) {
+      b.set(i, random.nextFloat());
     }
+  }
 
-    @Override
-    public void tearDown() {
-        a = null;
-        b = null;
-        c = null;
-        super.tearDown();
-    }
+  @Override
+  public void tearDown() {
+    a = null;
+    b = null;
+    c = null;
+    super.tearDown();
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        dgemm(m, n, m, a, b, c);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    dgemm(m, n, m, a, b, c);
+  }
 
-    @Override
-    public void barrier() {
-    }
+  @Override
+  public void barrier() {}
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

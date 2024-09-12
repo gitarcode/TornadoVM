@@ -22,7 +22,6 @@ import static uk.ac.manchester.tornado.benchmarks.stencil.Stencil.copy;
 import static uk.ac.manchester.tornado.benchmarks.stencil.Stencil.stencil3d;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
@@ -31,92 +30,89 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner stencil
  * </code>
  */
 public class StencilTornado extends BenchmarkDriver {
 
-    private final int sz;
-    private final int n;
-    private final float FAC = 1 / 26;
-    private FloatArray a0;
-    private FloatArray a1;
-    private FloatArray ainit;
+  private final int sz;
+  private final int n;
+  private final float FAC = 1 / 26;
+  private FloatArray a0;
+  private FloatArray a1;
+  private FloatArray ainit;
 
-    public StencilTornado(int iterations, int dataSize) {
-        super(iterations);
-        sz = (int) Math.cbrt(dataSize / 8) / 2;
-        n = sz - 2;
-    }
+  public StencilTornado(int iterations, int dataSize) {
+    super(iterations);
+    sz = (int) Math.cbrt(dataSize / 8) / 2;
+    n = sz - 2;
+  }
 
-    @Override
-    public void setUp() {
-        a0 = new FloatArray(sz * sz * sz);
-        a1 = new FloatArray(sz * sz * sz);
-        ainit = new FloatArray(sz * sz * sz);
+  @Override
+  public void setUp() {
+    a0 = new FloatArray(sz * sz * sz);
+    a1 = new FloatArray(sz * sz * sz);
+    ainit = new FloatArray(sz * sz * sz);
 
-        a1.init(0);
+    a1.init(0);
 
-        final Random rand = new Random(7);
-        for (int i = 1; i < n + 1; i++) {
-            for (int j = 1; j < n + 1; j++) {
-                for (int k = 1; k < n + 1; k++) {
-                    ainit.set((i * sz * sz) + (j * sz) + k, rand.nextFloat());
-                }
-            }
+    final Random rand = new Random(7);
+    for (int i = 1; i < n + 1; i++) {
+      for (int j = 1; j < n + 1; j++) {
+        for (int k = 1; k < n + 1; k++) {
+          ainit.set((i * sz * sz) + (j * sz) + k, rand.nextFloat());
         }
-        copy(sz, ainit, a0);
-        taskGraph = new TaskGraph("benchmark") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, a0, a1) //
-                .task("stencil", Stencil::stencil3d, n, sz, a0, a1, FAC) //
-                .task("copy", Stencil::copy, sz, a1, a0) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, a0);
+      }
+    }
+    copy(sz, ainit, a0);
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, a0, a1) //
+            .task("stencil", Stencil::stencil3d, n, sz, a0, a1, FAC) //
+            .task("copy", Stencil::copy, sz, a1, a0) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, a0);
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
+
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    a0 = null;
+    a1 = null;
+    ainit = null;
+    super.tearDown();
+  }
+
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+
+    final FloatArray b0 = new FloatArray(ainit.getSize());
+    final FloatArray b1 = new FloatArray(ainit.getSize());
+
+    copy(sz, ainit, b0);
+    runBenchmark(device);
+    executionPlan.clearProfiles();
+
+    for (int i = 0; i < iterations; i++) {
+      stencil3d(n, sz, b0, b1, FAC);
+      copy(sz, b1, b0);
     }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        a0 = null;
-        a1 = null;
-        ainit = null;
-        super.tearDown();
-    }
+    final float ulp = findULPDistance(a0, b0);
+    return ulp < MAX_ULP;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-
-        final FloatArray b0 = new FloatArray(ainit.getSize());
-        final FloatArray b1 = new FloatArray(ainit.getSize());
-
-        copy(sz, ainit, b0);
-        runBenchmark(device);
-        executionPlan.clearProfiles();
-
-        for (int i = 0; i < iterations; i++) {
-            stencil3d(n, sz, b0, b1, FAC);
-            copy(sz, b1, b0);
-        }
-
-        final float ulp = findULPDistance(a0, b0);
-        return ulp < MAX_ULP;
-    }
-
-    @Override
-    protected void barrier() {
-        executionResult.transferToHost(a0);
-    }
-
+  @Override
+  protected void barrier() {
+    executionResult.transferToHost(a0);
+  }
 }

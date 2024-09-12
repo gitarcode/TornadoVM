@@ -18,6 +18,7 @@
 
 package uk.ac.manchester.tornado.examples.arrays;
 
+import java.util.Arrays;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -26,48 +27,43 @@ import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.exceptions.TornadoExecutionPlanException;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 
-import java.util.Arrays;
-
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.examples/uk.ac.manchester.tornado.examples.arrays.ArrayAddInt
  * </code>
  */
 public class ArrayAddInt {
 
-    public static void add(IntArray a, IntArray b, IntArray c) {
-        for (@Parallel int i = 0; i < c.getSize(); i++) {
-            c.set(i, a.get(i) + b.get(i));
-        }
+  public static void add(IntArray a, IntArray b, IntArray c) {
+    for (@Parallel int i = 0; i < c.getSize(); i++) {
+      c.set(i, a.get(i) + b.get(i));
+    }
+  }
+
+  public static void main(String[] args) throws TornadoExecutionPlanException {
+
+    final int numElements = 8;
+    IntArray a = new IntArray(numElements);
+    IntArray b = new IntArray(numElements);
+    IntArray c = new IntArray(numElements);
+
+    a.init(1);
+    b.init(2);
+    c.init(0);
+
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+            .task("t0", ArrayAddInt::add, a, b, c) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    try (TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph)) {
+      executor.execute();
     }
 
-    public static void main(String[] args) throws TornadoExecutionPlanException {
-
-        final int numElements = 8;
-        IntArray a = new IntArray(numElements);
-        IntArray b = new IntArray(numElements);
-        IntArray c = new IntArray(numElements);
-
-        a.init(1);
-        b.init(2);
-        c.init(0);
-
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .task("t0", ArrayAddInt::add, a, b, c) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        try (TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph)) {
-            executor.execute();
-        }
-
-        System.out.println("a: " + Arrays.toString(a.toHeapArray()));
-        System.out.println("b: " + Arrays.toString(b.toHeapArray()));
-        System.out.println("c: " + Arrays.toString(c.toHeapArray()));
-    }
-
+    System.out.println("a: " + Arrays.toString(a.toHeapArray()));
+    System.out.println("b: " + Arrays.toString(b.toHeapArray()));
+    System.out.println("c: " + Arrays.toString(c.toHeapArray()));
+  }
 }

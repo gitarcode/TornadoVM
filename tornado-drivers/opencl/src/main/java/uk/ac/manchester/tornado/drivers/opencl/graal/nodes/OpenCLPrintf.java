@@ -27,25 +27,23 @@ import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.ExprStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLPrintString;
 
 @NodeInfo
 public class OpenCLPrintf extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<OpenCLPrintf> TYPE = NodeClass.create(OpenCLPrintf.class);
+  public static final NodeClass<OpenCLPrintf> TYPE = NodeClass.create(OpenCLPrintf.class);
 
-    private String value;
+  private String value;
 
-    public OpenCLPrintf(String value) {
-        super(TYPE, StampFactory.forVoid());
-        this.value = value;
-    }
+  public OpenCLPrintf(String value) {
+    super(TYPE, StampFactory.forVoid());
+    this.value = value;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        gen.getLIRGeneratorTool().append(new ExprStmt(new OCLPrintString(value)));
-    }
-
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    gen.getLIRGeneratorTool().append(new ExprStmt(new OCLPrintString(value)));
+  }
 }

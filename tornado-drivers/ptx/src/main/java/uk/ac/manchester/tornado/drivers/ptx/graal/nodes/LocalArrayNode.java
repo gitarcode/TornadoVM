@@ -25,6 +25,9 @@ package uk.ac.manchester.tornado.drivers.ptx.graal.nodes;
 import static uk.ac.manchester.tornado.drivers.ptx.graal.PTXArchitecture.PTXMemoryBase;
 import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler.PTXBinaryTemplate;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.ResolvedJavaType;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.core.common.type.TypeReference;
@@ -36,10 +39,6 @@ import org.graalvm.compiler.nodes.FixedNode;
 import org.graalvm.compiler.nodes.memory.MemoryKill;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.ResolvedJavaType;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXLIRGenerator;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXBinary;
@@ -48,56 +47,61 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkLocalArray;
 
 /**
- * Generates the LIR for declaring a CUDA shared (local in OpenCL) memory array.
- * The terminology used in this class refers to the OpenCL Programming Model.
+ * Generates the LIR for declaring a CUDA shared (local in OpenCL) memory array. The terminology
+ * used in this class refers to the OpenCL Programming Model.
  */
 @NodeInfo
 public class LocalArrayNode extends FixedNode implements LIRLowerable, MarkLocalArray, MemoryKill {
 
-    public static final NodeClass<LocalArrayNode> TYPE = NodeClass.create(LocalArrayNode.class);
+  public static final NodeClass<LocalArrayNode> TYPE = NodeClass.create(LocalArrayNode.class);
 
-    @Input
-    protected ConstantNode length;
+  @Input protected ConstantNode length;
 
-    protected PTXMemoryBase memoryRegister;
-    protected PTXBinaryTemplate arrayTemplate;
-    private PTXKind kind;
+  protected PTXMemoryBase memoryRegister;
+  protected PTXBinaryTemplate arrayTemplate;
+  private PTXKind kind;
 
-    public LocalArrayNode(PTXMemoryBase memoryRegister, ResolvedJavaType elementType, ConstantNode length) {
-        super(TYPE, StampFactory.objectNonNull(TypeReference.createTrustedWithoutAssumptions(elementType.getArrayClass())));
-        this.memoryRegister = memoryRegister;
-        this.length = length;
-        this.kind = PTXKind.fromResolvedJavaType(elementType);
-        this.arrayTemplate = PTXKind.resolveTemplateType(elementType);
-    }
+  public LocalArrayNode(
+      PTXMemoryBase memoryRegister, ResolvedJavaType elementType, ConstantNode length) {
+    super(
+        TYPE,
+        StampFactory.objectNonNull(
+            TypeReference.createTrustedWithoutAssumptions(elementType.getArrayClass())));
+    this.memoryRegister = memoryRegister;
+    this.length = length;
+    this.kind = PTXKind.fromResolvedJavaType(elementType);
+    this.arrayTemplate = PTXKind.resolveTemplateType(elementType);
+  }
 
-    public LocalArrayNode(PTXMemoryBase memoryRegister, JavaKind elementKind, ConstantNode length) {
-        super(TYPE, StampFactory.forKind(JavaKind.Object));
-        this.memoryRegister = memoryRegister;
-        this.length = length;
-        this.kind = PTXKind.fromResolvedJavaKind(elementKind);
-        this.arrayTemplate = PTXKind.resolveTemplateType(elementKind);
-    }
+  public LocalArrayNode(PTXMemoryBase memoryRegister, JavaKind elementKind, ConstantNode length) {
+    super(TYPE, StampFactory.forKind(JavaKind.Object));
+    this.memoryRegister = memoryRegister;
+    this.length = length;
+    this.kind = PTXKind.fromResolvedJavaKind(elementKind);
+    this.arrayTemplate = PTXKind.resolveTemplateType(elementKind);
+  }
 
-    public PTXMemoryBase getMemoryRegister() {
-        return memoryRegister;
-    }
+  public PTXMemoryBase getMemoryRegister() {
+    return memoryRegister;
+  }
 
-    public ConstantNode getLength() {
-        return length;
-    }
+  public ConstantNode getLength() {
+    return length;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitLocalArray length=%s kind=%s", length, kind);
-        final Value lengthValue = gen.operand(length);
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitLocalArray length=%s kind=%s", length, kind);
+    final Value lengthValue = gen.operand(length);
 
-        LIRKind lirKind = LIRKind.value(kind);
-        final Variable variable = ((PTXLIRGenerator) gen.getLIRGeneratorTool()).newVariable(lirKind, true);
-        final PTXBinary.Expr declaration = new PTXBinary.Expr(arrayTemplate, lirKind, variable, lengthValue);
+    LIRKind lirKind = LIRKind.value(kind);
+    final Variable variable =
+        ((PTXLIRGenerator) gen.getLIRGeneratorTool()).newVariable(lirKind, true);
+    final PTXBinary.Expr declaration =
+        new PTXBinary.Expr(arrayTemplate, lirKind, variable, lengthValue);
 
-        final PTXLIRStmt.ExprStmt expr = new PTXLIRStmt.ExprStmt(declaration);
-        gen.getLIRGeneratorTool().append(expr);
-        gen.setResult(this, variable);
-    }
+    final PTXLIRStmt.ExprStmt expr = new PTXLIRStmt.ExprStmt(declaration);
+    gen.getLIRGeneratorTool().append(expr);
+    gen.setResult(this, variable);
+  }
 }

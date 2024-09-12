@@ -29,35 +29,40 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
+import jdk.vm.ci.code.CallingConvention;
 import org.graalvm.compiler.core.common.CompilationIdentifier;
 import org.graalvm.compiler.core.common.alloc.RegisterAllocationConfig;
 import org.graalvm.compiler.lir.LIR;
 import org.graalvm.compiler.lir.Variable;
 import org.graalvm.compiler.lir.framemap.FrameMapBuilder;
 import org.graalvm.compiler.lir.gen.LIRGenerationResult;
-
-import jdk.vm.ci.code.CallingConvention;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 
 public class OCLLIRGenerationResult extends LIRGenerationResult {
 
-    private final Map<OCLKind, Set<Variable>> variableTable;
+  private final Map<OCLKind, Set<Variable>> variableTable;
 
-    public OCLLIRGenerationResult(CompilationIdentifier identifier, LIR lir, FrameMapBuilder frameMapBuilder, RegisterAllocationConfig registerAllocationConfig, CallingConvention callingConvention) {
-        super(identifier, lir, frameMapBuilder, registerAllocationConfig, callingConvention);
-        variableTable = new HashMap<>();
-    }
+  public OCLLIRGenerationResult(
+      CompilationIdentifier identifier,
+      LIR lir,
+      FrameMapBuilder frameMapBuilder,
+      RegisterAllocationConfig registerAllocationConfig,
+      CallingConvention callingConvention) {
+    super(identifier, lir, frameMapBuilder, registerAllocationConfig, callingConvention);
+    variableTable = new HashMap<>();
+  }
 
-    public void insertVariable(Variable variable) {
-        guarantee(variable.getPlatformKind() instanceof OCLKind, "invalid variable kind: %s", variable.getValueKind());
-        OCLKind kind = (OCLKind) variable.getPlatformKind();
+  public void insertVariable(Variable variable) {
+    guarantee(
+        variable.getPlatformKind() instanceof OCLKind,
+        "invalid variable kind: %s",
+        variable.getValueKind());
+    OCLKind kind = (OCLKind) variable.getPlatformKind();
 
-        variableTable.computeIfAbsent(kind, k -> new HashSet<>()).add(variable);
-    }
+    variableTable.computeIfAbsent(kind, k -> new HashSet<>()).add(variable);
+  }
 
-    public Map<OCLKind, Set<Variable>> getVariableTable() {
-        return variableTable;
-    }
-
+  public Map<OCLKind, Set<Variable>> getVariableTable() {
+    return variableTable;
+  }
 }

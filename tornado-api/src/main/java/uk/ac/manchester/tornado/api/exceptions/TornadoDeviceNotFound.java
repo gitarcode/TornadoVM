@@ -19,7 +19,7 @@ package uk.ac.manchester.tornado.api.exceptions;
 
 public class TornadoDeviceNotFound extends TornadoRuntimeException {
 
-    public TornadoDeviceNotFound(String msg) {
-        super(msg);
-    }
+  public TornadoDeviceNotFound(String msg) {
+    super(msg);
+  }
 }

@@ -20,18 +20,17 @@ package uk.ac.manchester.tornado.api.types.tensors;
 import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
 
 public abstract non-sealed class Tensor extends TornadoNativeArray {
-    private final DType dtype;
-    private final Shape shape;
+  private final DType dtype;
+  private final Shape shape;
 
-    protected Tensor(DType dtype, Shape shape) {
-        this.dtype = dtype;
-        this.shape = shape;
-    }
+  protected Tensor(DType dtype, Shape shape) {
+    this.dtype = dtype;
+    this.shape = shape;
+  }
 
-    public abstract Shape getShape();
+  public abstract Shape getShape();
 
-    public abstract String getDTypeAsString();
+  public abstract String getDTypeAsString();
 
-    public abstract DType getDType();
-
+  public abstract DType getDType();
 }

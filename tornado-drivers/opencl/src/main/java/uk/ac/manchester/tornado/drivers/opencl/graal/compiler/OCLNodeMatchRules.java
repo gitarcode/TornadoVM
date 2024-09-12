@@ -26,8 +26,7 @@ import org.graalvm.compiler.lir.gen.LIRGeneratorTool;
 
 public class OCLNodeMatchRules extends NodeMatchRules {
 
-    public OCLNodeMatchRules(LIRGeneratorTool gen) {
-        super(gen);
-    }
-
+  public OCLNodeMatchRules(LIRGeneratorTool gen) {
+    super(gen);
+  }
 }

@@ -29,7 +29,6 @@ import static org.graalvm.compiler.nodes.loop.DefaultLoopPolicies.Options.FullUn
 
 import java.util.List;
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.EndNode;
 import org.graalvm.compiler.nodes.GraphState;
@@ -42,7 +41,6 @@ import org.graalvm.compiler.nodes.loop.LoopEx;
 import org.graalvm.compiler.nodes.loop.LoopsData;
 import org.graalvm.compiler.options.OptionValues;
 import org.graalvm.compiler.phases.Phase;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.IntelUnrollPragmaNode;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.XilinxPipeliningPragmaNode;
@@ -50,98 +48,107 @@ import uk.ac.manchester.tornado.runtime.graal.nodes.TornadoLoopsData;
 
 public class OCLFPGAPragmaPhase extends Phase {
 
-    /**
-     * The default factor number for loop unrolling is 4, as this number yielded the
-     * same performance with full unrolling on an Intel Arria 10 FPGA.
-     *
-     * @see <a href= "https://arxiv.org/ftp/arxiv/papers/2010/2010.16304.pdf">
-     *     Transparent Compiler and Runtime Specializations for Accelerating
-     *     Managed Languages on FPGAs</a>.
-     */
-    private static final int UNROLL_FACTOR_NUMBER = 4;
-    /**
-     * The default initiation interval number for loop pipelining is 1, because this
-     * number has been indicated as the default by Xilinx HLS for full pipelining.
-     *
-     * @see <a href=
-     *     "https://www.xilinx.com/html_docs/xilinx2020_2/vitis_doc/openclattributes.html#sgo1504034359903__ad410982"
-     *     * >Vitis 2020.2 Documentation</a>.
-     */
-    private static final int XILINX_PIPELINING_II_NUMBER = 1;
-    private TornadoDeviceContext deviceContext;
+  /**
+   * The default factor number for loop unrolling is 4, as this number yielded the same performance
+   * with full unrolling on an Intel Arria 10 FPGA.
+   *
+   * @see <a href= "https://arxiv.org/ftp/arxiv/papers/2010/2010.16304.pdf"> Transparent Compiler
+   *     and Runtime Specializations for Accelerating Managed Languages on FPGAs</a>.
+   */
+  private static final int UNROLL_FACTOR_NUMBER = 4;
 
-    public OCLFPGAPragmaPhase(TornadoDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
+  /**
+   * The default initiation interval number for loop pipelining is 1, because this number has been
+   * indicated as the default by Xilinx HLS for full pipelining.
+   *
+   * @see <a href=
+   *     "https://www.xilinx.com/html_docs/xilinx2020_2/vitis_doc/openclattributes.html#sgo1504034359903__ad410982"
+   *     * >Vitis 2020.2 Documentation</a>.
+   */
+  private static final int XILINX_PIPELINING_II_NUMBER = 1;
+
+  private TornadoDeviceContext deviceContext;
+
+  public OCLFPGAPragmaPhase(TornadoDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+  }
+
+  private static boolean shouldFullUnrollOrPipeline(OptionValues options, LoopEx loop) {
+    if (!loop.isCounted() || !loop.counted().isConstantMaxTripCount()) {
+      return false;
     }
-
-    private static boolean shouldFullUnrollOrPipeline(OptionValues options, LoopEx loop) {
-        if (!loop.isCounted() || !loop.counted().isConstantMaxTripCount()) {
-            return false;
+    CountedLoopInfo counted = loop.counted();
+    long maxTrips = counted.constantMaxTripCount().asLong();
+    int maxNodes =
+        (counted.isExactTripCount() && counted.isConstantExactTripCount())
+            ? ExactFullUnrollMaxNodes.getValue(options)
+            : FullUnrollMaxNodes.getValue(options);
+    maxNodes =
+        Math.min(
+            maxNodes,
+            MaximumDesiredSize.getValue(options) - loop.loopBegin().graph().getNodeCount());
+    int size = Math.max(1, loop.size() - 1 - loop.loopBegin().phis().count());
+    if (size * maxTrips <= maxNodes) {
+      // check whether we're allowed to unroll or pipeline this loop
+      int loops = 0;
+      int ifs = 0;
+      for (Node node : loop.inside().nodes()) {
+        if (node instanceof ControlFlowAnchorNode) {
+          return false;
+        } else if (node instanceof LoopBeginNode) {
+          loops++;
+        } else if (node instanceof IfNode) {
+          ifs++;
         }
-        CountedLoopInfo counted = loop.counted();
-        long maxTrips = counted.constantMaxTripCount().asLong();
-        int maxNodes = (counted.isExactTripCount() && counted.isConstantExactTripCount()) ? ExactFullUnrollMaxNodes.getValue(options) : FullUnrollMaxNodes.getValue(options);
-        maxNodes = Math.min(maxNodes, MaximumDesiredSize.getValue(options) - loop.loopBegin().graph().getNodeCount());
-        int size = Math.max(1, loop.size() - 1 - loop.loopBegin().phis().count());
-        if (size * maxTrips <= maxNodes) {
-            // check whether we're allowed to unroll or pipeline this loop
-            int loops = 0;
-            int ifs = 0;
-            for (Node node : loop.inside().nodes()) {
-                if (node instanceof ControlFlowAnchorNode) {
-                    return false;
-                } else if (node instanceof LoopBeginNode) {
-                    loops++;
-                } else if (node instanceof IfNode) {
-                    ifs++;
+      }
+      if (loops - ifs != 0) {
+        return true;
+      }
+
+      return true;
+    } else {
+      return true;
+    }
+  }
+
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
+
+  @Override
+  protected void run(StructuredGraph graph) {
+    // Prevent Pragma Unroll for non-fpga devices
+    if (graph.hasLoops() && (deviceContext.isPlatformFPGA())) {
+      boolean peeled;
+      do {
+        peeled = false;
+        final LoopsData dataCounted = new TornadoLoopsData(graph);
+        dataCounted.detectCountedLoops();
+        for (LoopEx loop : dataCounted.countedLoops()) {
+          if (shouldFullUnrollOrPipeline(graph.getOptions(), loop)) {
+            List<EndNode> snapshot = graph.getNodes().filter(EndNode.class).snapshot();
+            int idx = 0;
+            for (EndNode end : snapshot) {
+              idx++;
+              if (idx == 2) {
+                if (deviceContext.isPlatformXilinxFPGA()) {
+                  XilinxPipeliningPragmaNode pipeliningPragmaNode =
+                      graph.addOrUnique(
+                          new XilinxPipeliningPragmaNode(XILINX_PIPELINING_II_NUMBER));
+                  graph.addBeforeFixed(end, pipeliningPragmaNode);
+                } else {
+                  IntelUnrollPragmaNode unrollPragmaNode =
+                      graph.addOrUnique(new IntelUnrollPragmaNode(UNROLL_FACTOR_NUMBER));
+                  graph.addBeforeFixed(end, unrollPragmaNode);
                 }
+              }
             }
-            if (loops - ifs != 0) {
-                return true;
-            }
-
-            return true;
-        } else {
-            return true;
+            peeled = false;
+            break;
+          }
         }
+      } while (peeled);
     }
-
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
-
-    @Override
-    protected void run(StructuredGraph graph) {
-        // Prevent Pragma Unroll for non-fpga devices
-        if (graph.hasLoops() && (deviceContext.isPlatformFPGA())) {
-            boolean peeled;
-            do {
-                peeled = false;
-                final LoopsData dataCounted = new TornadoLoopsData(graph);
-                dataCounted.detectCountedLoops();
-                for (LoopEx loop : dataCounted.countedLoops()) {
-                    if (shouldFullUnrollOrPipeline(graph.getOptions(), loop)) {
-                        List<EndNode> snapshot = graph.getNodes().filter(EndNode.class).snapshot();
-                        int idx = 0;
-                        for (EndNode end : snapshot) {
-                            idx++;
-                            if (idx == 2) {
-                                if (deviceContext.isPlatformXilinxFPGA()) {
-                                    XilinxPipeliningPragmaNode pipeliningPragmaNode = graph.addOrUnique(new XilinxPipeliningPragmaNode(XILINX_PIPELINING_II_NUMBER));
-                                    graph.addBeforeFixed(end, pipeliningPragmaNode);
-                                } else {
-                                    IntelUnrollPragmaNode unrollPragmaNode = graph.addOrUnique(new IntelUnrollPragmaNode(UNROLL_FACTOR_NUMBER));
-                                    graph.addBeforeFixed(end, unrollPragmaNode);
-                                }
-                            }
-
-                        }
-                        peeled = false;
-                        break;
-                    }
-                }
-            } while (peeled);
-        }
-    }
+  }
 }

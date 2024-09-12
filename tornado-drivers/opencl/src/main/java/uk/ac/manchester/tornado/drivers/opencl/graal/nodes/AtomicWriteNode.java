@@ -40,52 +40,52 @@ import org.graalvm.compiler.nodes.memory.address.AddressNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 import org.graalvm.word.LocationIdentity;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLBinaryIntrinsic;
 
 @NodeInfo(shortName = "Atomic Write")
 public class AtomicWriteNode extends AbstractWriteNode implements LIRLowerable {
 
-    public static final NodeClass<AtomicWriteNode> TYPE = NodeClass.create(AtomicWriteNode.class);
+  public static final NodeClass<AtomicWriteNode> TYPE = NodeClass.create(AtomicWriteNode.class);
 
-    OCLBinaryIntrinsic op;
+  OCLBinaryIntrinsic op;
 
-    public AtomicWriteNode(OCLBinaryIntrinsic op, AddressNode address, LocationIdentity location, ValueNode value) {
-        super(TYPE, address, location, value, BarrierType.NONE);
-        this.op = op;
-    }
+  public AtomicWriteNode(
+      OCLBinaryIntrinsic op, AddressNode address, LocationIdentity location, ValueNode value) {
+    super(TYPE, address, location, value, BarrierType.NONE);
+    this.op = op;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        final LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        unimplemented("Atomic WRITE not implemented yet.");
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    final LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    unimplemented("Atomic WRITE not implemented yet.");
+  }
 
-    @Override
-    public boolean canNullCheck() {
-        return false;
-    }
+  @Override
+  public boolean canNullCheck() {
+    return false;
+  }
 
-    @Override
-    public Stamp getAccessStamp(NodeView view) {
-        unimplemented("AtomicWriteNode::getAccessStamp not implemented");
-        return null;
-    }
+  @Override
+  public Stamp getAccessStamp(NodeView view) {
+    unimplemented("AtomicWriteNode::getAccessStamp not implemented");
+    return null;
+  }
 
-    @Override
-    public NodeIterable<FrameState> states() {
-        unimplemented("AtomicWriteNode::states not implemented");
-        return null;
-    }
+  @Override
+  public NodeIterable<FrameState> states() {
+    unimplemented("AtomicWriteNode::states not implemented");
+    return null;
+  }
 
-    @Override
-    public LocationIdentity getKilledLocationIdentity() {
-        unimplemented("AtmomicWriteNode::getKilledLocationIdentity not implemented");
-        return null;
-    }
+  @Override
+  public LocationIdentity getKilledLocationIdentity() {
+    unimplemented("AtmomicWriteNode::getKilledLocationIdentity not implemented");
+    return null;
+  }
 
-    @Override
-    public MemoryOrderMode getMemoryOrder() {
-        return null;
-    }
+  @Override
+  public MemoryOrderMode getMemoryOrder() {
+    return null;
+  }
 }

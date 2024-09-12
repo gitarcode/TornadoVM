@@ -19,15 +19,14 @@ package uk.ac.manchester.tornado.api;
 
 public class WorkerGrid2D extends AbstractWorkerGrid {
 
-    public static final int DIM = 2;
+  public static final int DIM = 2;
 
-    public WorkerGrid2D(int x, int y) {
-        super(x, y, 1);
-    }
+  public WorkerGrid2D(int x, int y) {
+    super(x, y, 1);
+  }
 
-    @Override
-    public int dimension() {
-        return DIM;
-    }
-
+  @Override
+  public int dimension() {
+    return DIM;
+  }
 }

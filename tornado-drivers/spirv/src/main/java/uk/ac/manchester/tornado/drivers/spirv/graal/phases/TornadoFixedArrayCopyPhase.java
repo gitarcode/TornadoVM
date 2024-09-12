@@ -24,35 +24,34 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.phases;
 
+import java.util.Optional;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.ValuePhiNode;
 import org.graalvm.compiler.nodes.memory.address.OffsetAddressNode;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoCompilationException;
-import uk.ac.manchester.tornado.runtime.graal.phases.TornadoLowTierContext;
 import uk.ac.manchester.tornado.drivers.spirv.graal.nodes.FixedArrayNode;
-
-import java.util.Optional;
+import uk.ac.manchester.tornado.runtime.graal.phases.TornadoLowTierContext;
 
 public class TornadoFixedArrayCopyPhase extends BasePhase<TornadoLowTierContext> {
 
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    protected void run(StructuredGraph graph, TornadoLowTierContext context) {
-        for (ValuePhiNode phiNode : graph.getNodes().filter(ValuePhiNode.class)) {
-            if (isFixedArrayCopied(phiNode)) {
-                throw new TornadoCompilationException("Copying a local array by reference is not currently supported for SPIR-V.");
-            }
-        }
+  protected void run(StructuredGraph graph, TornadoLowTierContext context) {
+    for (ValuePhiNode phiNode : graph.getNodes().filter(ValuePhiNode.class)) {
+      if (isFixedArrayCopied(phiNode)) {
+        throw new TornadoCompilationException(
+            "Copying a local array by reference is not currently supported for SPIR-V.");
+      }
     }
+  }
 
-    private static boolean isFixedArrayCopied(ValuePhiNode phiNode) {
-        return phiNode.usages().filter(OffsetAddressNode.class).isNotEmpty() && phiNode.values().filter(FixedArrayNode.class).isNotEmpty();
-    }
-
+  private static boolean isFixedArrayCopied(ValuePhiNode phiNode) {
+    return phiNode.usages().filter(OffsetAddressNode.class).isNotEmpty()
+        && phiNode.values().filter(FixedArrayNode.class).isNotEmpty();
+  }
 }

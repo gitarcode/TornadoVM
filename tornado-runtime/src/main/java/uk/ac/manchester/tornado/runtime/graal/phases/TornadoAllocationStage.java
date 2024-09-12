@@ -26,6 +26,5 @@ import org.graalvm.compiler.lir.phases.LIRPhaseSuite;
 
 public class TornadoAllocationStage extends LIRPhaseSuite<AllocationContext> {
 
-    public TornadoAllocationStage() {
-    }
+  public TornadoAllocationStage() {}
 }

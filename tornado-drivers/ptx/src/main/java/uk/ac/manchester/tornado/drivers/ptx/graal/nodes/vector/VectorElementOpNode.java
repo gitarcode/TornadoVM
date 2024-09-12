@@ -24,6 +24,7 @@ package uk.ac.manchester.tornado.drivers.ptx.graal.nodes.vector;
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.guarantee;
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.ObjectStamp;
 import org.graalvm.compiler.core.common.type.Stamp;
@@ -38,89 +39,104 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXStamp;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXVectorElementSelect;
 
-/**
- * The {@code LoadIndexedNode} represents a read from an element of an array.
- */
+/** The {@code LoadIndexedNode} represents a read from an element of an array. */
 @NodeInfo(nameTemplate = "Op .s{p#lane}")
-public abstract class VectorElementOpNode extends FloatingNode implements LIRLowerable, Comparable<VectorElementOpNode> {
+public abstract class VectorElementOpNode extends FloatingNode
+    implements LIRLowerable, Comparable<VectorElementOpNode> {
 
-    public static final NodeClass<VectorElementOpNode> TYPE = NodeClass.create(VectorElementOpNode.class);
-    private final PTXKind ptxKind;
-    @Input(InputType.Extension)
-    ValueNode vector;
-    @Input
-    ValueNode lane;
+  public static final NodeClass<VectorElementOpNode> TYPE =
+      NodeClass.create(VectorElementOpNode.class);
+  private final PTXKind ptxKind;
 
-    protected VectorElementOpNode(NodeClass<? extends VectorElementOpNode> c, PTXKind kind, ValueNode vector, ValueNode lane) {
-        super(c, StampFactory.forKind(kind.asJavaKind()));
-        this.ptxKind = kind;
-        this.vector = vector;
-        this.lane = lane;
+  @Input(InputType.Extension)
+  ValueNode vector;
 
-        Stamp vstamp = vector.stamp(NodeView.DEFAULT);
-        PTXKind vectorKind = PTXKind.ILLEGAL;
-        if (vstamp instanceof PTXStamp) {
-            final PTXStamp vectorStamp = (PTXStamp) vector.stamp(NodeView.DEFAULT);
-            vectorKind = vectorStamp.getPTXKind();
-            guarantee(vectorKind.isVector(), "Cannot apply vector operation to non-vector type: %s", vectorKind);
-        } else if (vstamp instanceof ObjectStamp objectStamp) {
-            ObjectStamp ostamp = objectStamp;
+  @Input ValueNode lane;
 
-            if (ostamp.type() != null) {
-                vectorKind = PTXKind.fromResolvedJavaType(ostamp.type());
-                guarantee(vectorKind.isVector(), "Cannot apply vector operation to non-vector type: %s", vectorKind);
-            }
-        } else {
-            shouldNotReachHere("invalid type on vector operation: %s (stamp=%s (class=%s))", vector, vector.stamp(NodeView.DEFAULT), vector.stamp(NodeView.DEFAULT).getClass().getName());
-        }
+  protected VectorElementOpNode(
+      NodeClass<? extends VectorElementOpNode> c, PTXKind kind, ValueNode vector, ValueNode lane) {
+    super(c, StampFactory.forKind(kind.asJavaKind()));
+    this.ptxKind = kind;
+    this.vector = vector;
+    this.lane = lane;
 
+    Stamp vstamp = vector.stamp(NodeView.DEFAULT);
+    PTXKind vectorKind = PTXKind.ILLEGAL;
+    if (vstamp instanceof PTXStamp) {
+      final PTXStamp vectorStamp = (PTXStamp) vector.stamp(NodeView.DEFAULT);
+      vectorKind = vectorStamp.getPTXKind();
+      guarantee(
+          vectorKind.isVector(),
+          "Cannot apply vector operation to non-vector type: %s",
+          vectorKind);
+    } else if (vstamp instanceof ObjectStamp objectStamp) {
+      ObjectStamp ostamp = objectStamp;
+
+      if (ostamp.type() != null) {
+        vectorKind = PTXKind.fromResolvedJavaType(ostamp.type());
+        guarantee(
+            vectorKind.isVector(),
+            "Cannot apply vector operation to non-vector type: %s",
+            vectorKind);
+      }
+    } else {
+      shouldNotReachHere(
+          "invalid type on vector operation: %s (stamp=%s (class=%s))",
+          vector,
+          vector.stamp(NodeView.DEFAULT),
+          vector.stamp(NodeView.DEFAULT).getClass().getName());
     }
+  }
 
-    @Override
-    public int compareTo(VectorElementOpNode o) {
-        return Integer.compare(laneId(), o.laneId());
-    }
+  @Override
+  public int compareTo(VectorElementOpNode o) {
+    return Integer.compare(laneId(), o.laneId());
+  }
 
-    @Override
-    public boolean inferStamp() {
-        return updateStamp(StampFactory.forKind(ptxKind.asJavaKind()));
-    }
+  @Override
+  public boolean inferStamp() {
+    return updateStamp(StampFactory.forKind(ptxKind.asJavaKind()));
+  }
 
-    public final int laneId() {
-        guarantee(lane instanceof ConstantNode, "Invalid lane: %s", lane);
-        return (lane instanceof ConstantNode) ? lane.asJavaConstant().asInt() : -1;
-    }
+  public final int laneId() {
+    guarantee(lane instanceof ConstantNode, "Invalid lane: %s", lane);
+    return (lane instanceof ConstantNode) ? lane.asJavaConstant().asInt() : -1;
+  }
 
-    public final ValueNode getLaneId() {
-        return this.lane;
-    }
+  public final ValueNode getLaneId() {
+    return this.lane;
+  }
 
-    public ValueNode getVector() {
-        return vector;
-    }
+  public ValueNode getVector() {
+    return vector;
+  }
 
-    public PTXKind getPTXKind() {
-        return ptxKind;
-    }
+  public PTXKind getPTXKind() {
+    return ptxKind;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        guarantee(vector != null, "vector is null");
-        Value targetVector = gen.operand(getVector());
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitVectorElementOp: targetVector=%s, laneId=%d", targetVector, laneId());
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    guarantee(vector != null, "vector is null");
+    Value targetVector = gen.operand(getVector());
+    Logger.traceBuildLIR(
+        Logger.BACKEND.PTX,
+        "emitVectorElementOp: targetVector=%s, laneId=%d",
+        targetVector,
+        laneId());
 
-        assert targetVector instanceof Variable;
+    assert targetVector instanceof Variable;
 
-        final PTXVectorElementSelect element = new PTXVectorElementSelect(LIRKind.value(((PTXKind) targetVector.getPlatformKind()).getElementKind()), (Variable) targetVector, laneId());
-        gen.setResult(this, element);
-
-    }
-
+    final PTXVectorElementSelect element =
+        new PTXVectorElementSelect(
+            LIRKind.value(((PTXKind) targetVector.getPlatformKind()).getElementKind()),
+            (Variable) targetVector,
+            laneId());
+    gen.setResult(this, element);
+  }
 }

@@ -36,62 +36,63 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class TestPTXTornadoCompiler {
 
-    // @formatter:off
-    private static final String PTX_KERNEL =
-            ".visible .entry add( \n" +
-            "	.param .u64 add_param_0, \n" +
-            "	.param .u64 add_param_1, \n" +
-            "	.param .u64 add_param_2 \n" +
-            ") \n" +
-            "{ \n" +
-            "	.reg .f32 	%f<3>; \n" +
-            "	.reg .b32 	%r<5>; \n" +
-            "	.reg .f64 	%fd<4>; \n" +
-            "	.reg .b64 	%rd<12>; \n" +
-            "	ld.param.u64 	%rd1, [add_param_0]; \n" +
-            "	ld.param.u64 	%rd2, [add_param_1]; \n" +
-            "	ld.param.u64 	%rd3, [add_param_2]; \n" +
-            "	cvta.to.global.u64 	%rd4, %rd1; \n" +
-            "	cvta.to.global.u64 	%rd5, %rd3; \n" +
-            "	cvta.to.global.u64 	%rd6, %rd2; \n" +
-            "	mov.u32 	%r1, %ctaid.x; \n" +
-            "	mov.u32 	%r2, %ntid.x; \n" +
-            "	mov.u32 	%r3, %tid.x; \n" +
-            "	mad.lo.s32 	%r4, %r2, %r1, %r3; \n" +
-            "	mul.wide.s32 	%rd7, %r4, 4; \n" +
-            "	add.s64 	%rd8, %rd6, %rd7; \n" +
-            "	ld.global.f32 	%f1, [%rd8]; \n" +
-            "	cvt.f64.f32	%fd1, %f1; \n" +
-            "	mul.wide.s32 	%rd9, %r4, 8; \n" +
-            "	add.s64 	%rd10, %rd5, %rd9; \n" +
-            "	ld.global.f64 	%fd2, [%rd10]; \n" +
-            "	add.f64 	%fd3, %fd1, %fd2; \n" +
-            "	cvt.rn.f32.f64	%f2, %fd3; \n" +
-            "	add.s64 	%rd11, %rd4, %rd7; \n" +
-            "	st.global.f32 	[%rd11], %f2; \n" +
-            "	ret; \n" +
-            "} \n" ;
+  // @formatter:off
+  private static final String PTX_KERNEL =
+      ".visible .entry add( \n"
+          + "	.param .u64 add_param_0, \n"
+          + "	.param .u64 add_param_1, \n"
+          + "	.param .u64 add_param_2 \n"
+          + ") \n"
+          + "{ \n"
+          + "	.reg .f32 	%f<3>; \n"
+          + "	.reg .b32 	%r<5>; \n"
+          + "	.reg .f64 	%fd<4>; \n"
+          + "	.reg .b64 	%rd<12>; \n"
+          + "	ld.param.u64 	%rd1, [add_param_0]; \n"
+          + "	ld.param.u64 	%rd2, [add_param_1]; \n"
+          + "	ld.param.u64 	%rd3, [add_param_2]; \n"
+          + "	cvta.to.global.u64 	%rd4, %rd1; \n"
+          + "	cvta.to.global.u64 	%rd5, %rd3; \n"
+          + "	cvta.to.global.u64 	%rd6, %rd2; \n"
+          + "	mov.u32 	%r1, %ctaid.x; \n"
+          + "	mov.u32 	%r2, %ntid.x; \n"
+          + "	mov.u32 	%r3, %tid.x; \n"
+          + "	mad.lo.s32 	%r4, %r2, %r1, %r3; \n"
+          + "	mul.wide.s32 	%rd7, %r4, 4; \n"
+          + "	add.s64 	%rd8, %rd6, %rd7; \n"
+          + "	ld.global.f32 	%f1, [%rd8]; \n"
+          + "	cvt.f64.f32	%fd1, %f1; \n"
+          + "	mul.wide.s32 	%rd9, %r4, 8; \n"
+          + "	add.s64 	%rd10, %rd5, %rd9; \n"
+          + "	ld.global.f64 	%fd2, [%rd10]; \n"
+          + "	add.f64 	%fd3, %fd1, %fd2; \n"
+          + "	cvt.rn.f32.f64	%f2, %fd3; \n"
+          + "	add.s64 	%rd11, %rd4, %rd7; \n"
+          + "	st.global.f32 	[%rd11], %f2; \n"
+          + "	ret; \n"
+          + "} \n";
 
+  // @formatter:on
 
-    // @formatter:on
+  public static void main(String[] args) {
 
-    public static void main(String[] args) {
+    PTXPlatform platform = PTX.getPlatform();
+    PTXCodeCache codeCache =
+        platform.getDevice(0).getPTXContext().getDeviceContext().getCodeCache();
 
-        PTXPlatform platform = PTX.getPlatform();
-        PTXCodeCache codeCache = platform.getDevice(0).getPTXContext().getDeviceContext().getCodeCache();
+    TornadoCoreRuntime tornadoRuntime = TornadoCoreRuntime.getTornadoRuntime();
+    PTXBackend backend = tornadoRuntime.getBackend(PTXBackendImpl.class).getDefaultBackend();
+    TaskDataContext meta = new TaskDataContext(new ScheduleContext("s0"), "add", 0);
+    new PTXCompilationResult("add", meta);
 
-        TornadoCoreRuntime tornadoRuntime = TornadoCoreRuntime.getTornadoRuntime();
-        PTXBackend backend = tornadoRuntime.getBackend(PTXBackendImpl.class).getDefaultBackend();
-        TaskDataContext meta = new TaskDataContext(new ScheduleContext("s0"), "add", 0);
-        new PTXCompilationResult("add", meta);
+    byte[] source = PTX_KERNEL.getBytes();
+    source = PTXCodeUtil.getCodeWithAttachedPTXHeader(source, backend);
+    PTXInstalledCode code =
+        codeCache.installSource("add", source, "add", meta.isPrintKernelEnabled());
 
-        byte[] source = PTX_KERNEL.getBytes();
-        source = PTXCodeUtil.getCodeWithAttachedPTXHeader(source, backend);
-        PTXInstalledCode code = codeCache.installSource("add", source, "add", meta.isPrintKernelEnabled());
-
-        String generatedSourceCode = code.getGeneratedSourceCode();
-        if (meta.isPrintKernelEnabled()) {
-            System.out.println("Compiled code: " + generatedSourceCode);
-        }
+    String generatedSourceCode = code.getGeneratedSourceCode();
+    if (meta.isPrintKernelEnabled()) {
+      System.out.println("Compiled code: " + generatedSourceCode);
     }
+  }
 }

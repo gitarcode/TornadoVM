@@ -31,22 +31,22 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXCompilationResultBuilder;
 
 public abstract class PTXLIROp extends Value {
-    public PTXLIROp(ValueKind<?> valueKind) {
-        super(valueKind);
-    }
+  public PTXLIROp(ValueKind<?> valueKind) {
+    super(valueKind);
+  }
 
-    public abstract void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest);
+  public abstract void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest);
 
-    public final void emit(PTXCompilationResultBuilder crb, Variable dest) {
-        emit(crb, crb.getAssembler(), dest);
-    }
+  public final void emit(PTXCompilationResultBuilder crb, Variable dest) {
+    emit(crb, crb.getAssembler(), dest);
+  }
 
-    public LIRKind getLIRKind() {
-        return (LIRKind) this.getValueKind();
-    }
+  public LIRKind getLIRKind() {
+    return (LIRKind) this.getValueKind();
+  }
 
-    public PTXKind getPTXPlatformKind() {
-        PlatformKind platformKind = getPlatformKind();
-        return (platformKind instanceof PTXKind) ? (PTXKind) platformKind : PTXKind.ILLEGAL;
-    }
+  public PTXKind getPTXPlatformKind() {
+    PlatformKind platformKind = getPlatformKind();
+    return (platformKind instanceof PTXKind) ? (PTXKind) platformKind : PTXKind.ILLEGAL;
+  }
 }

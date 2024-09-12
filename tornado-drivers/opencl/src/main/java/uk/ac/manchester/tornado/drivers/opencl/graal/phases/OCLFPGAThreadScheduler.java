@@ -23,14 +23,12 @@
 package uk.ac.manchester.tornado.drivers.opencl.graal.phases;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.iterators.NodeIterable;
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.EndNode;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.api.WorkerGrid;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.FPGAWorkGroupSizeNode;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.LocalWorkGroupDimensionsNode;
@@ -39,60 +37,63 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class OCLFPGAThreadScheduler extends BasePhase<TornadoLowTierContext> {
 
-    public static final int DEFAULT_FPGA_PARALLEL_1D = 64; // This value was chosen for Intel FPGAs due to experimental results
-    public static final int DEFAULT_FPGA_PARALLEL_2D = 1;
-    public static final int DEFAULT_FPGA_PARALLEL_3D = 1;
-    public static final int DEFAULT_FPGA_SEQUENTIAL_1D = 1;
-    public static final int DEFAULT_FPGA_SEQUENTIAL_2D = 1;
-    public static final int DEFAULT_FPGA_SEQUENTIAL_3D = 1;
+  public static final int DEFAULT_FPGA_PARALLEL_1D =
+      64; // This value was chosen for Intel FPGAs due to experimental results
+  public static final int DEFAULT_FPGA_PARALLEL_2D = 1;
+  public static final int DEFAULT_FPGA_PARALLEL_3D = 1;
+  public static final int DEFAULT_FPGA_SEQUENTIAL_1D = 1;
+  public static final int DEFAULT_FPGA_SEQUENTIAL_2D = 1;
+  public static final int DEFAULT_FPGA_SEQUENTIAL_3D = 1;
 
-    private static int oneD = DEFAULT_FPGA_PARALLEL_1D;
-    private static int twoD = DEFAULT_FPGA_PARALLEL_2D;
-    private static int threeD = DEFAULT_FPGA_PARALLEL_3D;
+  private static int oneD = DEFAULT_FPGA_PARALLEL_1D;
+  private static int twoD = DEFAULT_FPGA_PARALLEL_2D;
+  private static int threeD = DEFAULT_FPGA_PARALLEL_3D;
 
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoLowTierContext lowTierContext) {
-        if (graph.hasLoops()) {
-            NodeIterable<EndNode> filter = graph.getNodes().filter(EndNode.class);
-            EndNode end = filter.first();
-            TaskDataContext metaData;
+  @Override
+  protected void run(StructuredGraph graph, TornadoLowTierContext lowTierContext) {
+    if (graph.hasLoops()) {
+      NodeIterable<EndNode> filter = graph.getNodes().filter(EndNode.class);
+      EndNode end = filter.first();
+      TaskDataContext metaData;
 
-            metaData = lowTierContext.getMeta();
-            if (metaData != null) {
-                if (metaData.isGridSchedulerEnabled()) {
-                    if (metaData.isWorkerGridAvailable()) {
-                        WorkerGrid workerGrid = metaData.getWorkerGrid(metaData.getId());
-                        if (metaData.isGridSequential()) {
-                            oneD = DEFAULT_FPGA_SEQUENTIAL_1D;
-                            twoD = DEFAULT_FPGA_SEQUENTIAL_2D;
-                            threeD = DEFAULT_FPGA_SEQUENTIAL_3D;
-                        } else {
-                            oneD = (int) workerGrid.getLocalWork()[0];
-                            twoD = (int) workerGrid.getLocalWork()[1];
-                            threeD = (int) workerGrid.getLocalWork()[2];
-                        }
-                    }
-                } else {
-                    if (!metaData.isParallel()) { // Sequential kernel
-                        oneD = DEFAULT_FPGA_SEQUENTIAL_1D;
-                        twoD = DEFAULT_FPGA_SEQUENTIAL_2D;
-                        threeD = DEFAULT_FPGA_SEQUENTIAL_3D;
-                    }
-                }
+      metaData = lowTierContext.getMeta();
+      if (metaData != null) {
+        if (metaData.isGridSchedulerEnabled()) {
+          if (metaData.isWorkerGridAvailable()) {
+            WorkerGrid workerGrid = metaData.getWorkerGrid(metaData.getId());
+            if (metaData.isGridSequential()) {
+              oneD = DEFAULT_FPGA_SEQUENTIAL_1D;
+              twoD = DEFAULT_FPGA_SEQUENTIAL_2D;
+              threeD = DEFAULT_FPGA_SEQUENTIAL_3D;
+            } else {
+              oneD = (int) workerGrid.getLocalWork()[0];
+              twoD = (int) workerGrid.getLocalWork()[1];
+              threeD = (int) workerGrid.getLocalWork()[2];
             }
-
-            ConstantNode xNode = graph.addOrUnique(ConstantNode.forInt(oneD));
-            ConstantNode yNode = graph.addOrUnique(ConstantNode.forInt(twoD));
-            ConstantNode zNode = graph.addOrUnique(ConstantNode.forInt(threeD));
-
-            final LocalWorkGroupDimensionsNode localWorkGroupNode = graph.addOrUnique(new LocalWorkGroupDimensionsNode(xNode, yNode, zNode));
-            FPGAWorkGroupSizeNode workGroupSizeNode = graph.addOrUnique(new FPGAWorkGroupSizeNode(localWorkGroupNode));
-            graph.addBeforeFixed(end, workGroupSizeNode);
+          }
+        } else {
+          if (!metaData.isParallel()) { // Sequential kernel
+            oneD = DEFAULT_FPGA_SEQUENTIAL_1D;
+            twoD = DEFAULT_FPGA_SEQUENTIAL_2D;
+            threeD = DEFAULT_FPGA_SEQUENTIAL_3D;
+          }
         }
+      }
+
+      ConstantNode xNode = graph.addOrUnique(ConstantNode.forInt(oneD));
+      ConstantNode yNode = graph.addOrUnique(ConstantNode.forInt(twoD));
+      ConstantNode zNode = graph.addOrUnique(ConstantNode.forInt(threeD));
+
+      final LocalWorkGroupDimensionsNode localWorkGroupNode =
+          graph.addOrUnique(new LocalWorkGroupDimensionsNode(xNode, yNode, zNode));
+      FPGAWorkGroupSizeNode workGroupSizeNode =
+          graph.addOrUnique(new FPGAWorkGroupSizeNode(localWorkGroupNode));
+      graph.addBeforeFixed(end, workGroupSizeNode);
     }
+  }
 }

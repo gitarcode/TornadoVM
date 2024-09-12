@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.rotatevector;
 import static uk.ac.manchester.tornado.benchmarks.GraphicsKernels.rotateVector;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -38,7 +37,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -49,79 +47,78 @@ import uk.ac.manchester.tornado.api.types.vectors.Float3;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.rotatevector.JMHRotateVector
  * </code>
  */
 public class JMHRotateVector {
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        private final int numElements = Integer.parseInt(System.getProperty("y", "4194304"));
-        private VectorFloat3 input;
-        private VectorFloat3 output;
-        private Matrix4x4Float m;
-        private TornadoExecutionPlan executor;
+    private final int numElements = Integer.parseInt(System.getProperty("y", "4194304"));
+    private VectorFloat3 input;
+    private VectorFloat3 output;
+    private Matrix4x4Float m;
+    private TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            input = new VectorFloat3(numElements);
-            output = new VectorFloat3(numElements);
+    @Setup(Level.Trial)
+    public void doSetup() {
+      input = new VectorFloat3(numElements);
+      output = new VectorFloat3(numElements);
 
-            m = new Matrix4x4Float();
-            m.identity();
+      m = new Matrix4x4Float();
+      m.identity();
 
-            final Float3 value = new Float3(1f, 2f, 3f);
-            for (int i = 0; i < numElements; i++) {
-                input.set(i, value);
-            }
+      final Float3 value = new Float3(1f, 2f, 3f);
+      for (int i = 0; i < numElements; i++) {
+        input.set(i, value);
+      }
 
-            TaskGraph taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                    .task("rotateVector", GraphicsKernels::rotateVector, output, m, input) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
-        }
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
+              .task("rotateVector", GraphicsKernels::rotateVector, output, m, input) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void rotateVectorJava(BenchmarkSetup state) {
-        rotateVector(state.output, state.m, state.input);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void rotateVectorJava(BenchmarkSetup state) {
+    rotateVector(state.output, state.m, state.input);
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void rotateVectorTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void rotateVectorTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHRotateVector.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.SECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHRotateVector.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.SECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

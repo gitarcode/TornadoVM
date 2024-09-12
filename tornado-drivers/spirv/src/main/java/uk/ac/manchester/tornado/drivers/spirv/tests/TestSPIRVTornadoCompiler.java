@@ -38,39 +38,38 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.ScheduleContext;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 /**
- * How to test?
- *
- * <code>
+ * How to test? <code>
  * $ tornado --printKernel uk.ac.manchester.tornado.drivers.spirv.tests.TestSPIRVTornadoCompiler
  * </code>
  */
 public class TestSPIRVTornadoCompiler {
 
-    public static void main(String[] args) {
+  public static void main(String[] args) {
 
-        SPIRVPlatform platform = SPIRVRuntimeImpl.getInstance().getPlatform(0);
-        SPIRVContext context = platform.createContext();
-        SPIRVDeviceContext deviceContext = context.getDeviceContext(0);
+    SPIRVPlatform platform = SPIRVRuntimeImpl.getInstance().getPlatform(0);
+    SPIRVContext context = platform.createContext();
+    SPIRVDeviceContext deviceContext = context.getDeviceContext(0);
 
-        SPIRVCodeCache codeCache = null;
-        if (platform instanceof SPIRVOpenCLPlatform) {
-            codeCache = new SPIRVOCLCodeCache(deviceContext);
-        } else if (platform instanceof SPIRVLevelZeroPlatform) {
-            codeCache = new SPIRVLevelZeroCodeCache(deviceContext);
-        }
-
-        ScheduleContext scheduleMetaData = new ScheduleContext("SPIRV-Backend");
-        TaskDataContext task = new TaskDataContext(scheduleMetaData, "saxpy");
-        new SPIRVCompilationResult("saxpy", "saxpy", task);
-
-        String tornadoSDK = System.getenv("TORNADO_SDK");
-        String pathToSPIRVBinaryFile = tornadoSDK + "/examples/generated/add.spv";
-
-        SPIRVInstalledCode code = codeCache.installSPIRVBinary(task, "add", "add", pathToSPIRVBinaryFile);
-        String generatedCode = code.getGeneratedSourceCode();
-
-        if (scheduleMetaData.isPrintKernelEnabled()) {
-            System.out.println(generatedCode);
-        }
+    SPIRVCodeCache codeCache = null;
+    if (platform instanceof SPIRVOpenCLPlatform) {
+      codeCache = new SPIRVOCLCodeCache(deviceContext);
+    } else if (platform instanceof SPIRVLevelZeroPlatform) {
+      codeCache = new SPIRVLevelZeroCodeCache(deviceContext);
     }
+
+    ScheduleContext scheduleMetaData = new ScheduleContext("SPIRV-Backend");
+    TaskDataContext task = new TaskDataContext(scheduleMetaData, "saxpy");
+    new SPIRVCompilationResult("saxpy", "saxpy", task);
+
+    String tornadoSDK = System.getenv("TORNADO_SDK");
+    String pathToSPIRVBinaryFile = tornadoSDK + "/examples/generated/add.spv";
+
+    SPIRVInstalledCode code =
+        codeCache.installSPIRVBinary(task, "add", "add", pathToSPIRVBinaryFile);
+    String generatedCode = code.getGeneratedSourceCode();
+
+    if (scheduleMetaData.isPrintKernelEnabled()) {
+      System.out.println(generatedCode);
+    }
+  }
 }

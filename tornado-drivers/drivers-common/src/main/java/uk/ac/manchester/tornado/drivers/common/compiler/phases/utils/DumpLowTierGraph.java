@@ -24,20 +24,19 @@ package uk.ac.manchester.tornado.drivers.common.compiler.phases.utils;
 import static uk.ac.manchester.tornado.runtime.TornadoCoreRuntime.getDebugContext;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.debug.DebugContext;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.phases.Phase;
 
 public class DumpLowTierGraph extends Phase {
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph) {
-        getDebugContext().dump(DebugContext.BASIC_LEVEL, graph, "After-OCLLowTier");
-    }
+  @Override
+  protected void run(StructuredGraph graph) {
+    getDebugContext().dump(DebugContext.BASIC_LEVEL, graph, "After-OCLLowTier");
+  }
 }

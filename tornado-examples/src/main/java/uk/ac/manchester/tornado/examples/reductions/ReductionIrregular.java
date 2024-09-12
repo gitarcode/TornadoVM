@@ -21,7 +21,6 @@ package uk.ac.manchester.tornado.examples.reductions;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.stream.IntStream;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -31,67 +30,72 @@ import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.examples/uk.ac.manchester.tornado.examples.reductions.ReductionIrregular
  * </code>
- *
  */
 public class ReductionIrregular {
 
-    private static void reduceFloats(FloatArray input, @Reduce FloatArray output) {
-        for (@Parallel int i = 0; i < input.getSize(); i++) {
-            output.set(0, output.get(0) + input.get(i));
-        }
+  private static void reduceFloats(FloatArray input, @Reduce FloatArray output) {
+    for (@Parallel int i = 0; i < input.getSize(); i++) {
+      output.set(0, output.get(0) + input.get(i));
     }
+  }
 
-    private void run(final int inputSize) {
+  private void run(final int inputSize) {
 
-        FloatArray input = new FloatArray(inputSize);
-        FloatArray result = FloatArray.fromElements(0.0f);
-        Random r = new Random(101);
+    FloatArray input = new FloatArray(inputSize);
+    FloatArray result = FloatArray.fromElements(0.0f);
+    Random r = new Random(101);
 
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, input)//
-                .task("t0", ReductionIrregular::reduceFloats, input, result)//
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, result);
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
+            .task("t0", ReductionIrregular::reduceFloats, input, result) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, result);
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
 
-        ArrayList<Long> timers = new ArrayList<>();
-        for (int i = 0; i < ConfigurationReduce.MAX_ITERATIONS; i++) {
+    ArrayList<Long> timers = new ArrayList<>();
+    for (int i = 0; i < ConfigurationReduce.MAX_ITERATIONS; i++) {
 
-            IntStream.range(0, inputSize).parallel().forEach(idx -> {
+      IntStream.range(0, inputSize)
+          .parallel()
+          .forEach(
+              idx -> {
                 input.set(idx, r.nextFloat());
-            });
-            FloatArray sequential = new FloatArray(1);
-            reduceFloats(input, sequential);
+              });
+      FloatArray sequential = new FloatArray(1);
+      reduceFloats(input, sequential);
 
-            long start = System.nanoTime();
-            executor.execute();
-            long end = System.nanoTime();
-            timers.add((end - start));
+      long start = System.nanoTime();
+      executor.execute();
+      long end = System.nanoTime();
+      timers.add((end - start));
 
-            if (Math.abs(sequential.get(0) - result.get(0)) > 0.1f) {
-                System.out.println("Result is not correct - iteration: " + i + " expected: " + sequential.get(0) + " but found: " + result.get(0));
-            } else {
-                System.out.println("Iteration: " + i + " is correct");
-            }
-        }
-
-        System.out.println("Median TotalTime: " + Stats.computeMedian(timers));
-
+      if (Math.abs(sequential.get(0) - result.get(0)) > 0.1f) {
+        System.out.println(
+            "Result is not correct - iteration: "
+                + i
+                + " expected: "
+                + sequential.get(0)
+                + " but found: "
+                + result.get(0));
+      } else {
+        System.out.println("Iteration: " + i + " is correct");
+      }
     }
 
-    public static void main(String[] args) {
-        int inputSize = 2000;
-        if (args.length > 0) {
-            inputSize = Integer.parseInt(args[0]);
-        }
-        System.out.println("Size = " + inputSize);
-        new ReductionIrregular().run(inputSize);
+    System.out.println("Median TotalTime: " + Stats.computeMedian(timers));
+  }
+
+  public static void main(String[] args) {
+    int inputSize = 2000;
+    if (args.length > 0) {
+      inputSize = Integer.parseInt(args[0]);
     }
+    System.out.println("Size = " + inputSize);
+    new ReductionIrregular().run(inputSize);
+  }
 }

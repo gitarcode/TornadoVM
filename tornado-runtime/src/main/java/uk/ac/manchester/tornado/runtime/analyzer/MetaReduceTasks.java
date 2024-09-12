@@ -1,5 +1,5 @@
 /*
- * This file is part of Tornado: A heterogeneous programming framework: 
+ * This file is part of Tornado: A heterogeneous programming framework:
  * https://github.com/beehive-lab/tornadovm
  *
  * Copyright (c) 2013-2020, APT Group, Department of Computer Science,
@@ -25,37 +25,35 @@ package uk.ac.manchester.tornado.runtime.analyzer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
 import org.graalvm.compiler.nodes.StructuredGraph;
 
 /**
- * Mapping between the input tasks and the parameters indexes in which reduce
- * variables are found.
- *
+ * Mapping between the input tasks and the parameters indexes in which reduce variables are found.
  */
 public class MetaReduceTasks {
 
-    private HashMap<Integer, ArrayList<Integer>> reduceList;
-    private HashMap<Integer, Integer> reduceSize;
-    private StructuredGraph graph;
+  private HashMap<Integer, ArrayList<Integer>> reduceList;
+  private HashMap<Integer, Integer> reduceSize;
+  private StructuredGraph graph;
 
-    MetaReduceTasks(int taskIndex, StructuredGraph graph, ArrayList<Integer> reduceIndexes, int inputSize) {
-        reduceList = new HashMap<>();
-        reduceSize = new HashMap<>();
-        reduceList.put(taskIndex, reduceIndexes);
-        reduceSize.put(taskIndex, inputSize);
-        this.graph = graph;
-    }
+  MetaReduceTasks(
+      int taskIndex, StructuredGraph graph, ArrayList<Integer> reduceIndexes, int inputSize) {
+    reduceList = new HashMap<>();
+    reduceSize = new HashMap<>();
+    reduceList.put(taskIndex, reduceIndexes);
+    reduceSize.put(taskIndex, inputSize);
+    this.graph = graph;
+  }
 
-    public ArrayList<Integer> getListOfReduceParameters(int taskID) {
-        return reduceList.get(taskID);
-    }
+  public ArrayList<Integer> getListOfReduceParameters(int taskID) {
+    return reduceList.get(taskID);
+  }
 
-    public int getInputSize(int taskIndex) {
-        return reduceSize.get(taskIndex);
-    }
+  public int getInputSize(int taskIndex) {
+    return reduceSize.get(taskIndex);
+  }
 
-    public StructuredGraph getGraph() {
-        return graph;
-    }
+  public StructuredGraph getGraph() {
+    return graph;
+  }
 }

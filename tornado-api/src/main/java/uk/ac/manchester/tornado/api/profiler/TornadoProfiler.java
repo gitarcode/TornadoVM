@@ -19,44 +19,43 @@ package uk.ac.manchester.tornado.api.profiler;
 
 public interface TornadoProfiler {
 
-    void addValueToMetric(ProfilerType type, String taskName, long value);
+  void addValueToMetric(ProfilerType type, String taskName, long value);
 
-    void start(ProfilerType type);
+  void start(ProfilerType type);
 
-    void start(ProfilerType type, String taskName);
+  void start(ProfilerType type, String taskName);
 
-    void registerDeviceName(String taskName, String deviceInfo);
+  void registerDeviceName(String taskName, String deviceInfo);
 
-    void registerBackend(String taskName, String backend);
+  void registerBackend(String taskName, String backend);
 
-    void registerDeviceID(String taskName, String deviceID);
+  void registerDeviceID(String taskName, String deviceID);
 
-    void registerMethodHandle(ProfilerType type, String taskName, String methodName);
+  void registerMethodHandle(ProfilerType type, String taskName, String methodName);
 
-    void stop(ProfilerType type);
+  void stop(ProfilerType type);
 
-    void stop(ProfilerType type, String taskName);
+  void stop(ProfilerType type, String taskName);
 
-    long getTimer(ProfilerType type);
+  long getTimer(ProfilerType type);
 
-    long getSize(ProfilerType type);
+  long getSize(ProfilerType type);
 
-    long getTaskTimer(ProfilerType type, String taskName);
+  long getTaskTimer(ProfilerType type, String taskName);
 
-    void setTimer(ProfilerType type, long time);
+  void setTimer(ProfilerType type, long time);
 
-    void dump();
+  void dump();
 
-    String createJson(StringBuilder json, String sectionName);
+  String createJson(StringBuilder json, String sectionName);
 
-    void dumpJson(StringBuilder stringBuffer, String id);
+  void dumpJson(StringBuilder stringBuffer, String id);
 
-    void clean();
+  void clean();
 
-    void setTaskTimer(ProfilerType totalKernelTime, String taskId, long timer);
+  void setTaskTimer(ProfilerType totalKernelTime, String taskId, long timer);
 
-    void setTaskPowerUsage(ProfilerType powerUsageType, String taskId, long power);
+  void setTaskPowerUsage(ProfilerType powerUsageType, String taskId, long power);
 
-    void sum(ProfilerType type, long timer);
-
+  void sum(ProfilerType type, long timer);
 }

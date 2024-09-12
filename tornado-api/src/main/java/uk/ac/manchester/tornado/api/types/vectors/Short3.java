@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.api.types.vectors;
 
 import java.nio.ShortBuffer;
-
 import uk.ac.manchester.tornado.api.internal.annotations.Payload;
 import uk.ac.manchester.tornado.api.internal.annotations.Vector;
 import uk.ac.manchester.tornado.api.math.TornadoMath;
@@ -26,189 +25,206 @@ import uk.ac.manchester.tornado.api.math.TornadoMath;
 @Vector
 public final class Short3 implements TornadoVectorsInterface<ShortBuffer> {
 
-    public static final Class<Short3> TYPE = Short3.class;
+  public static final Class<Short3> TYPE = Short3.class;
 
-    private static final String NUMBER_FORMAT = "{ x=%-7d, y=%-7d, z=%-7d }";
-    /**
-     * number of elements in the storage.
-     */
-    private static final int NUM_ELEMENTS = 3;
-    /**
-     * backing array.
-     */
-    @Payload
-    private final short[] storage;
+  private static final String NUMBER_FORMAT = "{ x=%-7d, y=%-7d, z=%-7d }";
 
-    private Short3(short[] nativeVectorShort) {
-        this.storage = nativeVectorShort;
-    }
+  /** number of elements in the storage. */
+  private static final int NUM_ELEMENTS = 3;
 
-    public Short3() {
-        this(new short[NUM_ELEMENTS]);
-    }
+  /** backing array. */
+  @Payload private final short[] storage;
 
-    public Short3(short x, short y, short z) {
-        this();
-        setX(x);
-        setY(y);
-        setZ(z);
-    }
+  private Short3(short[] nativeVectorShort) {
+    this.storage = nativeVectorShort;
+  }
 
-    /*
-     * vector = op( vector, vector )
-     */
-    public static Short3 add(Short3 a, Short3 b) {
-        return new Short3((short) (a.getX() + b.getX()), (short) (a.getY() + b.getY()), (short) (a.getZ() + b.getZ()));
-    }
+  public Short3() {
+    this(new short[NUM_ELEMENTS]);
+  }
 
-    public static Short3 sub(Short3 a, Short3 b) {
-        return new Short3((short) (a.getX() - b.getX()), (short) (a.getY() - b.getY()), (short) (a.getZ() - b.getZ()));
-    }
+  public Short3(short x, short y, short z) {
+    this();
+    setX(x);
+    setY(y);
+    setZ(z);
+  }
 
-    public static Short3 div(Short3 a, Short3 b) {
-        return new Short3((short) (a.getX() / b.getX()), (short) (a.getY() / b.getY()), (short) (a.getZ() / b.getZ()));
-    }
+  /*
+   * vector = op( vector, vector )
+   */
+  public static Short3 add(Short3 a, Short3 b) {
+    return new Short3(
+        (short) (a.getX() + b.getX()),
+        (short) (a.getY() + b.getY()),
+        (short) (a.getZ() + b.getZ()));
+  }
 
-    public static Short3 mult(Short3 a, Short3 b) {
-        return new Short3((short) (a.getX() * b.getX()), (short) (a.getY() * b.getY()), (short) (a.getZ() * b.getZ()));
-    }
+  public static Short3 sub(Short3 a, Short3 b) {
+    return new Short3(
+        (short) (a.getX() - b.getX()),
+        (short) (a.getY() - b.getY()),
+        (short) (a.getZ() - b.getZ()));
+  }
 
-    public static Short3 min(Short3 a, Short3 b) {
-        return new Short3(TornadoMath.min(a.getX(), b.getX()), TornadoMath.min(a.getY(), b.getY()), TornadoMath.min(a.getZ(), b.getZ()));
-    }
+  public static Short3 div(Short3 a, Short3 b) {
+    return new Short3(
+        (short) (a.getX() / b.getX()),
+        (short) (a.getY() / b.getY()),
+        (short) (a.getZ() / b.getZ()));
+  }
 
-    public static Short3 max(Short3 a, Short3 b) {
-        return new Short3(TornadoMath.max(a.getX(), b.getX()), TornadoMath.max(a.getY(), b.getY()), TornadoMath.max(a.getZ(), b.getZ()));
-    }
+  public static Short3 mult(Short3 a, Short3 b) {
+    return new Short3(
+        (short) (a.getX() * b.getX()),
+        (short) (a.getY() * b.getY()),
+        (short) (a.getZ() * b.getZ()));
+  }
 
-    /*
-     * vector = op (vector, scalar)
-     */
-    public static Short3 add(Short3 a, short b) {
-        return new Short3((short) (a.getX() + b), (short) (a.getY() + b), (short) (a.getZ() + b));
-    }
+  public static Short3 min(Short3 a, Short3 b) {
+    return new Short3(
+        TornadoMath.min(a.getX(), b.getX()),
+        TornadoMath.min(a.getY(), b.getY()),
+        TornadoMath.min(a.getZ(), b.getZ()));
+  }
 
-    public static Short3 sub(Short3 a, short b) {
-        return new Short3((short) (a.getX() - b), (short) (a.getY() - b), (short) (a.getZ() - b));
-    }
+  public static Short3 max(Short3 a, Short3 b) {
+    return new Short3(
+        TornadoMath.max(a.getX(), b.getX()),
+        TornadoMath.max(a.getY(), b.getY()),
+        TornadoMath.max(a.getZ(), b.getZ()));
+  }
 
-    public static Short3 mult(Short3 a, short b) {
-        return new Short3((short) (a.getX() * b), (short) (a.getY() * b), (short) (a.getZ() * b));
-    }
+  /*
+   * vector = op (vector, scalar)
+   */
+  public static Short3 add(Short3 a, short b) {
+    return new Short3((short) (a.getX() + b), (short) (a.getY() + b), (short) (a.getZ() + b));
+  }
 
-    public static Short3 div(Short3 a, short b) {
-        return new Short3((short) (a.getX() / b), (short) (a.getY() / b), (short) (a.getZ() / b));
-    }
+  public static Short3 sub(Short3 a, short b) {
+    return new Short3((short) (a.getX() - b), (short) (a.getY() - b), (short) (a.getZ() - b));
+  }
 
-    public static Short3 inc(Short3 a, short value) {
-        return add(a, value);
-    }
+  public static Short3 mult(Short3 a, short b) {
+    return new Short3((short) (a.getX() * b), (short) (a.getY() * b), (short) (a.getZ() * b));
+  }
 
-    public static Short3 dec(Short3 a, short value) {
-        return sub(a, value);
-    }
+  public static Short3 div(Short3 a, short b) {
+    return new Short3((short) (a.getX() / b), (short) (a.getY() / b), (short) (a.getZ() / b));
+  }
 
-    public static Short3 scale(Short3 a, short value) {
-        return mult(a, value);
-    }
+  public static Short3 inc(Short3 a, short value) {
+    return add(a, value);
+  }
 
-    /*
-     * misc inplace vector ops
-     */
-    public static Short3 clamp(Short3 x, short min, short max) {
-        return new Short3(TornadoMath.clamp(x.getX(), min, max), TornadoMath.clamp(x.getY(), min, max), TornadoMath.clamp(x.getZ(), min, max));
-    }
+  public static Short3 dec(Short3 a, short value) {
+    return sub(a, value);
+  }
 
-    /*
-     * vector wide operations
-     */
-    public static short min(Short3 value) {
-        return TornadoMath.min(value.getX(), TornadoMath.min(value.getY(), value.getZ()));
-    }
+  public static Short3 scale(Short3 a, short value) {
+    return mult(a, value);
+  }
 
-    public static short max(Short3 value) {
-        return TornadoMath.max(value.getX(), TornadoMath.max(value.getY(), value.getZ()));
-    }
+  /*
+   * misc inplace vector ops
+   */
+  public static Short3 clamp(Short3 x, short min, short max) {
+    return new Short3(
+        TornadoMath.clamp(x.getX(), min, max),
+        TornadoMath.clamp(x.getY(), min, max),
+        TornadoMath.clamp(x.getZ(), min, max));
+  }
 
-    public static boolean isEqual(Short3 a, Short3 b) {
-        return TornadoMath.isEqual(a.toArray(), b.toArray());
-    }
+  /*
+   * vector wide operations
+   */
+  public static short min(Short3 value) {
+    return TornadoMath.min(value.getX(), TornadoMath.min(value.getY(), value.getZ()));
+  }
 
-    public void set(Short3 value) {
-        setX(value.getX());
-        setY(value.getY());
-        setZ(value.getZ());
-    }
+  public static short max(Short3 value) {
+    return TornadoMath.max(value.getX(), TornadoMath.max(value.getY(), value.getZ()));
+  }
 
-    public short get(int index) {
-        return storage[index];
-    }
+  public static boolean isEqual(Short3 a, Short3 b) {
+    return TornadoMath.isEqual(a.toArray(), b.toArray());
+  }
 
-    public void set(int index, short value) {
-        storage[index] = value;
-    }
+  public void set(Short3 value) {
+    setX(value.getX());
+    setY(value.getY());
+    setZ(value.getZ());
+  }
 
-    public short getX() {
-        return get(0);
-    }
+  public short get(int index) {
+    return storage[index];
+  }
 
-    public void setX(short value) {
-        set(0, value);
-    }
+  public void set(int index, short value) {
+    storage[index] = value;
+  }
 
-    public short getY() {
-        return get(1);
-    }
+  public short getX() {
+    return get(0);
+  }
 
-    public void setY(short value) {
-        set(1, value);
-    }
+  public void setX(short value) {
+    set(0, value);
+  }
 
-    public short getZ() {
-        return get(2);
-    }
+  public short getY() {
+    return get(1);
+  }
 
-    public void setZ(short value) {
-        set(2, value);
-    }
+  public void setY(short value) {
+    set(1, value);
+  }
 
-    public Short3 duplicate() {
-        Short3 vector = new Short3();
-        vector.set(this);
-        return vector;
-    }
+  public short getZ() {
+    return get(2);
+  }
 
-    public String toString(String fmt) {
-        return String.format(fmt, getX(), getY(), getZ());
-    }
+  public void setZ(short value) {
+    set(2, value);
+  }
 
-    @Override
-    public String toString() {
-        return toString(NUMBER_FORMAT);
-    }
+  public Short3 duplicate() {
+    Short3 vector = new Short3();
+    vector.set(this);
+    return vector;
+  }
 
-    @Override
-    public void loadFromBuffer(ShortBuffer buffer) {
-        asBuffer().put(buffer);
-    }
+  public String toString(String fmt) {
+    return String.format(fmt, getX(), getY(), getZ());
+  }
 
-    @Override
-    public ShortBuffer asBuffer() {
-        return ShortBuffer.wrap(storage);
-    }
+  @Override
+  public String toString() {
+    return toString(NUMBER_FORMAT);
+  }
 
-    @Override
-    public int size() {
-        return NUM_ELEMENTS;
-    }
+  @Override
+  public void loadFromBuffer(ShortBuffer buffer) {
+    asBuffer().put(buffer);
+  }
 
-    public short[] toArray() {
-        return storage;
-    }
+  @Override
+  public ShortBuffer asBuffer() {
+    return ShortBuffer.wrap(storage);
+  }
 
-    @Override
-    public long getNumBytes() {
-        return NUM_ELEMENTS * 2;
-    }
+  @Override
+  public int size() {
+    return NUM_ELEMENTS;
+  }
 
+  public short[] toArray() {
+    return storage;
+  }
+
+  @Override
+  public long getNumBytes() {
+    return NUM_ELEMENTS * 2;
+  }
 }

@@ -29,38 +29,40 @@ import java.util.List;
 
 public class BlockingCopyOutNode extends ContextOpNode {
 
-    public BlockingCopyOutNode(ContextNode context) {
-        super(context);
+  public BlockingCopyOutNode(ContextNode context) {
+    super(context);
+  }
+
+  private DependentReadNode value;
+
+  public void setValue(DependentReadNode object) {
+    value = object;
+  }
+
+  public DependentReadNode getValue() {
+    return value;
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "[%d]: blocking copy out object %d after task %d",
+        id, value.getValue().getIndex(), value.getDependent().getId());
+  }
+
+  @Override
+  public boolean hasInputs() {
+    return value != null;
+  }
+
+  @Override
+  public List<AbstractNode> getInputs() {
+    if (!hasInputs()) {
+      return Collections.emptyList();
     }
 
-    private DependentReadNode value;
-
-    public void setValue(DependentReadNode object) {
-        value = object;
-    }
-
-    public DependentReadNode getValue() {
-        return value;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("[%d]: blocking copy out object %d after task %d", id, value.getValue().getIndex(), value.getDependent().getId());
-    }
-
-    @Override
-    public boolean hasInputs() {
-        return value != null;
-    }
-
-    @Override
-    public List<AbstractNode> getInputs() {
-        if (!hasInputs()) {
-            return Collections.emptyList();
-        }
-
-        final List<AbstractNode> result = new ArrayList<>();
-        result.add(value);
-        return result;
-    }
+    final List<AbstractNode> result = new ArrayList<>();
+    result.add(value);
+    return result;
+  }
 }

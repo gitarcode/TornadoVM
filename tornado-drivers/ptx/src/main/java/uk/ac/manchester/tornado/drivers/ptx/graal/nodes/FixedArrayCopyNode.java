@@ -35,90 +35,100 @@ import org.graalvm.compiler.nodes.ValuePhiNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXArchitecture;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXBinary;
-import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXUnary;
-import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
+import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
+import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXUnary;
 
-/**
- * This node generates a pointer copy between two arrays in private memory.
- */
+/** This node generates a pointer copy between two arrays in private memory. */
 @NodeInfo
 public class FixedArrayCopyNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<FixedArrayCopyNode> TYPE = NodeClass.create(FixedArrayCopyNode.class);
+  public static final NodeClass<FixedArrayCopyNode> TYPE =
+      NodeClass.create(FixedArrayCopyNode.class);
 
-    @Input
-    protected ValuePhiNode conditionalPhiNode;
-    @Input
-    protected ValueNode address;
+  @Input protected ValuePhiNode conditionalPhiNode;
+  @Input protected ValueNode address;
 
-    protected ResolvedJavaType elementType;
-    protected PTXAssembler.PTXBinaryTemplate pointerCopyTemplate;
-    protected PTXArchitecture.PTXMemoryBase memoryRegister;
+  protected ResolvedJavaType elementType;
+  protected PTXAssembler.PTXBinaryTemplate pointerCopyTemplate;
+  protected PTXArchitecture.PTXMemoryBase memoryRegister;
 
-    public FixedArrayCopyNode(ValuePhiNode conditionalPhiNode, ResolvedJavaType elementType, PTXArchitecture.PTXMemoryBase memoryRegister, ValueNode address) {
-        super(TYPE, StampFactory.objectNonNull(TypeReference.createTrustedWithoutAssumptions(elementType.getArrayClass())));
-        this.conditionalPhiNode = conditionalPhiNode;
-        this.elementType = elementType;
-        this.memoryRegister = memoryRegister;
-        this.pointerCopyTemplate = PTXKind.resolvePrivatePointerCopyTemplate(elementType);
-        this.address = address;
+  public FixedArrayCopyNode(
+      ValuePhiNode conditionalPhiNode,
+      ResolvedJavaType elementType,
+      PTXArchitecture.PTXMemoryBase memoryRegister,
+      ValueNode address) {
+    super(
+        TYPE,
+        StampFactory.objectNonNull(
+            TypeReference.createTrustedWithoutAssumptions(elementType.getArrayClass())));
+    this.conditionalPhiNode = conditionalPhiNode;
+    this.elementType = elementType;
+    this.memoryRegister = memoryRegister;
+    this.pointerCopyTemplate = PTXKind.resolvePrivatePointerCopyTemplate(elementType);
+    this.address = address;
+  }
+
+  public PTXArchitecture.PTXMemoryBase getMemoryRegister() {
+    return memoryRegister;
+  }
+
+  private int getOffset() {
+    PTXKind kind = PTXKind.fromResolvedJavaType(elementType);
+    return switch (kind) {
+      case F64, S64 -> 8;
+      case F32, S32 -> 4;
+      case S16 -> 2;
+      case U16, S8 -> 1;
+      default -> -1;
+    };
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    final Value index = gen.operand(address);
+    final Value arrayToBeCopied = gen.operand(conditionalPhiNode);
+    // the kind of the fixed array
+    PTXKind ptxKind = PTXKind.fromResolvedJavaType(elementType);
+    LIRKind lirKind = LIRKind.value(ptxKind);
+    // the kind of the variables that will store the base index and address
+    LIRKind indexKind = LIRKind.value(PTXKind.S32);
+    LIRKind addressBaseKind = LIRKind.value(PTXKind.U32);
+
+    final Value offsetedIndex = tool.newVariable(indexKind);
+    final Value baseAddress = tool.newVariable(addressBaseKind);
+    int offset = getOffset();
+    final Value offsetValue = tool.emitConstant(lirKind, new RawConstant(offset));
+    tool.append(
+        new PTXLIRStmt.PrivateArrayCopyStmt(
+            index, arrayToBeCopied, offsetedIndex, baseAddress, offsetValue));
+
+    final PTXBinary.Expr declarationPtr;
+    final Value result;
+    if (ptxKind.isF32() || ptxKind.isF64()) {
+      result = tool.newVariable(lirKind);
+      tool.append(
+          new PTXLIRStmt.AssignStmt(
+              result,
+              new PTXUnary.Expr(PTXAssembler.PTXUnaryOp.CVT_FLOAT_RNE, lirKind, baseAddress)));
+      declarationPtr = new PTXBinary.Expr(pointerCopyTemplate, lirKind, result, baseAddress);
+    } else if (ptxKind.isS64()) {
+      result = tool.newVariable(lirKind);
+      tool.append(
+          new PTXLIRStmt.AssignStmt(
+              result, new PTXUnary.Expr(PTXAssembler.PTXUnaryOp.CVT_FLOAT, lirKind, baseAddress)));
+      declarationPtr = new PTXBinary.Expr(pointerCopyTemplate, lirKind, result, baseAddress);
+    } else {
+      declarationPtr = new PTXBinary.Expr(pointerCopyTemplate, lirKind, offsetedIndex, baseAddress);
+      result = offsetedIndex;
     }
 
-    public PTXArchitecture.PTXMemoryBase getMemoryRegister() {
-        return memoryRegister;
-    }
-
-    private int getOffset() {
-        PTXKind kind = PTXKind.fromResolvedJavaType(elementType);
-        return switch (kind) {
-            case F64, S64 -> 8;
-            case F32, S32 -> 4;
-            case S16 -> 2;
-            case U16, S8 -> 1;
-            default -> -1;
-        };
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        final Value index = gen.operand(address);
-        final Value arrayToBeCopied = gen.operand(conditionalPhiNode);
-        // the kind of the fixed array
-        PTXKind ptxKind = PTXKind.fromResolvedJavaType(elementType);
-        LIRKind lirKind = LIRKind.value(ptxKind);
-        // the kind of the variables that will store the base index and address
-        LIRKind indexKind = LIRKind.value(PTXKind.S32);
-        LIRKind addressBaseKind = LIRKind.value(PTXKind.U32);
-
-        final Value offsetedIndex = tool.newVariable(indexKind);
-        final Value baseAddress = tool.newVariable(addressBaseKind);
-        int offset = getOffset();
-        final Value offsetValue = tool.emitConstant(lirKind, new RawConstant(offset));
-        tool.append(new PTXLIRStmt.PrivateArrayCopyStmt(index, arrayToBeCopied, offsetedIndex, baseAddress, offsetValue));
-
-        final PTXBinary.Expr declarationPtr;
-        final Value result;
-        if (ptxKind.isF32() || ptxKind.isF64()) {
-            result = tool.newVariable(lirKind);
-            tool.append(new PTXLIRStmt.AssignStmt(result, new PTXUnary.Expr(PTXAssembler.PTXUnaryOp.CVT_FLOAT_RNE, lirKind, baseAddress)));
-            declarationPtr = new PTXBinary.Expr(pointerCopyTemplate, lirKind, result, baseAddress);
-        } else if (ptxKind.isS64()) {
-            result = tool.newVariable(lirKind);
-            tool.append(new PTXLIRStmt.AssignStmt(result, new PTXUnary.Expr(PTXAssembler.PTXUnaryOp.CVT_FLOAT, lirKind, baseAddress)));
-            declarationPtr = new PTXBinary.Expr(pointerCopyTemplate, lirKind, result, baseAddress);
-        } else {
-            declarationPtr = new PTXBinary.Expr(pointerCopyTemplate, lirKind, offsetedIndex, baseAddress);
-            result = offsetedIndex;
-        }
-
-        final PTXLIRStmt.ExprStmt ptrExpr = new PTXLIRStmt.ExprStmt(declarationPtr);
-        tool.append(ptrExpr);
-        gen.setResult(this, result);
-    }
+    final PTXLIRStmt.ExprStmt ptrExpr = new PTXLIRStmt.ExprStmt(declarationPtr);
+    tool.append(ptrExpr);
+    gen.setResult(this, result);
+  }
 }

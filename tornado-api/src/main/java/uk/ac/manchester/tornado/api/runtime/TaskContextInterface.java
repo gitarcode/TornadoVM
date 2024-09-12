@@ -18,42 +18,41 @@
 package uk.ac.manchester.tornado.api.runtime;
 
 import java.util.List;
-
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.common.TornadoEvents;
 import uk.ac.manchester.tornado.api.enums.TornadoVMBackendType;
 
 public interface TaskContextInterface {
 
-    List<TornadoEvents> getProfiles(long executionPlanId);
+  List<TornadoEvents> getProfiles(long executionPlanId);
 
-    void setCompilerFlags(TornadoVMBackendType backendType, String flags);
+  void setCompilerFlags(TornadoVMBackendType backendType, String flags);
 
-    void setGlobalWork(long[] global);
+  void setGlobalWork(long[] global);
 
-    void setLocalWork(long[] local);
+  void setLocalWork(long[] local);
 
-    long[] getGlobalWork();
+  long[] getGlobalWork();
 
-    long[] getLocalWork();
+  long[] getLocalWork();
 
-    void setNumThreads(long threads);
+  void setNumThreads(long threads);
 
-    long getNumThreads();
+  long getNumThreads();
 
-    void setCompiledGraph(Object graph);
+  void setCompiledGraph(Object graph);
 
-    Object getCompiledResolvedJavaMethod();
+  Object getCompiledResolvedJavaMethod();
 
-    int getBackendIndex();
+  int getBackendIndex();
 
-    int getDeviceIndex();
+  int getDeviceIndex();
 
-    void setDevice(TornadoDevice device);
+  void setDevice(TornadoDevice device);
 
-    boolean isPrintKernelEnabled();
+  boolean isPrintKernelEnabled();
 
-    void setPrintKernelFlag(boolean printKernelEnabled);
+  void setPrintKernelFlag(boolean printKernelEnabled);
 
-    void resetThreadBlocks();
+  void resetThreadBlocks();
 }

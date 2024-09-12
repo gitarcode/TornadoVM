@@ -21,6 +21,8 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -31,9 +33,6 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.memory.address.AddressNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
@@ -42,21 +41,22 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXUnary;
 @NodeInfo
 public class ReadHalfFloatNode extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<ReadHalfFloatNode> TYPE = NodeClass.create(ReadHalfFloatNode.class);
+  public static final NodeClass<ReadHalfFloatNode> TYPE = NodeClass.create(ReadHalfFloatNode.class);
 
-    @Input
-    private AddressNode addressNode;
+  @Input private AddressNode addressNode;
 
-    public ReadHalfFloatNode(AddressNode addressNode) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.addressNode = addressNode;
-    }
+  public ReadHalfFloatNode(AddressNode addressNode) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.addressNode = addressNode;
+  }
 
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(LIRKind.value(PTXKind.F16));
-        Value addressValue = generator.operand(addressNode);
-        tool.append(new PTXLIRStmt.HalfFloatLoadStmt((PTXUnary.MemoryAccess) addressValue, result, PTXAssembler.PTXNullaryOp.LD));
-        generator.setResult(this, result);
-    }
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(LIRKind.value(PTXKind.F16));
+    Value addressValue = generator.operand(addressNode);
+    tool.append(
+        new PTXLIRStmt.HalfFloatLoadStmt(
+            (PTXUnary.MemoryAccess) addressValue, result, PTXAssembler.PTXNullaryOp.LD));
+    generator.setResult(this, result);
+  }
 }

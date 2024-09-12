@@ -31,135 +31,135 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner nbody
  * </code>
  */
 public class NBodyTornado extends BenchmarkDriver {
-    private float delT;
-    private float espSqr;
-    private FloatArray posSeq;
-    private FloatArray velSeq;
-    private int numBodies;
+  private float delT;
+  private float espSqr;
+  private FloatArray posSeq;
+  private FloatArray velSeq;
+  private int numBodies;
 
-    public NBodyTornado(int numBodies, int iterations) {
-        super(iterations);
-        this.numBodies = numBodies;
+  public NBodyTornado(int numBodies, int iterations) {
+    super(iterations);
+    this.numBodies = numBodies;
+  }
+
+  @Override
+  public void setUp() {
+    delT = 0.005f;
+    espSqr = 500.0f;
+
+    FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
+    FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
+
+    for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+      auxPositionRandom.set(i, (float) Math.random());
     }
 
-    @Override
-    public void setUp() {
-        delT = 0.005f;
-        espSqr = 500.0f;
+    auxVelocityZero.init(0.0f);
 
-        FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
-        FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
+    posSeq = new FloatArray(numBodies * 4);
+    velSeq = new FloatArray(numBodies * 4);
 
-        for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-            auxPositionRandom.set(i, (float) Math.random());
-        }
-
-        auxVelocityZero.init(0.0f);
-
-        posSeq = new FloatArray(numBodies * 4);
-        velSeq = new FloatArray(numBodies * 4);
-
-        if (auxPositionRandom.getSize() >= 0) {
-            for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-                posSeq.set(i, auxPositionRandom.get(i));
-            }
-        }
-
-        if (auxVelocityZero.getSize() >= 0) {
-            for (int i = 0; i < auxVelocityZero.getSize(); i++) {
-                velSeq.set(i, auxVelocityZero.get(i));
-            }
-        }
-
-        taskGraph = new TaskGraph("benchmark");
-        taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, velSeq, posSeq) //
-                .task("t0", ComputeKernels::nBody, numBodies, posSeq, velSeq, delT, espSqr);
-
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+    if (auxPositionRandom.getSize() >= 0) {
+      for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+        posSeq.set(i, auxPositionRandom.get(i));
+      }
     }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        posSeq = null;
-        velSeq = null;
-        executionPlan.resetDevice();
-        super.tearDown();
+    if (auxVelocityZero.getSize() >= 0) {
+      for (int i = 0; i < auxVelocityZero.getSize(); i++) {
+        velSeq.set(i, auxVelocityZero.get(i));
+      }
     }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        boolean val = true;
-        FloatArray posSeqSeq;
-        FloatArray velSeqSeq;
-        delT = 0.005f;
-        espSqr = 500.0f;
+    taskGraph = new TaskGraph("benchmark");
+    taskGraph
+        .transferToDevice(DataTransferMode.EVERY_EXECUTION, velSeq, posSeq) //
+        .task("t0", ComputeKernels::nBody, numBodies, posSeq, velSeq, delT, espSqr);
 
-        FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
-        FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-        for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-            auxPositionRandom.set(i, (float) Math.random());
-        }
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    posSeq = null;
+    velSeq = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-        auxVelocityZero.init(0.0f);
+  @Override
+  public boolean validate(TornadoDevice device) {
+    boolean val = true;
+    FloatArray posSeqSeq;
+    FloatArray velSeqSeq;
+    delT = 0.005f;
+    espSqr = 500.0f;
 
-        posSeq = new FloatArray(numBodies * 4);
-        velSeq = new FloatArray(numBodies * 4);
-        posSeqSeq = new FloatArray(numBodies * 4);
-        velSeqSeq = new FloatArray(numBodies * 4);
+    FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
+    FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
 
-        for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-            posSeq.set(i, auxPositionRandom.get(i));
-            posSeqSeq.set(i, auxPositionRandom.get(i));
-        }
-        for (int i = 0; i < auxVelocityZero.getSize(); i++) {
-            velSeq.set(i, auxVelocityZero.get(i));
-            velSeqSeq.set(i, auxVelocityZero.get(i));
-        }
-        TaskGraph taskGraph = new TaskGraph("benchmark");
-        taskGraph.task("t0", ComputeKernels::nBody, numBodies, posSeq, velSeq, delT, espSqr);
-        taskGraph.transferToHost(DataTransferMode.UNDER_DEMAND, posSeq, velSeq);
-
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-
-        TornadoExecutionResult executionResult = executionPlan.withWarmUp() //
-                .withDevice(device) //
-                .execute();
-
-        executionResult.transferToHost(posSeq, velSeq);
-        executionPlan.clearProfiles();
-
-        nBody(numBodies, posSeqSeq, velSeqSeq, delT, espSqr);
-
-        for (int i = 0; i < numBodies * 4; i++) {
-            if (abs(posSeqSeq.get(i) - posSeq.get(i)) > 0.01) {
-                val = false;
-                break;
-            }
-            if (abs(velSeq.get(i) - velSeqSeq.get(i)) > 0.01) {
-                val = false;
-                break;
-            }
-        }
-        System.out.printf("Number validation: " + val + "\n");
-        return val;
+    for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+      auxPositionRandom.set(i, (float) Math.random());
     }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
+    auxVelocityZero.init(0.0f);
+
+    posSeq = new FloatArray(numBodies * 4);
+    velSeq = new FloatArray(numBodies * 4);
+    posSeqSeq = new FloatArray(numBodies * 4);
+    velSeqSeq = new FloatArray(numBodies * 4);
+
+    for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+      posSeq.set(i, auxPositionRandom.get(i));
+      posSeqSeq.set(i, auxPositionRandom.get(i));
     }
+    for (int i = 0; i < auxVelocityZero.getSize(); i++) {
+      velSeq.set(i, auxVelocityZero.get(i));
+      velSeqSeq.set(i, auxVelocityZero.get(i));
+    }
+    TaskGraph taskGraph = new TaskGraph("benchmark");
+    taskGraph.task("t0", ComputeKernels::nBody, numBodies, posSeq, velSeq, delT, espSqr);
+    taskGraph.transferToHost(DataTransferMode.UNDER_DEMAND, posSeq, velSeq);
+
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+
+    TornadoExecutionResult executionResult =
+        executionPlan
+            .withWarmUp() //
+            .withDevice(device) //
+            .execute();
+
+    executionResult.transferToHost(posSeq, velSeq);
+    executionPlan.clearProfiles();
+
+    nBody(numBodies, posSeqSeq, velSeqSeq, delT, espSqr);
+
+    for (int i = 0; i < numBodies * 4; i++) {
+      if (abs(posSeqSeq.get(i) - posSeq.get(i)) > 0.01) {
+        val = false;
+        break;
+      }
+      if (abs(velSeq.get(i) - velSeqSeq.get(i)) > 0.01) {
+        val = false;
+        break;
+      }
+    }
+    System.out.printf("Number validation: " + val + "\n");
+    return val;
+  }
+
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 }

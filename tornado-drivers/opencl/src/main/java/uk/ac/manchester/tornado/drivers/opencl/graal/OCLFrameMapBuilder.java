@@ -21,20 +21,20 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal;
 
-import org.graalvm.compiler.lir.framemap.FrameMap;
-import org.graalvm.compiler.lir.framemap.FrameMapBuilderImpl;
-
 import jdk.vm.ci.code.CodeCacheProvider;
 import jdk.vm.ci.code.RegisterConfig;
 import jdk.vm.ci.code.StackSlot;
+import org.graalvm.compiler.lir.framemap.FrameMap;
+import org.graalvm.compiler.lir.framemap.FrameMapBuilderImpl;
 
 public class OCLFrameMapBuilder extends FrameMapBuilderImpl {
 
-    public OCLFrameMapBuilder(FrameMap frameMap, CodeCacheProvider codeCache, RegisterConfig registerConfig) {
-        super(frameMap, codeCache, registerConfig);
-    }
+  public OCLFrameMapBuilder(
+      FrameMap frameMap, CodeCacheProvider codeCache, RegisterConfig registerConfig) {
+    super(frameMap, codeCache, registerConfig);
+  }
 
-    public StackSlot allocateDeoptimizationRescueSlot() {
-        return ((OCLFrameMap) getFrameMap()).allocateDeoptimizationRescueSlot();
-    }
+  public StackSlot allocateDeoptimizationRescueSlot() {
+    return ((OCLFrameMap) getFrameMap()).allocateDeoptimizationRescueSlot();
+  }
 }

@@ -23,16 +23,15 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.lir;
 
+import jdk.vm.ci.meta.AllocatableValue;
+import jdk.vm.ci.meta.Constant;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.cfg.BasicBlock;
 import org.graalvm.compiler.lir.LIRInstruction;
 import org.graalvm.compiler.lir.LIRInstructionClass;
 import org.graalvm.compiler.lir.LabelRef;
 import org.graalvm.compiler.lir.Opcode;
 import org.graalvm.compiler.lir.SwitchStrategy;
-
-import jdk.vm.ci.meta.AllocatableValue;
-import jdk.vm.ci.meta.Constant;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.beehivespirvtoolkit.lib.SPIRVInstScope;
 import uk.ac.manchester.beehivespirvtoolkit.lib.instructions.SPIRVOpBranch;
 import uk.ac.manchester.beehivespirvtoolkit.lib.instructions.SPIRVOpBranchConditional;
@@ -50,246 +49,250 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.asm.SPIRVAssembler;
 import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.SPIRVCompilationResultBuilder;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 
-/**
- * SPIR-V Code Generation for all control-flow constructs.
- */
+/** SPIR-V Code Generation for all control-flow constructs. */
 public class SPIRVControlFlow {
 
-    public abstract static class BaseControlFlow extends SPIRVLIRStmt.AbstractInstruction {
+  public abstract static class BaseControlFlow extends SPIRVLIRStmt.AbstractInstruction {
 
-        BaseControlFlow(LIRInstructionClass<? extends LIRInstruction> c) {
-            super(c);
-        }
-
-        // We only declare the IDs
-        protected SPIRVId getIfOfBranch(String blockName, SPIRVAssembler asm) {
-            SPIRVId branch = asm.getLabel(blockName);
-            if (branch == null) {
-                branch = asm.registerBlockLabel(blockName);
-            }
-            return branch;
-        }
-
-        // We only declare the IDs
-        protected SPIRVId getIdForBranch(LabelRef ref, SPIRVAssembler asm) {
-            BasicBlock<?> targetBlock = ref.getTargetBlock();
-            String blockName = targetBlock.toString();
-            SPIRVId branch = asm.getLabel(blockName);
-            if (branch == null) {
-                branch = asm.registerBlockLabel(blockName);
-            }
-            return branch;
-        }
+    BaseControlFlow(LIRInstructionClass<? extends LIRInstruction> c) {
+      super(c);
     }
 
-    public static class LoopBeginLabel extends BaseControlFlow {
-
-        public static final LIRInstructionClass<LoopBeginLabel> TYPE = LIRInstructionClass.create(LoopBeginLabel.class);
-
-        private final String blockId;
-
-        public LoopBeginLabel(String blockName) {
-            super(TYPE);
-            this.blockId = blockName;
-        }
-
-        @Override
-        protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
-            SPIRVId branchId = getIfOfBranch(blockId, asm);
-            Logger.traceCodeGen(Logger.BACKEND.SPIRV, "\tOpBranch: " + blockId);
-            SPIRVInstScope newScope = asm.currentBlockScope().add(new SPIRVOpBranch(branchId));
-            asm.pushScope(newScope);
-            Logger.traceCodeGen(Logger.BACKEND.SPIRV, "\tLoopLabel : blockID " + blockId);
-            SPIRVInstScope newScope2 = newScope.add(new SPIRVOpLabel(branchId));
-            asm.pushScope(newScope2);
-        }
+    // We only declare the IDs
+    protected SPIRVId getIfOfBranch(String blockName, SPIRVAssembler asm) {
+      SPIRVId branch = asm.getLabel(blockName);
+      if (branch == null) {
+        branch = asm.registerBlockLabel(blockName);
+      }
+      return branch;
     }
 
-    public static class BranchConditional extends BaseControlFlow {
+    // We only declare the IDs
+    protected SPIRVId getIdForBranch(LabelRef ref, SPIRVAssembler asm) {
+      BasicBlock<?> targetBlock = ref.getTargetBlock();
+      String blockName = targetBlock.toString();
+      SPIRVId branch = asm.getLabel(blockName);
+      if (branch == null) {
+        branch = asm.registerBlockLabel(blockName);
+      }
+      return branch;
+    }
+  }
 
-        public static final LIRInstructionClass<BranchConditional> TYPE = LIRInstructionClass.create(BranchConditional.class);
+  public static class LoopBeginLabel extends BaseControlFlow {
 
-        @Use
-        protected Value condition;
+    public static final LIRInstructionClass<LoopBeginLabel> TYPE =
+        LIRInstructionClass.create(LoopBeginLabel.class);
 
-        private LabelRef lirTrueBlock;
-        private LabelRef lirFalseBlock;
+    private final String blockId;
 
-        public BranchConditional(Value condition, LabelRef lirTrueBlock, LabelRef lirFalseBlock) {
-            super(TYPE);
-            this.condition = condition;
-            this.lirTrueBlock = lirTrueBlock;
-            this.lirFalseBlock = lirFalseBlock;
-        }
-
-        /**
-         * It emits the following pattern:
-         *
-         * <code>
-         *     OpBranchConditional %condition %trueBranch %falseBranch
-         * </code>
-         *
-         * @param crb
-         *            {@link SPIRVCompilationResultBuilder crb}
-         * @param asm
-         *            {@link SPIRVAssembler}
-         */
-        @Override
-        protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
-
-            SPIRVId conditionId = asm.lookUpLIRInstructions(condition);
-
-            SPIRVId trueBranch = getIdForBranch(lirTrueBlock, asm);
-            SPIRVId falseBranch = getIdForBranch(lirFalseBlock, asm);
-
-            Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit SPIRVOpBranchConditional: " + condition + "? " + lirTrueBlock + ":" + lirFalseBlock);
-
-            asm.currentBlockScope().add(new SPIRVOpBranchConditional( //
-                    conditionId, //
-                    trueBranch, //
-                    falseBranch, //
-                    new SPIRVMultipleOperands<>()));
-
-            // Note: we do not need to register a new ID, since this operation does not
-            // generate one.
-
-        }
+    public LoopBeginLabel(String blockName) {
+      super(TYPE);
+      this.blockId = blockName;
     }
 
-    public static class Branch extends BaseControlFlow {
+    @Override
+    protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
+      SPIRVId branchId = getIfOfBranch(blockId, asm);
+      Logger.traceCodeGen(Logger.BACKEND.SPIRV, "\tOpBranch: " + blockId);
+      SPIRVInstScope newScope = asm.currentBlockScope().add(new SPIRVOpBranch(branchId));
+      asm.pushScope(newScope);
+      Logger.traceCodeGen(Logger.BACKEND.SPIRV, "\tLoopLabel : blockID " + blockId);
+      SPIRVInstScope newScope2 = newScope.add(new SPIRVOpLabel(branchId));
+      asm.pushScope(newScope2);
+    }
+  }
 
-        public static final LIRInstructionClass<Branch> TYPE = LIRInstructionClass.create(Branch.class);
+  public static class BranchConditional extends BaseControlFlow {
 
-        @Use
-        private LabelRef branch;
+    public static final LIRInstructionClass<BranchConditional> TYPE =
+        LIRInstructionClass.create(BranchConditional.class);
 
-        public Branch(LabelRef branch) {
-            super(TYPE);
-            this.branch = branch;
-        }
+    @Use protected Value condition;
 
-        /**
-         * It emits the following pattern:
-         *
-         * <code>
-         *     SPIRVOpBranch %branch
-         * </code>
-         *
-         * @param crb
-         * @param asm
-         */
-        @Override
-        protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
-            SPIRVId branchId = getIdForBranch(branch, asm);
-            Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit SPIRVOpBranch: " + branch);
-            asm.currentBlockScope().add(new SPIRVOpBranch(branchId));
+    private LabelRef lirTrueBlock;
+    private LabelRef lirFalseBlock;
 
-        }
+    public BranchConditional(Value condition, LabelRef lirTrueBlock, LabelRef lirFalseBlock) {
+      super(TYPE);
+      this.condition = condition;
+      this.lirTrueBlock = lirTrueBlock;
+      this.lirFalseBlock = lirFalseBlock;
     }
 
-    public static class BranchIf extends BaseControlFlow {
+    /**
+     * It emits the following pattern: <code>
+     *     OpBranchConditional %condition %trueBranch %falseBranch
+     * </code>
+     *
+     * @param crb {@link SPIRVCompilationResultBuilder crb}
+     * @param asm {@link SPIRVAssembler}
+     */
+    @Override
+    protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
 
-        public static final LIRInstructionClass<BranchIf> TYPE = LIRInstructionClass.create(BranchIf.class);
-        private final boolean isConditional;
-        private final boolean isLoopEdgeBack;
-        @Use
-        private LabelRef branch;
+      SPIRVId conditionId = asm.lookUpLIRInstructions(condition);
 
-        public BranchIf(LabelRef branch, boolean isConditional, boolean isLoopEdgeBack) {
-            super(TYPE);
-            this.branch = branch;
-            this.isConditional = isConditional;
-            this.isLoopEdgeBack = isLoopEdgeBack;
-        }
+      SPIRVId trueBranch = getIdForBranch(lirTrueBlock, asm);
+      SPIRVId falseBranch = getIdForBranch(lirFalseBlock, asm);
 
-        /**
-         * It emits the following pattern:
-         *
-         * <code>
-         *     SPIRVOpBranch %branch
-         * </code>
-         *
-         * @param crb
-         * @param asm
-         */
-        @Override
-        protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
-            SPIRVId branchId = getIdForBranch(branch, asm);
-            Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit IF_CASE SPIRVOpBranch: " + branch);
-            asm.currentBlockScope().add(new SPIRVOpBranch(branchId));
+      Logger.traceCodeGen(
+          Logger.BACKEND.SPIRV,
+          "emit SPIRVOpBranchConditional: "
+              + condition
+              + "? "
+              + lirTrueBlock
+              + ":"
+              + lirFalseBlock);
 
-        }
+      asm.currentBlockScope()
+          .add(
+              new SPIRVOpBranchConditional( //
+                  conditionId, //
+                  trueBranch, //
+                  falseBranch, //
+                  new SPIRVMultipleOperands<>()));
+
+      // Note: we do not need to register a new ID, since this operation does not
+      // generate one.
+
+    }
+  }
+
+  public static class Branch extends BaseControlFlow {
+
+    public static final LIRInstructionClass<Branch> TYPE = LIRInstructionClass.create(Branch.class);
+
+    @Use private LabelRef branch;
+
+    public Branch(LabelRef branch) {
+      super(TYPE);
+      this.branch = branch;
     }
 
-    public static class BranchLoopConditional extends BranchIf {
+    /**
+     * It emits the following pattern: <code>
+     *     SPIRVOpBranch %branch
+     * </code>
+     *
+     * @param crb
+     * @param asm
+     */
+    @Override
+    protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
+      SPIRVId branchId = getIdForBranch(branch, asm);
+      Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit SPIRVOpBranch: " + branch);
+      asm.currentBlockScope().add(new SPIRVOpBranch(branchId));
+    }
+  }
 
-        public BranchLoopConditional(LabelRef branch, boolean isConditional, boolean isLoopEdgeBack) {
-            super(branch, isConditional, isLoopEdgeBack);
-        }
+  public static class BranchIf extends BaseControlFlow {
+
+    public static final LIRInstructionClass<BranchIf> TYPE =
+        LIRInstructionClass.create(BranchIf.class);
+    private final boolean isConditional;
+    private final boolean isLoopEdgeBack;
+    @Use private LabelRef branch;
+
+    public BranchIf(LabelRef branch, boolean isConditional, boolean isLoopEdgeBack) {
+      super(TYPE);
+      this.branch = branch;
+      this.isConditional = isConditional;
+      this.isLoopEdgeBack = isLoopEdgeBack;
     }
 
-    @Opcode("Switch")
-    public static class SwitchStatement extends BaseControlFlow {
-
-        public static final LIRInstructionClass<SwitchStatement> TYPE = LIRInstructionClass.create(SwitchStatement.class);
-
-        @Use
-        private AllocatableValue key;
-
-        private SwitchStrategy strategy;
-
-        @Use
-        private LabelRef[] keytargets;
-
-        @Use
-        private LabelRef defaultTarget;
-
-        public SwitchStatement(AllocatableValue key, SwitchStrategy strategy, LabelRef[] keyTargets, LabelRef defaultTarget) {
-            super(TYPE);
-            this.key = key;
-            this.strategy = strategy;
-            this.keytargets = keyTargets;
-            this.defaultTarget = defaultTarget;
-        }
-
-        @Override
-        protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
-            Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit SWITCH(" + key + ")");
-
-            SPIRVId valueKey = asm.lookUpLIRInstructions(key);
-
-            SPIRVKind spirvKind = (SPIRVKind) key.getPlatformKind();
-            SPIRVId typeKind = asm.primitives.getTypePrimitive(spirvKind);
-
-            // Perform a Load of the key value
-            SPIRVId loadId;
-            if (TornadoOptions.OPTIMIZE_LOAD_STORE_SPIRV) {
-                loadId = valueKey;
-            } else {
-                loadId = asm.module.getNextId();
-                asm.currentBlockScope().add(new SPIRVOpLoad(//
-                        typeKind, //
-                        loadId, //
-                        valueKey, //
-                        new SPIRVOptionalOperand<>( //
-                                SPIRVMemoryAccess.Aligned( //
-                                        new SPIRVLiteralInteger(spirvKind.getSizeInBytes())))//
-                ));
-            }
-
-            SPIRVId defaultSelector = getIdForBranch(defaultTarget, asm);
-
-            SPIRVPairLiteralIntegerIdRef[] cases = new SPIRVPairLiteralIntegerIdRef[strategy.getKeyConstants().length];
-            int i = 0;
-            for (Constant keyConstant : strategy.getKeyConstants()) {
-                SPIRVId labelCase = getIdForBranch(keytargets[i], asm);
-                int caseIntValue = Integer.parseInt(keyConstant.toValueString());
-                SPIRVPairLiteralIntegerIdRef pairId = new SPIRVPairLiteralIntegerIdRef(new SPIRVLiteralInteger(caseIntValue), labelCase);
-                cases[i] = pairId;
-                i++;
-            }
-
-            asm.currentBlockScope().add(new SPIRVOpSwitch(loadId, defaultSelector, new SPIRVMultipleOperands<>(cases)));
-        }
+    /**
+     * It emits the following pattern: <code>
+     *     SPIRVOpBranch %branch
+     * </code>
+     *
+     * @param crb
+     * @param asm
+     */
+    @Override
+    protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
+      SPIRVId branchId = getIdForBranch(branch, asm);
+      Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit IF_CASE SPIRVOpBranch: " + branch);
+      asm.currentBlockScope().add(new SPIRVOpBranch(branchId));
     }
+  }
+
+  public static class BranchLoopConditional extends BranchIf {
+
+    public BranchLoopConditional(LabelRef branch, boolean isConditional, boolean isLoopEdgeBack) {
+      super(branch, isConditional, isLoopEdgeBack);
+    }
+  }
+
+  @Opcode("Switch")
+  public static class SwitchStatement extends BaseControlFlow {
+
+    public static final LIRInstructionClass<SwitchStatement> TYPE =
+        LIRInstructionClass.create(SwitchStatement.class);
+
+    @Use private AllocatableValue key;
+
+    private SwitchStrategy strategy;
+
+    @Use private LabelRef[] keytargets;
+
+    @Use private LabelRef defaultTarget;
+
+    public SwitchStatement(
+        AllocatableValue key,
+        SwitchStrategy strategy,
+        LabelRef[] keyTargets,
+        LabelRef defaultTarget) {
+      super(TYPE);
+      this.key = key;
+      this.strategy = strategy;
+      this.keytargets = keyTargets;
+      this.defaultTarget = defaultTarget;
+    }
+
+    @Override
+    protected void emitCode(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
+      Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit SWITCH(" + key + ")");
+
+      SPIRVId valueKey = asm.lookUpLIRInstructions(key);
+
+      SPIRVKind spirvKind = (SPIRVKind) key.getPlatformKind();
+      SPIRVId typeKind = asm.primitives.getTypePrimitive(spirvKind);
+
+      // Perform a Load of the key value
+      SPIRVId loadId;
+      if (TornadoOptions.OPTIMIZE_LOAD_STORE_SPIRV) {
+        loadId = valueKey;
+      } else {
+        loadId = asm.module.getNextId();
+        asm.currentBlockScope()
+            .add(
+                new SPIRVOpLoad( //
+                    typeKind, //
+                    loadId, //
+                    valueKey, //
+                    new SPIRVOptionalOperand<>( //
+                        SPIRVMemoryAccess.Aligned( //
+                            new SPIRVLiteralInteger(spirvKind.getSizeInBytes()))) //
+                    ));
+      }
+
+      SPIRVId defaultSelector = getIdForBranch(defaultTarget, asm);
+
+      SPIRVPairLiteralIntegerIdRef[] cases =
+          new SPIRVPairLiteralIntegerIdRef[strategy.getKeyConstants().length];
+      int i = 0;
+      for (Constant keyConstant : strategy.getKeyConstants()) {
+        SPIRVId labelCase = getIdForBranch(keytargets[i], asm);
+        int caseIntValue = Integer.parseInt(keyConstant.toValueString());
+        SPIRVPairLiteralIntegerIdRef pairId =
+            new SPIRVPairLiteralIntegerIdRef(new SPIRVLiteralInteger(caseIntValue), labelCase);
+        cases[i] = pairId;
+        i++;
+      }
+
+      asm.currentBlockScope()
+          .add(new SPIRVOpSwitch(loadId, defaultSelector, new SPIRVMultipleOperands<>(cases)));
+    }
+  }
 }

@@ -30,25 +30,23 @@ import org.graalvm.compiler.nodes.ValueNode;
 
 @NodeInfo(shortName = "FLOAT16(/)")
 public class DivHalfFloatNode extends ValueNode {
-    public static final NodeClass<DivHalfFloatNode> TYPE = NodeClass.create(DivHalfFloatNode.class);
+  public static final NodeClass<DivHalfFloatNode> TYPE = NodeClass.create(DivHalfFloatNode.class);
 
-    @Node.Input
-    ValueNode input1;
+  @Node.Input ValueNode input1;
 
-    @Node.Input
-    ValueNode input2;
+  @Node.Input ValueNode input2;
 
-    public DivHalfFloatNode(ValueNode input1, ValueNode input2) {
-        super(TYPE, StampFactory.forKind(JavaKind.Object));
-        this.input1 = input1;
-        this.input2 = input2;
-    }
+  public DivHalfFloatNode(ValueNode input1, ValueNode input2) {
+    super(TYPE, StampFactory.forKind(JavaKind.Object));
+    this.input1 = input1;
+    this.input2 = input2;
+  }
 
-    public ValueNode getX() {
-        return input1;
-    }
+  public ValueNode getX() {
+    return input1;
+  }
 
-    public ValueNode getY() {
-        return input2;
-    }
+  public ValueNode getY() {
+    return input2;
+  }
 }

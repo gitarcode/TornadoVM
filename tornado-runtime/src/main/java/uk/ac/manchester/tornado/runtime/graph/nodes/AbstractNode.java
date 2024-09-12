@@ -29,63 +29,63 @@ import java.util.List;
 
 public abstract class AbstractNode implements Comparable<AbstractNode> {
 
-    protected int index;
+  protected int index;
 
-    protected int id;
+  protected int id;
 
-    protected final List<AbstractNode> uses;
+  protected final List<AbstractNode> uses;
 
-    public AbstractNode() {
-        id = -1;
-        uses = new ArrayList<>();
+  public AbstractNode() {
+    id = -1;
+    uses = new ArrayList<>();
+  }
+
+  public boolean hasInputs() {
+    return false;
+  }
+
+  public List<AbstractNode> getInputs() {
+    return Collections.emptyList();
+  }
+
+  public void addUse(AbstractNode use) {
+    if (!uses.contains(use)) {
+      uses.add(use);
+    }
+  }
+
+  public int getIndex() {
+    return index;
+  }
+
+  @Override
+  public int compareTo(AbstractNode o) {
+    if (o == null) {
+      return -1;
     }
 
-    public boolean hasInputs() {
-        return false;
-    }
+    return (this == o) ? 0 : 1;
+  }
 
-    public List<AbstractNode> getInputs() {
-        return Collections.emptyList();
-    }
+  public int getId() {
+    return id;
+  }
 
-    public void addUse(AbstractNode use) {
-        if (!uses.contains(use)) {
-            uses.add(use);
-        }
-    }
+  public List<AbstractNode> getUses() {
+    return uses;
+  }
 
-    public int getIndex() {
-        return index;
-    }
+  public void replaceAtUses(AbstractNode toReplace, AbstractNode replacement) {
+    uses.remove(toReplace);
+    uses.add(replacement);
+  }
 
-    @Override
-    public int compareTo(AbstractNode o) {
-        if (o == null) {
-            return -1;
-        }
+  public void setId(int value) {
+    id = value;
+  }
 
-        return (this == o) ? 0 : 1;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public List<AbstractNode> getUses() {
-        return uses;
-    }
-
-    public void replaceAtUses(AbstractNode toReplace, AbstractNode replacement) {
-        uses.remove(toReplace);
-        uses.add(replacement);
-    }
-
-    public void setId(int value) {
-        id = value;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("[%d]: %s", id, this.getClass().getSimpleName());
-    }
+  @Override
+  public String toString() {
+    return String.format("[%d]: %s", id, this.getClass().getSimpleName());
+  }
 }

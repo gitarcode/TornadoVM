@@ -19,40 +19,34 @@ package uk.ac.manchester.tornado.api.types.matrix;
 
 abstract class Matrix2DType {
 
-    /**
-     * Number of rows.
-     */
-    protected final int ROWS;
+  /** Number of rows. */
+  protected final int ROWS;
 
-    /**
-     * Number of columns.
-     */
-    protected final int COLUMNS;
+  /** Number of columns. */
+  protected final int COLUMNS;
 
-    Matrix2DType(int numRows, int numColumns) {
-        this.ROWS = numRows;
-        this.COLUMNS = numColumns;
-    }
+  Matrix2DType(int numRows, int numColumns) {
+    this.ROWS = numRows;
+    this.COLUMNS = numColumns;
+  }
 
-    public int getNumRows() {
-        return ROWS;
-    }
+  public int getNumRows() {
+    return ROWS;
+  }
 
-    public int getNumColumns() {
-        return COLUMNS;
-    }
+  public int getNumColumns() {
+    return COLUMNS;
+  }
 
-    /**
-     * It returns the final index of the range to be copied, starting from the input
-     * parameter.
-     *
-     * @param fromIndex
-     * @return int
-     */
-    public int getFinalIndexOfRange(int fromIndex) {
-        return fromIndex + COLUMNS;
-    }
+  /**
+   * It returns the final index of the range to be copied, starting from the input parameter.
+   *
+   * @param fromIndex
+   * @return int
+   */
+  public int getFinalIndexOfRange(int fromIndex) {
+    return fromIndex + COLUMNS;
+  }
 
-    public abstract void clear();
-
+  public abstract void clear();
 }

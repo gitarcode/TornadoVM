@@ -24,44 +24,44 @@ import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 public class EulerJava extends BenchmarkDriver {
 
-    private int size;
-    LongArray input;
-    LongArray outputA;
-    LongArray outputB;
-    LongArray outputC;
-    LongArray outputD;
-    LongArray outputE;
+  private int size;
+  LongArray input;
+  LongArray outputA;
+  LongArray outputB;
+  LongArray outputC;
+  LongArray outputD;
+  LongArray outputE;
 
-    public EulerJava(int iterations, int size) {
-        super(iterations);
-        this.size = size;
-    }
+  public EulerJava(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
 
-    private LongArray init(int size) {
-        LongArray input = new LongArray(size);
-        for (int i = 0; i < size; i++) {
-            input.set(i, ((long) i * i * i * i * i));
-        }
-        return input;
+  private LongArray init(int size) {
+    LongArray input = new LongArray(size);
+    for (int i = 0; i < size; i++) {
+      input.set(i, ((long) i * i * i * i * i));
     }
+    return input;
+  }
 
-    @Override
-    public void setUp() {
-        input = init(size);
-        outputA = new LongArray(size);
-        outputB = new LongArray(size);
-        outputC = new LongArray(size);
-        outputD = new LongArray(size);
-        outputE = new LongArray(size);
-    }
+  @Override
+  public void setUp() {
+    input = init(size);
+    outputA = new LongArray(size);
+    outputB = new LongArray(size);
+    outputC = new LongArray(size);
+    outputD = new LongArray(size);
+    outputE = new LongArray(size);
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        ComputeKernels.euler(size, input, outputA, outputB, outputC, outputD, outputE);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    ComputeKernels.euler(size, input, outputA, outputB, outputC, outputD, outputE);
+  }
 }

@@ -22,44 +22,43 @@ import uk.ac.manchester.tornado.api.TornadoSetting;
 
 public class TornadoRuntimeProvider {
 
-    private static TornadoRuntime runtimeImpl;
-    private static TornadoSetting tornadoImpl;
+  private static TornadoRuntime runtimeImpl;
+  private static TornadoSetting tornadoImpl;
 
-    static {
-        init();
+  static {
+    init();
+  }
+
+  private static void init() {
+    if (runtimeImpl == null) {
+      runtimeImpl = TornadoAPIProvider.loadTornadoRuntimeImpl();
     }
-
-    private static void init() {
-        if (runtimeImpl == null) {
-            runtimeImpl = TornadoAPIProvider.loadTornadoRuntimeImpl();
-        }
-        if (tornadoImpl == null) {
-            tornadoImpl = TornadoAPIProvider.loadTornadoImpl();
-        }
+    if (tornadoImpl == null) {
+      tornadoImpl = TornadoAPIProvider.loadTornadoImpl();
     }
+  }
 
-    public static TornadoRuntime getTornadoRuntime() {
-        return runtimeImpl;
-    }
+  public static TornadoRuntime getTornadoRuntime() {
+    return runtimeImpl;
+  }
 
-    public static boolean isProfilerEnabled() {
-        return runtimeImpl.isProfilerEnabled();
-    }
+  public static boolean isProfilerEnabled() {
+    return runtimeImpl.isProfilerEnabled();
+  }
 
-    public static void setProperty(String key, String value) {
-        tornadoImpl.setTornadoProperty(key, value);
-    }
+  public static void setProperty(String key, String value) {
+    tornadoImpl.setTornadoProperty(key, value);
+  }
 
-    public static String getProperty(String key, String value) {
-        return tornadoImpl.getTornadoProperty(key, value);
-    }
+  public static String getProperty(String key, String value) {
+    return tornadoImpl.getTornadoProperty(key, value);
+  }
 
-    public static String getProperty(String key) {
-        return tornadoImpl.getTornadoProperty(key);
-    }
+  public static String getProperty(String key) {
+    return tornadoImpl.getTornadoProperty(key);
+  }
 
-    public static void loadSettings(String property) {
-        tornadoImpl.loadTornadoProperty(property);
-    }
-
+  public static void loadSettings(String property) {
+    tornadoImpl.loadTornadoProperty(property);
+  }
 }

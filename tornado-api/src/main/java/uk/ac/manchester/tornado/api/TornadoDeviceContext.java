@@ -18,37 +18,36 @@
 package uk.ac.manchester.tornado.api;
 
 import java.util.Set;
-
 import uk.ac.manchester.tornado.api.common.SchedulableTask;
 import uk.ac.manchester.tornado.api.memory.TornadoMemoryProvider;
 
 public interface TornadoDeviceContext {
 
-    TornadoTargetDevice getDevice();
+  TornadoTargetDevice getDevice();
 
-    TornadoMemoryProvider getMemoryManager();
+  TornadoMemoryProvider getMemoryManager();
 
-    boolean wasReset();
+  boolean wasReset();
 
-    void reset(long executionPlanId);
+  void reset(long executionPlanId);
 
-    void setResetToFalse();
+  void setResetToFalse();
 
-    boolean isPlatformFPGA();
+  boolean isPlatformFPGA();
 
-    boolean isPlatformXilinxFPGA();
+  boolean isPlatformXilinxFPGA();
 
-    boolean isFP64Supported();
+  boolean isFP64Supported();
 
-    boolean isCached(String methodName, SchedulableTask task);
+  boolean isCached(String methodName, SchedulableTask task);
 
-    int getDeviceIndex();
+  int getDeviceIndex();
 
-    int getDevicePlatform();
+  int getDevicePlatform();
 
-    String getDeviceName();
+  String getDeviceName();
 
-    int getDriverIndex();
+  int getDriverIndex();
 
-    Set<Long> getRegisteredPlanIds();
+  Set<Long> getRegisteredPlanIds();
 }

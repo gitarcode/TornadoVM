@@ -18,20 +18,19 @@
 package uk.ac.manchester.tornado.api.enums;
 
 public enum TornadoVMBackendType {
+  OPENCL("OpenCL"), //
+  PTX("PTX"), //
+  SPIRV("SPIRV"), //
+  JAVA("Java"), //
+  VIRTUAL("Virtual");
 
-    OPENCL("OpenCL"), //
-    PTX("PTX"), //
-    SPIRV("SPIRV"), //
-    JAVA("Java"), //
-    VIRTUAL("Virtual");
+  final String backendName;
 
-    final String backendName;
+  TornadoVMBackendType(String backendName) {
+    this.backendName = backendName;
+  }
 
-    TornadoVMBackendType(String backendName) {
-        this.backendName = backendName;
-    }
-
-    String getName() {
-        return backendName;
-    }
+  String getName() {
+    return backendName;
+  }
 }

@@ -30,64 +30,67 @@ import static uk.ac.manchester.tornado.runtime.common.TornadoOptions.EVENT_WINDO
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.LinkedList;
-
 import uk.ac.manchester.tornado.drivers.common.utils.EventDescriptor;
 import uk.ac.manchester.tornado.drivers.spirv.timestamps.TimeStamp;
 
 /**
- * This class controls a pools of low-level events for the device. There is a
- * pool of events per device, and it handles the actual events that will
- * communicate with the correct driver (e.g., LevelZero event, OCL events).
+ * This class controls a pools of low-level events for the device. There is a pool of events per
+ * device, and it handles the actual events that will communicate with the correct driver (e.g.,
+ * LevelZero event, OCL events).
  */
 public class SPIRVEventPool {
 
-    private final int poolSize;
-    private final BitSet retain;
-    private final HashMap<Integer, LinkedList<TimeStamp>> events;
-    private final EventDescriptor[] descriptors;
-    private int eventPositionIndex;
+  private final int poolSize;
+  private final BitSet retain;
+  private final HashMap<Integer, LinkedList<TimeStamp>> events;
+  private final EventDescriptor[] descriptors;
+  private int eventPositionIndex;
 
-    protected SPIRVEventPool(int poolSize) {
-        this.poolSize = poolSize;
-        this.events = new HashMap<>();
-        this.descriptors = new EventDescriptor[poolSize];
-        this.retain = new BitSet(poolSize);
-        this.eventPositionIndex = 0;
+  protected SPIRVEventPool(int poolSize) {
+    this.poolSize = poolSize;
+    this.events = new HashMap<>();
+    this.descriptors = new EventDescriptor[poolSize];
+    this.retain = new BitSet(poolSize);
+    this.eventPositionIndex = 0;
+  }
+
+  private void findNextEventSlot() {
+    eventPositionIndex = retain.nextClearBit(eventPositionIndex + 1);
+    if (CIRCULAR_EVENTS && (eventPositionIndex >= poolSize)) {
+      eventPositionIndex = 0;
+    }
+    guarantee(
+        eventPositionIndex != -1,
+        "event window is full (retained=%d, capacity=%d)",
+        retain.cardinality(),
+        EVENT_WINDOW);
+  }
+
+  protected int registerEvent(EventDescriptor eventDescriptor, ProfilerTransfer profilerTransfer) {
+    if (retain.get(eventPositionIndex)) {
+      findNextEventSlot();
+    }
+    final int currentEventPosition = eventPositionIndex;
+    guarantee(!retain.get(currentEventPosition), "overwriting retained event");
+
+    LinkedList<TimeStamp> listTimeStamps = new LinkedList<>();
+
+    if (profilerTransfer != null) {
+      listTimeStamps.add(profilerTransfer.getStart());
+      listTimeStamps.add(profilerTransfer.getStop());
     }
 
-    private void findNextEventSlot() {
-        eventPositionIndex = retain.nextClearBit(eventPositionIndex + 1);
-        if (CIRCULAR_EVENTS && (eventPositionIndex >= poolSize)) {
-            eventPositionIndex = 0;
-        }
-        guarantee(eventPositionIndex != -1, "event window is full (retained=%d, capacity=%d)", retain.cardinality(), EVENT_WINDOW);
-    }
+    events.put(currentEventPosition, listTimeStamps);
+    descriptors[currentEventPosition] = eventDescriptor;
+    findNextEventSlot();
+    return currentEventPosition;
+  }
 
-    protected int registerEvent(EventDescriptor eventDescriptor, ProfilerTransfer profilerTransfer) {
-        if (retain.get(eventPositionIndex)) {
-            findNextEventSlot();
-        }
-        final int currentEventPosition = eventPositionIndex;
-        guarantee(!retain.get(currentEventPosition), "overwriting retained event");
+  public LinkedList<TimeStamp> getTimers(int eventId) {
+    return events.get(eventId);
+  }
 
-        LinkedList<TimeStamp> listTimeStamps = new LinkedList<>();
-
-        if (profilerTransfer != null) {
-            listTimeStamps.add(profilerTransfer.getStart());
-            listTimeStamps.add(profilerTransfer.getStop());
-        }
-
-        events.put(currentEventPosition, listTimeStamps);
-        descriptors[currentEventPosition] = eventDescriptor;
-        findNextEventSlot();
-        return currentEventPosition;
-    }
-
-    public LinkedList<TimeStamp> getTimers(int eventId) {
-        return events.get(eventId);
-    }
-
-    public EventDescriptor getDescriptor(int eventId) {
-        return descriptors[eventId];
-    }
+  public EventDescriptor getDescriptor(int eventId) {
+    return descriptors[eventId];
+  }
 }

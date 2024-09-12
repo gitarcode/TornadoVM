@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- * 
+ *
  *
  */
 package uk.ac.manchester.tornado.drivers.opencl.tests;
@@ -39,39 +39,41 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class TestOpenCLTornadoCompiler {
 
-    // @formatter:off
-    private static final String OPENCL_KERNEL = "__kernel void saxpy(__global float *a," + 
-            "    __global float *b, __global float *c) { " +
-            "      int idx = get_global_id(0); " + 
-            "      c[idx]  =  a[idx] + b[idx]; " + 
-            "}";
-    // @formatter:on
+  // @formatter:off
+  private static final String OPENCL_KERNEL =
+      "__kernel void saxpy(__global float *a,"
+          + "    __global float *b, __global float *c) { "
+          + "      int idx = get_global_id(0); "
+          + "      c[idx]  =  a[idx] + b[idx]; "
+          + "}";
 
-    public static void main(String[] args) {
+  // @formatter:on
 
-        OCLPlatform platform = (OCLPlatform) OpenCL.getPlatform(0);
-        // Create context for the platform
-        OCLContext oclContext = platform.createContext();
+  public static void main(String[] args) {
 
-        // Create command queue
-        oclContext.createCommandQueue(0);
+    OCLPlatform platform = (OCLPlatform) OpenCL.getPlatform(0);
+    // Create context for the platform
+    OCLContext oclContext = platform.createContext();
 
-        // 1. Compile the code:
-        OCLDeviceContext deviceContext = oclContext.createDeviceContext(0);
-        OCLCodeCache codeCache = new OCLCodeCache(deviceContext);
+    // Create command queue
+    oclContext.createCommandQueue(0);
 
-        TornadoCoreRuntime tornadoRuntime = TornadoCoreRuntime.getTornadoRuntime();
-        OCLBackend backend = tornadoRuntime.getBackend(OCLBackendImpl.class).getDefaultBackend();
-        ScheduleContext scheduleMeta = new ScheduleContext("oclbackend");
-        TaskDataContext meta = new TaskDataContext(scheduleMeta, "saxpy");
-        new OCLCompilationResult("internal", "saxpy", meta, backend);
+    // 1. Compile the code:
+    OCLDeviceContext deviceContext = oclContext.createDeviceContext(0);
+    OCLCodeCache codeCache = new OCLCodeCache(deviceContext);
 
-        byte[] source = OPENCL_KERNEL.getBytes();
-        OCLInstalledCode code = codeCache.installSource(meta, "saxpy", "saxpy", source);
+    TornadoCoreRuntime tornadoRuntime = TornadoCoreRuntime.getTornadoRuntime();
+    OCLBackend backend = tornadoRuntime.getBackend(OCLBackendImpl.class).getDefaultBackend();
+    ScheduleContext scheduleMeta = new ScheduleContext("oclbackend");
+    TaskDataContext meta = new TaskDataContext(scheduleMeta, "saxpy");
+    new OCLCompilationResult("internal", "saxpy", meta, backend);
 
-        String generatedSourceCode = code.getGeneratedSourceCode();
-        if (meta.isPrintKernelEnabled()) {
-            System.out.println("Compiled code: " + generatedSourceCode);
-        }
+    byte[] source = OPENCL_KERNEL.getBytes();
+    OCLInstalledCode code = codeCache.installSource(meta, "saxpy", "saxpy", source);
+
+    String generatedSourceCode = code.getGeneratedSourceCode();
+    if (meta.isPrintKernelEnabled()) {
+      System.out.println("Compiled code: " + generatedSourceCode);
     }
+  }
 }

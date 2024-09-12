@@ -29,68 +29,71 @@ import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.ValueNode;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLStampFactory;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 
-/**
- * The {@code StoreIndexedNode} represents a write to an array element.
- */
+/** The {@code StoreIndexedNode} represents a write to an array element. */
 @Deprecated()
 @NodeInfo(nameTemplate = "Load .s{p#lane}")
 public final class VectorLoadElementProxyNode extends FixedWithNextNode {
 
-    public static final NodeClass<VectorLoadElementProxyNode> TYPE = NodeClass.create(VectorLoadElementProxyNode.class);
+  public static final NodeClass<VectorLoadElementProxyNode> TYPE =
+      NodeClass.create(VectorLoadElementProxyNode.class);
 
-    @OptionalInput(InputType.Association)
-    ValueNode origin;
-    @OptionalInput(InputType.Association)
-    ValueNode laneOrigin;
+  @OptionalInput(InputType.Association)
+  ValueNode origin;
 
-    private final OCLKind kind;
+  @OptionalInput(InputType.Association)
+  ValueNode laneOrigin;
 
-    protected VectorLoadElementProxyNode(NodeClass<? extends VectorLoadElementProxyNode> c, OCLKind kind, ValueNode origin, ValueNode lane) {
-        super(c, OCLStampFactory.getStampFor(kind));
-        this.kind = kind;
-        this.origin = origin;
-        this.laneOrigin = lane;
+  private final OCLKind kind;
+
+  protected VectorLoadElementProxyNode(
+      NodeClass<? extends VectorLoadElementProxyNode> c,
+      OCLKind kind,
+      ValueNode origin,
+      ValueNode lane) {
+    super(c, OCLStampFactory.getStampFor(kind));
+    this.kind = kind;
+    this.origin = origin;
+    this.laneOrigin = lane;
+  }
+
+  public VectorLoadElementNode tryResolve() {
+    VectorLoadElementNode loadNode = null;
+    if (canResolve()) {
+      /*
+       * If we can resolve this node properly, this operation should be
+       * applied to the vector node and this node should be discarded.
+       */
+      VectorValueNode vector = null;
+      if (origin instanceof VectorValueNode) {
+        vector = (VectorValueNode) origin;
+      } else {
+        shouldNotReachHere();
+      }
+
+      loadNode = new VectorLoadElementNode(kind, vector, laneOrigin);
+      clearInputs();
     }
 
-    public VectorLoadElementNode tryResolve() {
-        VectorLoadElementNode loadNode = null;
-        if (canResolve()) {
-            /*
-             * If we can resolve this node properly, this operation should be
-             * applied to the vector node and this node should be discarded.
-             */
-            VectorValueNode vector = null;
-            if (origin instanceof VectorValueNode) {
-                vector = (VectorValueNode) origin;
-            } else {
-                shouldNotReachHere();
-            }
+    return loadNode;
+  }
 
-            loadNode = new VectorLoadElementNode(kind, vector, laneOrigin);
-            clearInputs();
-        }
+  @Override
+  public boolean inferStamp() {
+    return true;
+  }
 
-        return loadNode;
-    }
+  public OCLKind getOCLKind() {
+    return kind;
+  }
 
-    @Override
-    public boolean inferStamp() {
-        return true;
-    }
+  public boolean canResolve() {
+    return (isVectorValueNode() && laneOrigin != null && laneOrigin instanceof ConstantNode);
+  }
 
-    public OCLKind getOCLKind() {
-        return kind;
-    }
-
-    public boolean canResolve() {
-        return (isVectorValueNode() && laneOrigin != null && laneOrigin instanceof ConstantNode);
-    }
-
-    private boolean isVectorValueNode() {
-        return (origin != null) && (origin instanceof VectorValueNode);
-    }
+  private boolean isVectorValueNode() {
+    return (origin != null) && (origin instanceof VectorValueNode);
+  }
 }

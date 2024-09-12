@@ -24,27 +24,25 @@ package uk.ac.manchester.tornado.drivers.ptx.graal.compiler;
 
 import org.graalvm.compiler.nodes.cfg.ControlFlowGraph;
 import org.graalvm.compiler.nodes.cfg.HIRBlock;
-
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 
 public class PTXBlockVisitor implements ControlFlowGraph.RecursiveVisitor<HIRBlock> {
-    private final PTXCompilationResultBuilder crb;
-    private PTXAssembler asm;
+  private final PTXCompilationResultBuilder crb;
+  private PTXAssembler asm;
 
-    public PTXBlockVisitor(PTXCompilationResultBuilder resultBuilder, PTXAssembler asm) {
-        this.crb = resultBuilder;
-        this.asm = asm;
-    }
+  public PTXBlockVisitor(PTXCompilationResultBuilder resultBuilder, PTXAssembler asm) {
+    this.crb = resultBuilder;
+    this.asm = asm;
+  }
 
-    @Override
-    public HIRBlock enter(HIRBlock block) {
-        asm.eol();
-        asm.emitBlockLabel(block);
-        crb.emitBlock(block);
-        return null;
-    }
+  @Override
+  public HIRBlock enter(HIRBlock block) {
+    asm.eol();
+    asm.emitBlockLabel(block);
+    crb.emitBlock(block);
+    return null;
+  }
 
-    @Override
-    public void exit(HIRBlock b, HIRBlock value) {
-    }
+  @Override
+  public void exit(HIRBlock b, HIRBlock value) {}
 }

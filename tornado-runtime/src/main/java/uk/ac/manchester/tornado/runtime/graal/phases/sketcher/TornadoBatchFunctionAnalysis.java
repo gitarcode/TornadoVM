@@ -21,6 +21,9 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.phases.sketcher;
 
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.FrameState;
 import org.graalvm.compiler.nodes.GraphState;
@@ -33,50 +36,48 @@ import org.graalvm.compiler.nodes.memory.address.OffsetAddressNode;
 import org.graalvm.compiler.phases.BasePhase;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoSketchTierContext;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-
 /**
- * This phase analyses the graph to deduct if the loop index is written in the output buffer.
- * This information is necessary for batch processing, because in that case the kernel
- * will need to be recompiled to offset the value written based on the number of the batch.
+ * This phase analyses the graph to deduct if the loop index is written in the output buffer. This
+ * information is necessary for batch processing, because in that case the kernel will need to be
+ * recompiled to offset the value written based on the number of the batch.
  */
 public class TornadoBatchFunctionAnalysis extends BasePhase<TornadoSketchTierContext> {
 
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
-        for (ValuePhiNode phiNode : graph.getNodes().filter(ValuePhiNode.class)) {
-            for (Node phiNodeUsage : phiNode.usages()) {
-                Set<Node> visited = new HashSet<>();
-                if (isIndexUsedInJavaWrite(phiNodeUsage, visited)) {
-                    context.setBatchWriteThreadIndex();
-                }
-            }
+  @Override
+  protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
+    for (ValuePhiNode phiNode : graph.getNodes().filter(ValuePhiNode.class)) {
+      for (Node phiNodeUsage : phiNode.usages()) {
+        Set<Node> visited = new HashSet<>();
+        if (isIndexUsedInJavaWrite(phiNodeUsage, visited)) {
+          context.setBatchWriteThreadIndex();
         }
+      }
     }
+  }
 
-    private static boolean isIndexUsedInJavaWrite(Node indexUsage, Set<Node> visited) {
-        visited.add(indexUsage);
-        if (indexUsage instanceof OffsetAddressNode || indexUsage instanceof FrameState || indexUsage instanceof LoadIndexedNode || indexUsage instanceof JavaReadNode) {
-            return false;
-        } else if (indexUsage instanceof JavaWriteNode) {
+  private static boolean isIndexUsedInJavaWrite(Node indexUsage, Set<Node> visited) {
+    visited.add(indexUsage);
+    if (indexUsage instanceof OffsetAddressNode
+        || indexUsage instanceof FrameState
+        || indexUsage instanceof LoadIndexedNode
+        || indexUsage instanceof JavaReadNode) {
+      return false;
+    } else if (indexUsage instanceof JavaWriteNode) {
+      return true;
+    } else {
+      for (Node node : indexUsage.usages()) {
+        if (!visited.contains(node)) {
+          if (isIndexUsedInJavaWrite(node, visited)) {
             return true;
-        } else {
-            for (Node node : indexUsage.usages()) {
-                if (!visited.contains(node)) {
-                    if (isIndexUsedInJavaWrite(node, visited)) {
-                        return true;
-                    }
-                }
-            }
+          }
         }
-        return false;
+      }
     }
-
+    return false;
+  }
 }

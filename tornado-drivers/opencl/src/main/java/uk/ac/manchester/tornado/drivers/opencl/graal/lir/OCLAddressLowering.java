@@ -30,31 +30,35 @@ import org.graalvm.compiler.nodes.memory.FloatingReadNode;
 import org.graalvm.compiler.nodes.memory.ReadNode;
 import org.graalvm.compiler.nodes.memory.address.AddressNode;
 import org.graalvm.compiler.phases.common.AddressLoweringByNodePhase;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLArchitecture;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLArchitecture.OCLMemoryBase;
-import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.FixedArrayNode;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.FixedArrayCopyNode;
+import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.FixedArrayNode;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.LocalArrayNode;
 import uk.ac.manchester.tornado.runtime.graal.nodes.calc.TornadoAddressArithmeticNode;
 
 public class OCLAddressLowering extends AddressLoweringByNodePhase.AddressLowering {
 
-    @Override
-    public AddressNode lower(ValueNode base, ValueNode offset) {
-        OCLMemoryBase memoryRegister = OCLArchitecture.globalSpace;
-        if (base instanceof FixedArrayNode fixedArrayNode) {
-            memoryRegister = fixedArrayNode.getMemoryRegister();
-        } else if (base instanceof FixedArrayCopyNode fixedArrayCopyNode) {
-            memoryRegister = fixedArrayCopyNode.getMemoryRegister();
-        } else if (base instanceof LocalArrayNode localArrayNode) {
-            memoryRegister = localArrayNode.getMemoryRegister();
-        } else if (!((base instanceof TornadoAddressArithmeticNode) || (base instanceof ParameterNode) || (base instanceof ReadNode) || (base instanceof FloatingReadNode) || (base instanceof PiNode))) {
-            TornadoInternalError.unimplemented("address origin unimplemented: %s", base.getClass().getName());
-        }
-
-        OCLAddressNode result = new OCLAddressNode(base, offset, memoryRegister);
-        return (base.graph().unique(result));
+  @Override
+  public AddressNode lower(ValueNode base, ValueNode offset) {
+    OCLMemoryBase memoryRegister = OCLArchitecture.globalSpace;
+    if (base instanceof FixedArrayNode fixedArrayNode) {
+      memoryRegister = fixedArrayNode.getMemoryRegister();
+    } else if (base instanceof FixedArrayCopyNode fixedArrayCopyNode) {
+      memoryRegister = fixedArrayCopyNode.getMemoryRegister();
+    } else if (base instanceof LocalArrayNode localArrayNode) {
+      memoryRegister = localArrayNode.getMemoryRegister();
+    } else if (!((base instanceof TornadoAddressArithmeticNode)
+        || (base instanceof ParameterNode)
+        || (base instanceof ReadNode)
+        || (base instanceof FloatingReadNode)
+        || (base instanceof PiNode))) {
+      TornadoInternalError.unimplemented(
+          "address origin unimplemented: %s", base.getClass().getName());
     }
+
+    OCLAddressNode result = new OCLAddressNode(base, offset, memoryRegister);
+    return (base.graph().unique(result));
+  }
 }

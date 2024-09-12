@@ -23,26 +23,26 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 public class MandelbrotJava extends BenchmarkDriver {
-    int size;
-    ShortArray result;
+  int size;
+  ShortArray result;
 
-    public MandelbrotJava(int iterations, int size) {
-        super(iterations);
-        this.size = size;
-    }
+  public MandelbrotJava(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
 
-    @Override
-    public void setUp() {
-        result = new ShortArray(size * size);
-    }
+  @Override
+  public void setUp() {
+    result = new ShortArray(size * size);
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        ComputeKernels.mandelbrot(size, result);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    ComputeKernels.mandelbrot(size, result);
+  }
 }

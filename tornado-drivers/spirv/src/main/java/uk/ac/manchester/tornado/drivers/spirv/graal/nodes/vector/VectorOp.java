@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021, APT Group, Department of Computer Science,
  * The University of Manchester. All rights reserved.
- * 
+ *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.
@@ -19,5 +19,4 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes.vector;
 
-public interface VectorOp {
-}
+public interface VectorOp {}

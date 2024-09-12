@@ -26,6 +26,5 @@ import org.graalvm.compiler.nodes.calc.FloatingNode;
 
 public interface Floatable {
 
-    FloatingNode asFloating();
-
+  FloatingNode asFloating();
 }

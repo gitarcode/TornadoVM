@@ -23,6 +23,7 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.nodes;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.gen.ArithmeticLIRGeneratorTool;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
@@ -31,36 +32,34 @@ import org.graalvm.compiler.nodes.calc.SubNode;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 
-import jdk.vm.ci.meta.Value;
-
 @NodeInfo(shortName = "REDUCE(-)")
 public class TornadoReduceSubNode extends SubNode {
 
-    public static final NodeClass<TornadoReduceSubNode> TYPE = NodeClass.create(TornadoReduceSubNode.class);
+  public static final NodeClass<TornadoReduceSubNode> TYPE =
+      NodeClass.create(TornadoReduceSubNode.class);
 
-    public TornadoReduceSubNode(ValueNode x, ValueNode y) {
-        super(TYPE, x, y);
+  public TornadoReduceSubNode(ValueNode x, ValueNode y) {
+    super(TYPE, x, y);
+  }
+
+  @Override
+  public ValueNode canonical(CanonicalizerTool tool, ValueNode forX, ValueNode forY) {
+    return this;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool tool, ArithmeticLIRGeneratorTool gen) {
+
+    Value op1 = tool.operand(getX());
+    assert op1 != null : getX() + ", this=" + this;
+    Value op2 = tool.operand(getY());
+
+    if (shouldSwapInputs(tool)) {
+      Value tmp = op1;
+      op1 = op2;
+      op2 = tmp;
     }
-
-    @Override
-    public ValueNode canonical(CanonicalizerTool tool, ValueNode forX, ValueNode forY) {
-        return this;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool tool, ArithmeticLIRGeneratorTool gen) {
-
-        Value op1 = tool.operand(getX());
-        assert op1 != null : getX() + ", this=" + this;
-        Value op2 = tool.operand(getY());
-
-        if (shouldSwapInputs(tool)) {
-            Value tmp = op1;
-            op1 = op2;
-            op2 = tmp;
-        }
-        Value resultAdd = gen.emitSub(op1, op2, false);
-        tool.setResult(this, resultAdd);
-
-    }
+    Value resultAdd = gen.emitSub(op1, op2, false);
+    tool.setResult(this, resultAdd);
+  }
 }

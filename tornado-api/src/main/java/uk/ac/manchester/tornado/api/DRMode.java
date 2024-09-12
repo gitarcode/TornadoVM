@@ -17,24 +17,21 @@
  */
 package uk.ac.manchester.tornado.api;
 
-/**
- * DRMode: Dynamic Reconfiguration Mode.
- */
+/** DRMode: Dynamic Reconfiguration Mode. */
 public enum DRMode {
 
-    /**
-     * A serial mode means that the runtime evaluates all devices in a sequential
-     * manner (it compiles all {@link ImmutableTaskGraph} associated with a
-     * {@link TornadoExecutionPlan} one after another) before performing a dynamic
-     * device switch.
-     */
-    SERIAL, //
+  /**
+   * A serial mode means that the runtime evaluates all devices in a sequential manner (it compiles
+   * all {@link ImmutableTaskGraph} associated with a {@link TornadoExecutionPlan} one after
+   * another) before performing a dynamic device switch.
+   */
+  SERIAL, //
 
-    /**
-     * A parallel mode means that the runtime evaluates all devices in parallel. It
-     * compiles all {@link ImmutableTaskGraph} associated with a
-     * {@link TornadoExecutionPlan} and run the expressions on the target devices.
-     * Each physical accelerator handler is mapped to a Java thread.
-     */
-    PARALLEL //
+  /**
+   * A parallel mode means that the runtime evaluates all devices in parallel. It compiles all
+   * {@link ImmutableTaskGraph} associated with a {@link TornadoExecutionPlan} and run the
+   * expressions on the target devices. Each physical accelerator handler is mapped to a Java
+   * thread.
+   */
+  PARALLEL //
 }

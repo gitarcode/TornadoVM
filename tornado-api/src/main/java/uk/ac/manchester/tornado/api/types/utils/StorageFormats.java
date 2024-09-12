@@ -24,212 +24,184 @@ import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 
 public final class StorageFormats {
 
-    private StorageFormats() {
+  private StorageFormats() {}
+
+  /**
+   * Converts a given i,j index to a column-major index.
+   *
+   * @param i row index
+   * @param j column index
+   * @param ld length of a column
+   * @return int
+   */
+  @Deprecated
+  public static int toColumnMajor(int i, int j, int ld) {
+    return (j * ld) + i;
+  }
+
+  /**
+   * Converts a given i,j index to a row-major index.
+   *
+   * @param i row index
+   * @param j column index
+   * @param numColumns length of a row
+   * @return int
+   */
+  public static int toRowMajor(int i, int j, int numColumns) {
+    return (i * numColumns) + j;
+  }
+
+  public static int toRowMajorVector(int i, int j, int numColumns, int vectorElements) {
+    return ((i * numColumns) + j) * vectorElements;
+  }
+
+  public static int toRowMajor3D(int i, int j, int k, int zMax, int yMax) {
+    return (i * zMax * yMax) + (j * zMax) + k;
+  }
+
+  public static int toRowMajor3DVector(int i, int j, int k, int zSize, int ySize, int vectorWidth) {
+    return (i * zSize * ySize * vectorWidth) + (j * zSize) + k;
+  }
+
+  /**
+   * Converts a given i,j index to row-major index.
+   *
+   * @param i row index
+   * @param j column index
+   * @param ld length of a row
+   * @param el length of each element in a row
+   * @return int
+   */
+  public static int toRowMajor(int i, int j, int ld, int el) {
+    return (i * ld) + (j * el);
+  }
+
+  /**
+   * Converts a given i,j,k index to row-major index.
+   *
+   * @param i index in 1st dimension
+   * @param j index in 2nd dimension
+   * @param k index in 3rd dimension
+   * @param ld1 leading edge length 1st dimension
+   * @param ld2 leading edge length 2dn dimension
+   * @param el basic element length
+   * @return int
+   */
+  public static int toRowMajor(int i, int j, int k, int ld1, int ld2, int el) {
+    return toRowMajor(i, j, ld1, el) + (k * ld2);
+  }
+
+  /**
+   * Converts a given i,j index to a row-major index.
+   *
+   * @param i row index
+   * @param j column index
+   * @param incm row step
+   * @param incn col step
+   * @param ld length of a row
+   * @return int
+   */
+  public static int toRowMajor(int i, int j, int incm, int incn, int ld) {
+    return (i * ld * incn) + (j * incm);
+  }
+
+  /**
+   * Converts a given i,j index to Fortran index.
+   *
+   * @param i row index
+   * @param j column index
+   * @param ld length of a column
+   * @return int
+   */
+  public static int toFortran(int i, int j, int ld) {
+    return ((j - 1) * ld) + (i - 1);
+  }
+
+  /**
+   * Converts a matrix stored in multidimensional arrays into Row-Major format.
+   *
+   * @param matrix input matrix
+   * @return double[]
+   */
+  public static DoubleArray toRowMajor(double[][] matrix) {
+    final int cols = matrix[0].length;
+    final int rows = matrix.length;
+    DoubleArray flattenMatrix = new DoubleArray(rows * cols);
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        flattenMatrix.set(toRowMajor(i, j, cols), matrix[i][j]);
+      }
+    }
+    return flattenMatrix;
+  }
+
+  /**
+   * Converts a matrix stored in multidimensional arrays into Row-Major format.
+   *
+   * @param matrix input matrix
+   * @return float[]
+   */
+  public static FloatArray toRowMajor(float[][] matrix) {
+    final int dimX = matrix.length;
+    final int dimY = matrix[0].length;
+
+    FloatArray flattenMatrix = new FloatArray(dimX * dimY);
+
+    for (int i = 0; i < dimX; i++) {
+      for (int j = 0; j < dimY; j++) {
+        flattenMatrix.set(toRowMajor(i, j, dimY), matrix[i][j]);
+      }
     }
 
-    /**
-     * Converts a given i,j index to a column-major index.
-     *
-     * @param i
-     *     row index
-     * @param j
-     *     column index
-     * @param ld
-     *     length of a column
-     * @return int
-     */
-    @Deprecated
-    public static int toColumnMajor(int i, int j, int ld) {
-        return (j * ld) + i;
-    }
+    return flattenMatrix;
+  }
 
-    /**
-     * Converts a given i,j index to a row-major index.
-     *
-     * @param i
-     *     row index
-     * @param j
-     *     column index
-     * @param numColumns
-     *     length of a row
-     * @return int
-     */
-    public static int toRowMajor(int i, int j, int numColumns) {
-        return (i * numColumns) + j;
-    }
+  public static FloatArray toRowMajor3D(float[][][] matrix) {
+    final int dimX = matrix.length;
+    final int dimY = matrix[0].length;
+    final int dimZ = matrix[0][0].length;
+    FloatArray flattenMatrix = new FloatArray(dimX * dimY * dimZ);
 
-    public static int toRowMajorVector(int i, int j, int numColumns, int vectorElements) {
-        return ((i * numColumns) + j) * vectorElements;
-    }
-
-    public static int toRowMajor3D(int i, int j, int k, int zMax, int yMax) {
-        return (i * zMax * yMax) + (j * zMax) + k;
-    }
-
-    public static int toRowMajor3DVector(int i, int j, int k, int zSize, int ySize, int vectorWidth) {
-        return (i * zSize * ySize * vectorWidth) + (j * zSize) + k;
-    }
-
-    /**
-     * Converts a given i,j index to row-major index.
-     *
-     * @param i
-     *     row index
-     * @param j
-     *     column index
-     * @param ld
-     *     length of a row
-     * @param el
-     *     length of each element in a row
-     * @return int
-     */
-    public static int toRowMajor(int i, int j, int ld, int el) {
-        return (i * ld) + (j * el);
-    }
-
-    /**
-     * Converts a given i,j,k index to row-major index.
-     *
-     * @param i
-     *     index in 1st dimension
-     * @param j
-     *     index in 2nd dimension
-     * @param k
-     *     index in 3rd dimension
-     * @param ld1
-     *     leading edge length 1st dimension
-     * @param ld2
-     *     leading edge length 2dn dimension
-     * @param el
-     *     basic element length
-     * @return int
-     */
-    public static int toRowMajor(int i, int j, int k, int ld1, int ld2, int el) {
-        return toRowMajor(i, j, ld1, el) + (k * ld2);
-    }
-
-    /**
-     * Converts a given i,j index to a row-major index.
-     *
-     * @param i
-     *     row index
-     * @param j
-     *     column index
-     * @param incm
-     *     row step
-     * @param incn
-     *     col step
-     * @param ld
-     *     length of a row
-     * @return int
-     */
-    public static int toRowMajor(int i, int j, int incm, int incn, int ld) {
-        return (i * ld * incn) + (j * incm);
-    }
-
-    /**
-     * Converts a given i,j index to Fortran index.
-     *
-     * @param i
-     *     row index
-     * @param j
-     *     column index
-     * @param ld
-     *     length of a column
-     * @return int
-     */
-    public static int toFortran(int i, int j, int ld) {
-        return ((j - 1) * ld) + (i - 1);
-    }
-
-    /**
-     * Converts a matrix stored in multidimensional arrays into Row-Major format.
-     *
-     * @param matrix
-     *     input matrix
-     * @return double[]
-     */
-    public static DoubleArray toRowMajor(double[][] matrix) {
-        final int cols = matrix[0].length;
-        final int rows = matrix.length;
-        DoubleArray flattenMatrix = new DoubleArray(rows * cols);
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                flattenMatrix.set(toRowMajor(i, j, cols), matrix[i][j]);
-            }
+    for (int i = 0; i < dimX; i++) {
+      for (int j = 0; j < dimY; j++) {
+        for (int k = 0; k < dimZ; k++) {
+          int index = toRowMajor3D(i, j, k, dimZ, dimY);
+          flattenMatrix.set(index, matrix[i][j][k]);
         }
-        return flattenMatrix;
+      }
     }
+    return flattenMatrix;
+  }
 
-    /**
-     * Converts a matrix stored in multidimensional arrays into Row-Major format.
-     *
-     * @param matrix
-     *     input matrix
-     * @return float[]
-     */
-    public static FloatArray toRowMajor(float[][] matrix) {
-        final int dimX = matrix.length;
-        final int dimY = matrix[0].length;
+  public static IntArray toRowMajor(int[][] matrix) {
+    final int dimX = matrix.length;
+    final int dimY = matrix[0].length;
 
-        FloatArray flattenMatrix = new FloatArray(dimX * dimY);
-
-        for (int i = 0; i < dimX; i++) {
-            for (int j = 0; j < dimY; j++) {
-                flattenMatrix.set(toRowMajor(i, j, dimY), matrix[i][j]);
-            }
-        }
-
-        return flattenMatrix;
+    IntArray matrixRM = new IntArray(dimX * dimY);
+    for (int i = 0; i < dimX; i++) {
+      for (int j = 0; j < dimY; j++) {
+        matrixRM.set(toRowMajor(i, j, dimY), matrix[i][j]);
+      }
     }
+    return matrixRM;
+  }
 
-    public static FloatArray toRowMajor3D(float[][][] matrix) {
-        final int dimX = matrix.length;
-        final int dimY = matrix[0].length;
-        final int dimZ = matrix[0][0].length;
-        FloatArray flattenMatrix = new FloatArray(dimX * dimY * dimZ);
+  /**
+   * Converts a matrix stored in multidimensional arrays into Row-Major format.
+   *
+   * @param matrix input matrix
+   * @return byte[]
+   */
+  public static ByteArray toRowMajor(byte[][] matrix) {
+    final int m = matrix[0].length;
+    final int n = matrix.length;
+    ByteArray matrixRM = new ByteArray(m * n);
 
-        for (int i = 0; i < dimX; i++) {
-            for (int j = 0; j < dimY; j++) {
-                for (int k = 0; k < dimZ; k++) {
-                    int index = toRowMajor3D(i, j, k, dimZ, dimY);
-                    flattenMatrix.set(index, matrix[i][j][k]);
-                }
-            }
-        }
-        return flattenMatrix;
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        matrixRM.set(toRowMajor(i, j, m), matrix[i][j]);
+      }
     }
-
-    public static IntArray toRowMajor(int[][] matrix) {
-        final int dimX = matrix.length;
-        final int dimY = matrix[0].length;
-
-        IntArray matrixRM = new IntArray(dimX * dimY);
-        for (int i = 0; i < dimX; i++) {
-            for (int j = 0; j < dimY; j++) {
-                matrixRM.set(toRowMajor(i, j, dimY), matrix[i][j]);
-            }
-        }
-        return matrixRM;
-    }
-
-    /**
-     * Converts a matrix stored in multidimensional arrays into Row-Major format.
-     *
-     * @param matrix
-     *     input matrix
-     * @return byte[]
-     */
-    public static ByteArray toRowMajor(byte[][] matrix) {
-        final int m = matrix[0].length;
-        final int n = matrix.length;
-        ByteArray matrixRM = new ByteArray(m * n);
-
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                matrixRM.set(toRowMajor(i, j, m), matrix[i][j]);
-            }
-        }
-        return matrixRM;
-    }
+    return matrixRM;
+  }
 }

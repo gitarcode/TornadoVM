@@ -19,8 +19,7 @@ package uk.ac.manchester.tornado.unittests.common;
 
 public class TornadoVMSPIRVNotSupported extends RuntimeException {
 
-    public TornadoVMSPIRVNotSupported(String message) {
-        super(message);
-    }
-
+  public TornadoVMSPIRVNotSupported(String message) {
+    super(message);
+  }
 }

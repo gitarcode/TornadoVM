@@ -25,9 +25,8 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 public class SPIRVLevelZeroDeviceContext extends SPIRVDeviceContext {
 
-    public SPIRVLevelZeroDeviceContext(SPIRVDevice device, SPIRVContext context) {
-        super(device, context);
-        this.spirvContext = context;
-    }
-
+  public SPIRVLevelZeroDeviceContext(SPIRVDevice device, SPIRVContext context) {
+    super(device, context);
+    this.spirvContext = context;
+  }
 }

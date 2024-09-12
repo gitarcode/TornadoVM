@@ -29,47 +29,46 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
 import uk.ac.manchester.tornado.runtime.TornadoAcceleratorBackend;
 import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
 
 public final class MetaDataUtils {
 
-    public static TornadoXPUDevice resolveDevice(String device) {
-        final String[] ids = device.split(":");
-        final TornadoAcceleratorBackend driver = getTornadoRuntime().getBackend(Integer.parseInt(ids[0]));
-        return (TornadoXPUDevice) driver.getDevice(Integer.parseInt(ids[1]));
-    }
+  public static TornadoXPUDevice resolveDevice(String device) {
+    final String[] ids = device.split(":");
+    final TornadoAcceleratorBackend driver =
+        getTornadoRuntime().getBackend(Integer.parseInt(ids[0]));
+    return (TornadoXPUDevice) driver.getDevice(Integer.parseInt(ids[1]));
+  }
 
-    public record BackendSelectionContainer(int backendIndex, int deviceIndex) {
-    }
+  public record BackendSelectionContainer(int backendIndex, int deviceIndex) {}
 
-    public static BackendSelectionContainer resolveDriverDeviceIndexes(String device) {
-        final String[] ids = device.split(":");
-        return new BackendSelectionContainer(Integer.parseInt(ids[0]), Integer.parseInt(ids[1]));
-    }
+  public static BackendSelectionContainer resolveDriverDeviceIndexes(String device) {
+    final String[] ids = device.split(":");
+    return new BackendSelectionContainer(Integer.parseInt(ids[0]), Integer.parseInt(ids[1]));
+  }
 
-    public static String[] processPrecompiledBinariesFromFile(String fileName) {
-        StringBuilder listBinaries = new StringBuilder();
-        try (BufferedReader fileContent = new BufferedReader(new FileReader(fileName))) {
-            String line = fileContent.readLine();
-            while (line != null) {
-                if (!line.isEmpty() && !line.startsWith("#")) {
-                    listBinaries.append(line + ",");
-                }
-                line = fileContent.readLine();
-            }
-            listBinaries.deleteCharAt(listBinaries.length() - 1);
-        } catch (FileNotFoundException e) {
-            throw new TornadoRuntimeException("File: " + fileName + " not found");
-        } catch (IOException e) {
-            e.printStackTrace();
+  public static String[] processPrecompiledBinariesFromFile(String fileName) {
+    StringBuilder listBinaries = new StringBuilder();
+    try (BufferedReader fileContent = new BufferedReader(new FileReader(fileName))) {
+      String line = fileContent.readLine();
+      while (line != null) {
+        if (!line.isEmpty() && !line.startsWith("#")) {
+          listBinaries.append(line + ",");
         }
-        return listBinaries.toString().split(",");
+        line = fileContent.readLine();
+      }
+      listBinaries.deleteCharAt(listBinaries.length() - 1);
+    } catch (FileNotFoundException e) {
+      throw new TornadoRuntimeException("File: " + fileName + " not found");
+    } catch (IOException e) {
+      e.printStackTrace();
     }
+    return listBinaries.toString().split(",");
+  }
 
-    public static String getProperty(String key) {
-        return System.getProperty(key);
-    }
+  public static String getProperty(String key) {
+    return System.getProperty(key);
+  }
 }

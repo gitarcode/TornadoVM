@@ -23,67 +23,65 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.ConstantValue;
 import org.graalvm.compiler.lir.Opcode;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 
 @Opcode("PRINTF")
 public class OCLPrintf extends OCLLIROp {
 
-    private Value[] inputs;
+  private Value[] inputs;
 
-    public OCLPrintf(Value[] inputs) {
-        super(LIRKind.Illegal);
-        this.inputs = inputs;
+  public OCLPrintf(Value[] inputs) {
+    super(LIRKind.Illegal);
+    this.inputs = inputs;
+  }
+
+  @Override
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+    asm.emit(
+        "printf( \"tornado[%%3d,%%3d,%%3d]> %s\"", asm.formatConstant((ConstantValue) inputs[0]));
+
+    for (int i = 1; i < 4; i++) {
+      asm.emit(", ");
+      asm.emitValue(crb, inputs[i]);
     }
 
-    @Override
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-        asm.emit("printf( \"tornado[%%3d,%%3d,%%3d]> %s\"",
-            asm.formatConstant((ConstantValue) inputs[0]));
-
-        for (int i = 1; i < 4; i++) {
-            asm.emit(", ");
-            asm.emitValue(crb, inputs[i]);
-        }
-
-        if (inputs.length > 4) {
-            asm.emit(", ");
-        }
-
-        for (int i = 4; i < inputs.length - 1; i++) {
-            asm.emitValue(crb, inputs[i]);
-            asm.emit(", ");
-        }
-
-        if (inputs.length > 4) {
-            asm.emitValue(crb, inputs[inputs.length - 1]);
-        }
-
-        asm.emit(")");
+    if (inputs.length > 4) {
+      asm.emit(", ");
     }
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("printf( \"%s\"", inputs[0]));
-
-        if (inputs.length > 4) {
-            sb.append(", ");
-        }
-        for (int i = 4; i < inputs.length - 1; i++) {
-            sb.append(inputs[i]);
-            sb.append(", ");
-        }
-        if (inputs.length > 4) {
-            sb.append(inputs[inputs.length - 1]);
-        }
-        sb.append(" )");
-        return sb.toString();
+    for (int i = 4; i < inputs.length - 1; i++) {
+      asm.emitValue(crb, inputs[i]);
+      asm.emit(", ");
     }
 
+    if (inputs.length > 4) {
+      asm.emitValue(crb, inputs[inputs.length - 1]);
+    }
+
+    asm.emit(")");
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("printf( \"%s\"", inputs[0]));
+
+    if (inputs.length > 4) {
+      sb.append(", ");
+    }
+    for (int i = 4; i < inputs.length - 1; i++) {
+      sb.append(inputs[i]);
+      sb.append(", ");
+    }
+    if (inputs.length > 4) {
+      sb.append(inputs[inputs.length - 1]);
+    }
+    sb.append(" )");
+    return sb.toString();
+  }
 }

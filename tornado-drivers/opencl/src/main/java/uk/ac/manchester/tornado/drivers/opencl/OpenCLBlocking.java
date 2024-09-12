@@ -1,5 +1,5 @@
 /*
- * This file is part of Tornado: A heterogeneous programming framework: 
+ * This file is part of Tornado: A heterogeneous programming framework:
  * https://github.com/beehive-lab/tornadovm
  *
  * Copyright (c) 2013-2020, APT Group, Department of Computer Science,
@@ -24,9 +24,8 @@
 package uk.ac.manchester.tornado.drivers.opencl;
 
 public class OpenCLBlocking {
-    public static final boolean TRUE = true;
-    public static final boolean FALSE = false;
+  public static final boolean TRUE = true;
+  public static final boolean FALSE = false;
 
-    private OpenCLBlocking() {
-    }
+  private OpenCLBlocking() {}
 }

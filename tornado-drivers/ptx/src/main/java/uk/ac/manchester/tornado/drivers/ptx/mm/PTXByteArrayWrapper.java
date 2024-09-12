@@ -27,72 +27,90 @@ import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.ptx.PTXDeviceContext;
 
 public class PTXByteArrayWrapper extends PTXArrayWrapper<byte[]> {
-    private long setSubRegionSize;
+  private long setSubRegionSize;
 
-    public PTXByteArrayWrapper(PTXDeviceContext deviceContext) {
-        super(deviceContext, JavaKind.Byte);
-    }
+  public PTXByteArrayWrapper(PTXDeviceContext deviceContext) {
+    super(deviceContext, JavaKind.Byte);
+  }
 
-    /**
-     * Copy data from the device to the main host.
-     *
-     * @param address
-     *     Device Buffer ID
-     * @param bytes
-     *     Bytes to be copied back to the host
-     * @param value
-     *     Host array that resides the final data
-     * @param hostOffset
-     * @param waitEvents
-     *     List of events to wait for.
-     * @return Event information
-     */
-    @Override
-    protected int enqueueReadArrayData(long executionPlanId, long address, long bytes, byte[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.enqueueReadBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  /**
+   * Copy data from the device to the main host.
+   *
+   * @param address Device Buffer ID
+   * @param bytes Bytes to be copied back to the host
+   * @param value Host array that resides the final data
+   * @param hostOffset
+   * @param waitEvents List of events to wait for.
+   * @return Event information
+   */
+  @Override
+  protected int enqueueReadArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      byte[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.enqueueReadBuffer(
+        executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected int readArrayData(long executionPlanId, long address, long bytes, byte[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.readBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected int readArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      byte[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.readBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    /**
-     * Copy data that resides in the host to the target device.
-     *
-     * @param address
-     *     Device Buffer ID
-     * @param bytes
-     *     Bytes to be copied
-     * @param value
-     *     Host array to be copied
-     * @param hostOffset
-     * @param waitEvents
-     *     List of events to wait for.
-     * @return Event information
-     */
-    @Override
-    protected int enqueueWriteArrayData(long executionPlanId, long address, long bytes, byte[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.enqueueWriteBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  /**
+   * Copy data that resides in the host to the target device.
+   *
+   * @param address Device Buffer ID
+   * @param bytes Bytes to be copied
+   * @param value Host array to be copied
+   * @param hostOffset
+   * @param waitEvents List of events to wait for.
+   * @return Event information
+   */
+  @Override
+  protected int enqueueWriteArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      byte[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.enqueueWriteBuffer(
+        executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected void writeArrayData(long executionPlanId, long address, long bytes, byte[] value, int hostOffset, int[] waitEvents) {
-        deviceContext.writeBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected void writeArrayData(
+      long executionPlanId,
+      long address,
+      long bytes,
+      byte[] value,
+      int hostOffset,
+      int[] waitEvents) {
+    deviceContext.writeBuffer(executionPlanId, address, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    public long getSizeSubRegionSize() {
-        return setSubRegionSize;
-    }
+  @Override
+  public long getSizeSubRegionSize() {
+    return setSubRegionSize;
+  }
 
-    @Override
-    public int[] getIntBuffer() {
-        return super.getIntBuffer();
-    }
+  @Override
+  public int[] getIntBuffer() {
+    return super.getIntBuffer();
+  }
 
-    @Override
-    public void setIntBuffer(int[] arr) {
-        super.setIntBuffer(arr);
-    }
+  @Override
+  public void setIntBuffer(int[] arr) {
+    super.setIntBuffer(arr);
+  }
 }

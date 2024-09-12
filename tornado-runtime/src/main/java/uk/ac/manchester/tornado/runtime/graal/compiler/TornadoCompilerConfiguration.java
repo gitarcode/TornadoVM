@@ -25,31 +25,39 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.compiler;
 
+import jdk.vm.ci.meta.MetaAccessProvider;
 import org.graalvm.compiler.lir.phases.LIRPhaseSuite;
 import org.graalvm.compiler.lir.phases.PostAllocationOptimizationPhase.PostAllocationOptimizationContext;
 import org.graalvm.compiler.lir.phases.PreAllocationOptimizationPhase.PreAllocationOptimizationContext;
 import org.graalvm.compiler.options.OptionValues;
 import org.graalvm.compiler.phases.common.AddressLoweringByNodePhase;
 import org.graalvm.compiler.phases.common.CanonicalizerPhase;
-
-import jdk.vm.ci.meta.MetaAccessProvider;
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoAllocationStage;
 
 public interface TornadoCompilerConfiguration {
 
-    TornadoAllocationStage createAllocationStage(OptionValues options);
+  TornadoAllocationStage createAllocationStage(OptionValues options);
 
-    TornadoSketchTier createSketchTier(OptionValues options, CanonicalizerPhase.CustomSimplification canonicalizer);
+  TornadoSketchTier createSketchTier(
+      OptionValues options, CanonicalizerPhase.CustomSimplification canonicalizer);
 
-    TornadoHighTier createHighTier(OptionValues options, TornadoDeviceContext deviceContext, CanonicalizerPhase.CustomSimplification canonicalizer, MetaAccessProvider metaAccessProvider);
+  TornadoHighTier createHighTier(
+      OptionValues options,
+      TornadoDeviceContext deviceContext,
+      CanonicalizerPhase.CustomSimplification canonicalizer,
+      MetaAccessProvider metaAccessProvider);
 
-    TornadoLowTier createLowTier(OptionValues options, TornadoDeviceContext deviceContext, AddressLoweringByNodePhase.AddressLowering addressLowering);
+  TornadoLowTier createLowTier(
+      OptionValues options,
+      TornadoDeviceContext deviceContext,
+      AddressLoweringByNodePhase.AddressLowering addressLowering);
 
-    TornadoMidTier createMidTier(OptionValues options);
+  TornadoMidTier createMidTier(OptionValues options);
 
-    LIRPhaseSuite<PostAllocationOptimizationContext> createPostAllocationOptimizationStage(OptionValues options);
+  LIRPhaseSuite<PostAllocationOptimizationContext> createPostAllocationOptimizationStage(
+      OptionValues options);
 
-    LIRPhaseSuite<PreAllocationOptimizationContext> createPreAllocationOptimizationStage(OptionValues options);
-
+  LIRPhaseSuite<PreAllocationOptimizationContext> createPreAllocationOptimizationStage(
+      OptionValues options);
 }

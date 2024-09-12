@@ -25,7 +25,6 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroContext;
 import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroDevice;
 import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroDriver;
@@ -35,73 +34,74 @@ import uk.ac.manchester.tornado.drivers.spirv.levelzero.ZeDriverHandle;
 
 public class SPIRVLevelZeroPlatform implements SPIRVPlatform {
 
-    private final int indexDriver;
-    private final LevelZeroDriver driver;
-    private final ZeDriverHandle driversHandler;
-    private int deviceCount = -1;
-    private List<SPIRVDevice> spirvDevices;
+  private final int indexDriver;
+  private final LevelZeroDriver driver;
+  private final ZeDriverHandle driversHandler;
+  private int deviceCount = -1;
+  private List<SPIRVDevice> spirvDevices;
 
-    SPIRVContext spirvContext;
-    LevelZeroContext levelZeroContext;
+  SPIRVContext spirvContext;
+  LevelZeroContext levelZeroContext;
 
-    public SPIRVLevelZeroPlatform(LevelZeroDriver driver, ZeDriverHandle driversHandler, int indexDriver) {
-        this.driver = driver;
-        this.driversHandler = driversHandler;
-        this.indexDriver = indexDriver;
-        initDevices();
+  public SPIRVLevelZeroPlatform(
+      LevelZeroDriver driver, ZeDriverHandle driversHandler, int indexDriver) {
+    this.driver = driver;
+    this.driversHandler = driversHandler;
+    this.indexDriver = indexDriver;
+    initDevices();
+  }
+
+  private void initDevices() {
+    // Get number of devices in a driver
+    int[] deviceCountArray = new int[1];
+    driver.zeDeviceGet(driversHandler, indexDriver, deviceCountArray, null);
+    deviceCount = deviceCountArray[0];
+
+    // Instantiate a device Handler
+    ZeDevicesHandle deviceHandler = new ZeDevicesHandle(deviceCount);
+    driver.zeDeviceGet(driversHandler, indexDriver, deviceCountArray, deviceHandler);
+
+    List<LevelZeroDevice> devices = new ArrayList<>();
+    spirvDevices = new ArrayList<>();
+
+    for (int i = 0; i < deviceCount; i++) {
+      LevelZeroDevice device = driver.getDevice(driversHandler, i);
+      devices.add(device);
+      SPIRVDevice spirvDevice = new SPIRVLevelZeroDevice(indexDriver, i, devices.get(i));
+      spirvDevices.add(spirvDevice);
     }
+  }
 
-    private void initDevices() {
-        // Get number of devices in a driver
-        int[] deviceCountArray = new int[1];
-        driver.zeDeviceGet(driversHandler, indexDriver, deviceCountArray, null);
-        deviceCount = deviceCountArray[0];
-
-        // Instantiate a device Handler
-        ZeDevicesHandle deviceHandler = new ZeDevicesHandle(deviceCount);
-        driver.zeDeviceGet(driversHandler, indexDriver, deviceCountArray, deviceHandler);
-
-        List<LevelZeroDevice> devices = new ArrayList<>();
-        spirvDevices = new ArrayList<>();
-
-        for (int i = 0; i < deviceCount; i++) {
-            LevelZeroDevice device = driver.getDevice(driversHandler, i);
-            devices.add(device);
-            SPIRVDevice spirvDevice = new SPIRVLevelZeroDevice(indexDriver, i, devices.get(i));
-            spirvDevices.add(spirvDevice);
-        }
+  @Override
+  public int getNumDevices() {
+    if (deviceCount == -1) {
+      initDevices();
+      return deviceCount;
     }
+    return deviceCount;
+  }
 
-    @Override
-    public int getNumDevices() {
-        if (deviceCount == -1) {
-            initDevices();
-            return deviceCount;
-        }
-        return deviceCount;
-    }
+  @Override
+  public SPIRVDevice getDevice(int deviceIndex) {
+    return spirvDevices.get(deviceIndex);
+  }
 
-    @Override
-    public SPIRVDevice getDevice(int deviceIndex) {
-        return spirvDevices.get(deviceIndex);
-    }
+  @Override
+  public SPIRVContext createContext() {
+    ZeContextDescriptor contextDescriptor = new ZeContextDescriptor();
+    levelZeroContext = new LevelZeroContext(driversHandler, contextDescriptor);
+    levelZeroContext.zeContextCreate(driversHandler.getZe_driver_handle_t_ptr()[indexDriver]);
+    spirvContext = new SPIRVLevelZeroContext(this, spirvDevices, levelZeroContext);
+    return spirvContext;
+  }
 
-    @Override
-    public SPIRVContext createContext() {
-        ZeContextDescriptor contextDescriptor = new ZeContextDescriptor();
-        levelZeroContext = new LevelZeroContext(driversHandler, contextDescriptor);
-        levelZeroContext.zeContextCreate(driversHandler.getZe_driver_handle_t_ptr()[indexDriver]);
-        spirvContext = new SPIRVLevelZeroContext(this, spirvDevices, levelZeroContext);
-        return spirvContext;
-    }
+  @Override
+  public SPIRVDevice[] getDevices() {
+    return spirvDevices.toArray(new SPIRVDevice[0]);
+  }
 
-    @Override
-    public SPIRVDevice[] getDevices() {
-        return spirvDevices.toArray(new SPIRVDevice[0]);
-    }
-
-    @Override
-    public SPIRVRuntimeType getRuntime() {
-        return SPIRVRuntimeType.LEVEL_ZERO;
-    }
+  @Override
+  public SPIRVRuntimeType getRuntime() {
+    return SPIRVRuntimeType.LEVEL_ZERO;
+  }
 }

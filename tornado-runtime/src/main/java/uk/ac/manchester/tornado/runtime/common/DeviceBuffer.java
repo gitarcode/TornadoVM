@@ -25,20 +25,19 @@ package uk.ac.manchester.tornado.runtime.common;
 
 public interface DeviceBuffer {
 
-    void reset();
+  void reset();
 
-    int getNumberOfAtomics();
+  int getNumberOfAtomics();
 
-    void push(int value);
+  void push(int value);
 
-    boolean isOnDevice();
+  boolean isOnDevice();
 
-    int enqueueWrite();
+  int enqueueWrite();
 
-    int enqueueRead();
+  int enqueueRead();
 
-    void set(int[] arr);
+  void set(int[] arr);
 
-    int[] getBuffer();
-
+  int[] getBuffer();
 }

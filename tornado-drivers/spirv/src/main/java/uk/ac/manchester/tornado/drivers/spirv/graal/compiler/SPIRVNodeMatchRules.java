@@ -29,7 +29,7 @@ import org.graalvm.compiler.lir.gen.LIRGeneratorTool;
 
 public class SPIRVNodeMatchRules extends NodeMatchRules {
 
-    public SPIRVNodeMatchRules(LIRGeneratorTool lirGen) {
-        super(lirGen);
-    }
+  public SPIRVNodeMatchRules(LIRGeneratorTool lirGen) {
+    super(lirGen);
+  }
 }

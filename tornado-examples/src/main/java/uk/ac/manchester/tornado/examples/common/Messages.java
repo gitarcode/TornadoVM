@@ -19,7 +19,6 @@ package uk.ac.manchester.tornado.examples.common;
 
 public class Messages {
 
-    public static final String CORRECT = "Result is correct";
-    public static final String WRONG = "Result is wrong";
-
+  public static final String CORRECT = "Result is correct";
+  public static final String WRONG = "Result is wrong";
 }

@@ -33,48 +33,49 @@ import org.graalvm.compiler.nodes.ValuePhiNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLArchitecture;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLBinary;
-import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
+import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 
-/**
- * This node generates a pointer copy between two arrays in private memory.
- */
+/** This node generates a pointer copy between two arrays in private memory. */
 @NodeInfo
-public class FixedArrayCopyNode extends FloatingNode implements LIRLowerable  {
+public class FixedArrayCopyNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<FixedArrayCopyNode> TYPE = NodeClass.create(FixedArrayCopyNode.class);
+  public static final NodeClass<FixedArrayCopyNode> TYPE =
+      NodeClass.create(FixedArrayCopyNode.class);
 
-    @Input
-    protected ValuePhiNode conditionalPhiNode;
+  @Input protected ValuePhiNode conditionalPhiNode;
 
-    protected ResolvedJavaType elementType;
-    protected OCLAssembler.OCLBinaryTemplate pointerCopyTemplate;
-    protected OCLArchitecture.OCLMemoryBase memoryRegister;
+  protected ResolvedJavaType elementType;
+  protected OCLAssembler.OCLBinaryTemplate pointerCopyTemplate;
+  protected OCLArchitecture.OCLMemoryBase memoryRegister;
 
-    public FixedArrayCopyNode(ValuePhiNode conditionalPhiNode, ResolvedJavaType elementType, OCLArchitecture.OCLMemoryBase memoryRegister) {
-        super(TYPE, StampFactory.forKind(JavaKind.Object));
-        this.conditionalPhiNode = conditionalPhiNode;
-        this.elementType = elementType;
-        this.memoryRegister = memoryRegister;
-        this.pointerCopyTemplate = OCLKind.resolvePrivatePointerCopyTemplate(elementType);
-    }
+  public FixedArrayCopyNode(
+      ValuePhiNode conditionalPhiNode,
+      ResolvedJavaType elementType,
+      OCLArchitecture.OCLMemoryBase memoryRegister) {
+    super(TYPE, StampFactory.forKind(JavaKind.Object));
+    this.conditionalPhiNode = conditionalPhiNode;
+    this.elementType = elementType;
+    this.memoryRegister = memoryRegister;
+    this.pointerCopyTemplate = OCLKind.resolvePrivatePointerCopyTemplate(elementType);
+  }
 
-    public OCLArchitecture.OCLMemoryBase getMemoryRegister() {
-        return memoryRegister;
-    }
+  public OCLArchitecture.OCLMemoryBase getMemoryRegister() {
+    return memoryRegister;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRKind lirKind = LIRKind.value(gen.getLIRGeneratorTool().target().arch.getWordKind());
-        final Variable ptr = gen.getLIRGeneratorTool().newVariable(lirKind);
-        Value fixedArrayValue = gen.operand(conditionalPhiNode);
-        final OCLBinary.Expr declarationPtr = new OCLBinary.Expr(pointerCopyTemplate, lirKind, ptr, fixedArrayValue);
-        final OCLLIRStmt.ExprStmt ptrExpr = new OCLLIRStmt.ExprStmt(declarationPtr);
-        gen.getLIRGeneratorTool().append(ptrExpr);
-        gen.setResult(this, ptr);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRKind lirKind = LIRKind.value(gen.getLIRGeneratorTool().target().arch.getWordKind());
+    final Variable ptr = gen.getLIRGeneratorTool().newVariable(lirKind);
+    Value fixedArrayValue = gen.operand(conditionalPhiNode);
+    final OCLBinary.Expr declarationPtr =
+        new OCLBinary.Expr(pointerCopyTemplate, lirKind, ptr, fixedArrayValue);
+    final OCLLIRStmt.ExprStmt ptrExpr = new OCLLIRStmt.ExprStmt(declarationPtr);
+    gen.getLIRGeneratorTool().append(ptrExpr);
+    gen.setResult(this, ptr);
+  }
 }

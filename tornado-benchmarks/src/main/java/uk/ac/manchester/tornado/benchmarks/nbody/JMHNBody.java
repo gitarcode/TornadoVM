@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.nbody;
 import static uk.ac.manchester.tornado.benchmarks.ComputeKernels.nBody;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -38,7 +37,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -47,97 +45,96 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.nbody.JMHNBody
  * </code>
  */
 public class JMHNBody {
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        int numBodies = Integer.parseInt(System.getProperty("x", "16384"));
-        float delT;
-        float espSqr;
-        FloatArray velSeq;
-        private FloatArray posSeq;
+    int numBodies = Integer.parseInt(System.getProperty("x", "16384"));
+    float delT;
+    float espSqr;
+    FloatArray velSeq;
+    private FloatArray posSeq;
 
-        private TornadoExecutionPlan executor;
+    private TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            delT = 0.005f;
-            espSqr = 500.0f;
+    @Setup(Level.Trial)
+    public void doSetup() {
+      delT = 0.005f;
+      espSqr = 500.0f;
 
-            FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
-            FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
+      FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
+      FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
 
-            for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-                auxPositionRandom.set(i, (float) Math.random());
-            }
+      for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+        auxPositionRandom.set(i, (float) Math.random());
+      }
 
-            auxVelocityZero.init(0.0f);
+      auxVelocityZero.init(0.0f);
 
-            posSeq = new FloatArray(numBodies * 4);
-            velSeq = new FloatArray(numBodies * 4);
+      posSeq = new FloatArray(numBodies * 4);
+      velSeq = new FloatArray(numBodies * 4);
 
-            if (auxPositionRandom.getSize() >= 0) {
-                for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-                    posSeq.set(i, auxPositionRandom.get(i));
-                }
-            }
-
-            if (auxVelocityZero.getSize() >= 0) {
-                for (int i = 0; i < auxVelocityZero.getSize(); i++) {
-                    velSeq.set(i, auxVelocityZero.get(i));
-                }
-            }
-
-            TaskGraph taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, velSeq, posSeq) //
-                    .task("t0", ComputeKernels::nBody, numBodies, posSeq, velSeq, delT, espSqr) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, posSeq, velSeq);
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
+      if (auxPositionRandom.getSize() >= 0) {
+        for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+          posSeq.set(i, auxPositionRandom.get(i));
         }
-    }
+      }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void nbodyJava(BenchmarkSetup state) {
-        nBody(state.numBodies, state.posSeq, state.velSeq, state.delT, state.espSqr);
-    }
+      if (auxVelocityZero.getSize() >= 0) {
+        for (int i = 0; i < auxVelocityZero.getSize(); i++) {
+          velSeq.set(i, auxVelocityZero.get(i));
+        }
+      }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void nbodyTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, velSeq, posSeq) //
+              .task("t0", ComputeKernels::nBody, numBodies, posSeq, velSeq, delT, espSqr) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, posSeq, velSeq);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHNBody.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void nbodyJava(BenchmarkSetup state) {
+    nBody(state.numBodies, state.posSeq, state.velSeq, state.delT, state.espSqr);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void nbodyTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
+
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHNBody.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

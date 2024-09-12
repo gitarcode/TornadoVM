@@ -40,69 +40,74 @@ import org.graalvm.compiler.nodes.spi.CoreProviders;
 import org.graalvm.compiler.options.OptionValues;
 import org.graalvm.compiler.phases.BasePhase;
 import org.graalvm.compiler.phases.common.CanonicalizerPhase;
-
 import uk.ac.manchester.tornado.runtime.graal.nodes.TornadoLoopsData;
 
 public class TornadoPragmaUnroll extends BasePhase<CoreProviders> {
 
-    private final CanonicalizerPhase canonicalizer;
+  private final CanonicalizerPhase canonicalizer;
 
-    public TornadoPragmaUnroll(CanonicalizerPhase canonicalizer) {
-        this.canonicalizer = canonicalizer;
+  public TornadoPragmaUnroll(CanonicalizerPhase canonicalizer) {
+    this.canonicalizer = canonicalizer;
+  }
+
+  public static boolean shouldFullUnroll(OptionValues options, LoopEx loop) {
+    if (!loop.isCounted() || !loop.counted().isConstantMaxTripCount()) {
+      return false;
     }
-
-    public static boolean shouldFullUnroll(OptionValues options, LoopEx loop) {
-        if (!loop.isCounted() || !loop.counted().isConstantMaxTripCount()) {
-            return false;
+    CountedLoopInfo counted = loop.counted();
+    long maxTrips = counted.constantMaxTripCount().asLong();
+    int maxNodes =
+        (counted.isExactTripCount() && counted.isConstantExactTripCount())
+            ? ExactFullUnrollMaxNodes.getValue(options)
+            : FullUnrollMaxNodes.getValue(options);
+    maxNodes =
+        Math.min(
+            maxNodes,
+            MaximumDesiredSize.getValue(options) - loop.loopBegin().graph().getNodeCount());
+    int size = Math.max(1, loop.size() - 1 - loop.loopBegin().phis().count());
+    if (size * maxTrips <= maxNodes) {
+      // check whether we're allowed to unroll this loop
+      int loops = 0;
+      int ifs = 0;
+      for (Node node : loop.inside().nodes()) {
+        if (node instanceof ControlFlowAnchorNode) {
+          return false;
+        } else if (node instanceof LoopBeginNode) {
+          loops++;
+        } else if (node instanceof IfNode) {
+          ifs++;
         }
-        CountedLoopInfo counted = loop.counted();
-        long maxTrips = counted.constantMaxTripCount().asLong();
-        int maxNodes = (counted.isExactTripCount() && counted.isConstantExactTripCount()) ? ExactFullUnrollMaxNodes.getValue(options) : FullUnrollMaxNodes.getValue(options);
-        maxNodes = Math.min(maxNodes, MaximumDesiredSize.getValue(options) - loop.loopBegin().graph().getNodeCount());
-        int size = Math.max(1, loop.size() - 1 - loop.loopBegin().phis().count());
-        if (size * maxTrips <= maxNodes) {
-            // check whether we're allowed to unroll this loop
-            int loops = 0;
-            int ifs = 0;
-            for (Node node : loop.inside().nodes()) {
-                if (node instanceof ControlFlowAnchorNode) {
-                    return false;
-                } else if (node instanceof LoopBeginNode) {
-                    loops++;
-                } else if (node instanceof IfNode) {
-                    ifs++;
-                }
-            }
+      }
 
-            return ((loops - ifs) == 0);
-        } else {
-            return false;
+      return ((loops - ifs) == 0);
+    } else {
+      return false;
+    }
+  }
+
+  public void execute(StructuredGraph graph, CoreProviders providers) {
+    run(graph, providers);
+  }
+
+  @Override
+  protected void run(StructuredGraph graph, CoreProviders providers) {
+    if (graph.hasLoops()) {
+      boolean peeled;
+      do {
+        peeled = false;
+        final LoopsData dataCounted = new TornadoLoopsData(graph);
+        dataCounted.detectCountedLoops();
+        for (LoopEx loop : dataCounted.countedLoops()) {
+          if (shouldFullUnroll(graph.getOptions(), loop)) {
+            getDebugContext().log("FullUnroll %s", loop);
+            LoopTransformations.fullUnroll(loop, providers, canonicalizer);
+            getDebugContext().dump(INFO_LEVEL, graph, "After fullUnroll %s", loop);
+            peeled = true;
+            break;
+          }
         }
+        dataCounted.deleteUnusedNodes();
+      } while (peeled);
     }
-
-    public void execute(StructuredGraph graph, CoreProviders providers) {
-        run(graph, providers);
-    }
-
-    @Override
-    protected void run(StructuredGraph graph, CoreProviders providers) {
-        if (graph.hasLoops()) {
-            boolean peeled;
-            do {
-                peeled = false;
-                final LoopsData dataCounted = new TornadoLoopsData(graph);
-                dataCounted.detectCountedLoops();
-                for (LoopEx loop : dataCounted.countedLoops()) {
-                    if (shouldFullUnroll(graph.getOptions(), loop)) {
-                        getDebugContext().log("FullUnroll %s", loop);
-                        LoopTransformations.fullUnroll(loop, providers, canonicalizer);
-                        getDebugContext().dump(INFO_LEVEL, graph, "After fullUnroll %s", loop);
-                        peeled = true;
-                        break;
-                    }
-                }
-                dataCounted.deleteUnusedNodes();
-            } while (peeled);
-        }
-    }
+  }
 }

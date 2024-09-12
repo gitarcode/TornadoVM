@@ -24,6 +24,8 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -34,9 +36,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.spirv.SPIRVThreadBuiltIn;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
@@ -45,25 +44,29 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
 @NodeInfo
 public class LocalGroupSizeNode extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<LocalGroupSizeNode> TYPE = NodeClass.create(LocalGroupSizeNode.class);
+  public static final NodeClass<LocalGroupSizeNode> TYPE =
+      NodeClass.create(LocalGroupSizeNode.class);
 
-    @Input
-    private ConstantNode dimensionIndex;
+  @Input private ConstantNode dimensionIndex;
 
-    public LocalGroupSizeNode(ConstantNode dimensionIndex) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        assert stamp != null;
-        this.dimensionIndex = dimensionIndex;
-    }
+  public LocalGroupSizeNode(ConstantNode dimensionIndex) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    assert stamp != null;
+    this.dimensionIndex = dimensionIndex;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        Logger.traceBuildLIR(Logger.BACKEND.SPIRV, "emitLocalGroupSize: dim=%s", dimensionIndex);
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        Value valueDimension = generator.operand(dimensionIndex);
-        LIRKind lirKind = tool.getLIRKind(stamp);
-        tool.append(new SPIRVLIRStmt.AssignStmt(result, new SPIRVUnary.ThreadBuiltinCallForSPIRV(SPIRVThreadBuiltIn.WORKGROUP_SIZE, result, lirKind, valueDimension)));
-        generator.setResult(this, result);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    Logger.traceBuildLIR(Logger.BACKEND.SPIRV, "emitLocalGroupSize: dim=%s", dimensionIndex);
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    Value valueDimension = generator.operand(dimensionIndex);
+    LIRKind lirKind = tool.getLIRKind(stamp);
+    tool.append(
+        new SPIRVLIRStmt.AssignStmt(
+            result,
+            new SPIRVUnary.ThreadBuiltinCallForSPIRV(
+                SPIRVThreadBuiltIn.WORKGROUP_SIZE, result, lirKind, valueDimension)));
+    generator.setResult(this, result);
+  }
 }

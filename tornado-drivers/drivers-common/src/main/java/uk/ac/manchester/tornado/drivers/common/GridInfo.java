@@ -42,5 +42,5 @@
 package uk.ac.manchester.tornado.drivers.common;
 
 public interface GridInfo {
-    boolean checkGridDimensions();
+  boolean checkGridDimensions();
 }

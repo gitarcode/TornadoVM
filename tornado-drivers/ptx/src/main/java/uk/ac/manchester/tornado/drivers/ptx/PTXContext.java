@@ -26,60 +26,58 @@ package uk.ac.manchester.tornado.drivers.ptx;
 import static uk.ac.manchester.tornado.runtime.common.TornadoOptions.DUMP_EVENTS;
 
 import java.util.stream.IntStream;
-
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.exceptions.TornadoBailoutRuntimeException;
 
 public class PTXContext {
 
-    private final long ptxContext;
+  private final long ptxContext;
 
-    private final PTXDeviceContext deviceContext;
+  private final PTXDeviceContext deviceContext;
 
-    public PTXContext(PTXDevice device) {
-        ptxContext = cuCtxCreate(device.getCuDevice());
-        cuCtxSetCurrent(ptxContext);
-        deviceContext = new PTXDeviceContext(device);
+  public PTXContext(PTXDevice device) {
+    ptxContext = cuCtxCreate(device.getCuDevice());
+    cuCtxSetCurrent(ptxContext);
+    deviceContext = new PTXDeviceContext(device);
+  }
 
+  private static native long cuCtxCreate(long deviceIndex);
+
+  private static native long cuCtxDestroy(long cuContext);
+
+  private static native long cuMemAlloc(long cuContext, long numBytes);
+
+  private static native long cuMemFree(long cuContext, long devicePtr);
+
+  private static native long cuCtxSetCurrent(long cuContext);
+
+  public void enablePTXContext() {
+    cuCtxSetCurrent(ptxContext);
+  }
+
+  public void cleanup() {
+    int numPlans = TornadoExecutionPlan.getTotalPlans();
+    if (DUMP_EVENTS) {
+      IntStream.range(1, numPlans).forEach(deviceContext::dumpEvents);
     }
 
-    private native static long cuCtxCreate(long deviceIndex);
+    IntStream.range(1, (numPlans)).forEach(deviceContext::destroyStream);
+    cuCtxDestroy(ptxContext);
+  }
 
-    private native static long cuCtxDestroy(long cuContext);
+  public PTXDeviceContext getDeviceContext() {
+    return deviceContext;
+  }
 
-    private native static long cuMemAlloc(long cuContext, long numBytes);
-
-    private native static long cuMemFree(long cuContext, long devicePtr);
-
-    private native static long cuCtxSetCurrent(long cuContext);
-
-    public void enablePTXContext() {
-        cuCtxSetCurrent(ptxContext);
+  public long allocateMemory(long numBytes) {
+    try {
+      return cuMemAlloc(ptxContext, numBytes);
+    } catch (Exception e) {
+      throw new TornadoBailoutRuntimeException("[Error during memory allocation] ", e);
     }
+  }
 
-    public void cleanup() {
-        int numPlans = TornadoExecutionPlan.getTotalPlans();
-        if (DUMP_EVENTS) {
-            IntStream.range(1, numPlans).forEach(deviceContext::dumpEvents);
-        }
-
-        IntStream.range(1, (numPlans)).forEach(deviceContext::destroyStream);
-        cuCtxDestroy(ptxContext);
-    }
-
-    public PTXDeviceContext getDeviceContext() {
-        return deviceContext;
-    }
-
-    public long allocateMemory(long numBytes) {
-        try {
-            return cuMemAlloc(ptxContext, numBytes);
-        } catch (Exception e) {
-            throw new TornadoBailoutRuntimeException("[Error during memory allocation] ", e);
-        }
-    }
-
-    public void freeMemory(long address) {
-        cuMemFree(ptxContext, address);
-    }
+  public void freeMemory(long address) {
+    cuMemFree(ptxContext, address);
+  }
 }

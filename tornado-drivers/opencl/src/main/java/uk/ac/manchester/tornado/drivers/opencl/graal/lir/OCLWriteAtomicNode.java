@@ -28,6 +28,7 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimplemented;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.memory.BarrierType;
 import org.graalvm.compiler.core.common.memory.MemoryOrderMode;
@@ -45,126 +46,152 @@ import org.graalvm.compiler.nodes.memory.LIRLowerableAccess;
 import org.graalvm.compiler.nodes.memory.address.AddressNode;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 import org.graalvm.word.LocationIdentity;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLStamp;
 import uk.ac.manchester.tornado.drivers.providers.TornadoMemoryOrder;
 
-/**
- * Writes a given {@linkplain #value() value} a {@linkplain FixedAccessNode
- * memory location}.
- */
+/** Writes a given {@linkplain #value() value} a {@linkplain FixedAccessNode memory location}. */
 @NodeInfo(nameTemplate = "OCLAtomicWrite#{p#location/s}")
 public class OCLWriteAtomicNode extends AbstractWriteNode implements LIRLowerableAccess {
 
-    public static final NodeClass<OCLWriteAtomicNode> TYPE = NodeClass.create(OCLWriteAtomicNode.class);
-    @Input(InputType.Association)
-    private AddressNode address;
-    @Input
-    private ValueNode accumulator;
-    private Stamp accStamp;
-    private JavaKind elementKind;
-    private ATOMIC_OPERATION operation;
+  public static final NodeClass<OCLWriteAtomicNode> TYPE =
+      NodeClass.create(OCLWriteAtomicNode.class);
 
-    public OCLWriteAtomicNode(AddressNode address, LocationIdentity location, ValueNode value, BarrierType barrierType, ValueNode acc, Stamp accStamp, JavaKind elementKind,
-            ATOMIC_OPERATION operation) {
-        super(TYPE, address, location, value, barrierType);
+  @Input(InputType.Association)
+  private AddressNode address;
 
-        this.address = address;
-        this.accumulator = acc;
-        this.accStamp = accStamp;
-        this.elementKind = elementKind;
-        this.operation = operation;
+  @Input private ValueNode accumulator;
+  private Stamp accStamp;
+  private JavaKind elementKind;
+  private ATOMIC_OPERATION operation;
+
+  public OCLWriteAtomicNode(
+      AddressNode address,
+      LocationIdentity location,
+      ValueNode value,
+      BarrierType barrierType,
+      ValueNode acc,
+      Stamp accStamp,
+      JavaKind elementKind,
+      ATOMIC_OPERATION operation) {
+    super(TYPE, address, location, value, barrierType);
+
+    this.address = address;
+    this.accumulator = acc;
+    this.accStamp = accStamp;
+    this.elementKind = elementKind;
+    this.operation = operation;
+  }
+
+  // @formatter:on
+
+  protected OCLWriteAtomicNode(
+      NodeClass<? extends OCLWriteAtomicNode> c,
+      AddressNode address,
+      LocationIdentity location,
+      ValueNode value,
+      BarrierType barrierType) {
+    super(c, address, location, value, barrierType);
+    this.address = address;
+  }
+
+  public static void store() {}
+
+  @Override
+  public MemoryOrderMode getMemoryOrder() {
+    return null;
+  }
+
+  @Override
+  public Stamp getAccessStamp(NodeView view) {
+    return value().stamp(view);
+  }
+
+  public OCLStamp getStampInt() {
+    return switch (operation) {
+      case ADD -> new OCLStamp(OCLKind.ATOMIC_ADD_INT);
+      case MUL -> new OCLStamp(OCLKind.ATOMIC_MUL_INT);
+      default ->
+          throw new RuntimeException("Operation for reduction not supported yet: " + operation);
+    };
+  }
+
+  public OCLStamp getStampFloat() {
+    OCLStamp oclStamp = null;
+    switch (operation) {
+      case ADD:
+        oclStamp = new OCLStamp(OCLKind.ATOMIC_ADD_FLOAT);
+        break;
+      default:
+        throw new RuntimeException("Operation for reduction not supported yet: " + operation);
     }
-    //@formatter:on
+    return oclStamp;
+  }
 
-    protected OCLWriteAtomicNode(NodeClass<? extends OCLWriteAtomicNode> c, AddressNode address, LocationIdentity location, ValueNode value, BarrierType barrierType) {
-        super(c, address, location, value, barrierType);
-        this.address = address;
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
 
-    public static void store() {
-
-    }
-
-    @Override
-    public MemoryOrderMode getMemoryOrder() {
-        return null;
-    }
-
-    @Override
-    public Stamp getAccessStamp(NodeView view) {
-        return value().stamp(view);
-    }
-
-    public OCLStamp getStampInt() {
-        return switch (operation) {
-            case ADD -> new OCLStamp(OCLKind.ATOMIC_ADD_INT);
-            case MUL -> new OCLStamp(OCLKind.ATOMIC_MUL_INT);
-            default -> throw new RuntimeException("Operation for reduction not supported yet: " + operation);
+    // New OpenCL nodes for atomic add
+    OCLStamp oclStamp =
+        switch (elementKind) {
+          case Int -> getStampInt();
+          case Long ->
+              // DUE TO UNSUPPORTED FEATURE IN INTEL OpenCL PLATFORM
+              new OCLStamp(OCLKind.ATOMIC_ADD_INT);
+          case Float -> getStampFloat();
+          default ->
+              throw new RuntimeException(
+                  "Data type for reduction not supported yet: " + elementKind);
         };
-    }
 
-    public OCLStamp getStampFloat() {
-        OCLStamp oclStamp = null;
-        switch (operation) {
-            case ADD:
-                oclStamp = new OCLStamp(OCLKind.ATOMIC_ADD_FLOAT);
-                break;
-            default:
-                throw new RuntimeException("Operation for reduction not supported yet: " + operation);
-        }
-        return oclStamp;
-    }
+    LIRKind writeKind = gen.getLIRGeneratorTool().getLIRKind(oclStamp);
+    LIRKind accKind = gen.getLIRGeneratorTool().getLIRKind(accStamp);
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
+    // Atomic Store
+    gen.getLIRGeneratorTool()
+        .getArithmetic()
+        .emitStore(
+            writeKind,
+            gen.operand(address),
+            gen.operand(value()),
+            gen.state(this),
+            TornadoMemoryOrder.GPU_MEMORY_MODE);
 
-        // New OpenCL nodes for atomic add
-        OCLStamp oclStamp = switch (elementKind) {
-            case Int -> getStampInt();
-            case Long ->
-                // DUE TO UNSUPPORTED FEATURE IN INTEL OpenCL PLATFORM
-                new OCLStamp(OCLKind.ATOMIC_ADD_INT);
-            case Float -> getStampFloat();
-            default -> throw new RuntimeException("Data type for reduction not supported yet: " + elementKind);
-        };
+    // Update the accumulator
+    gen.getLIRGeneratorTool()
+        .getArithmetic()
+        .emitStore(
+            accKind,
+            gen.operand(accumulator),
+            gen.operand(value()),
+            gen.state(this),
+            TornadoMemoryOrder.GPU_MEMORY_MODE);
+  }
 
-        LIRKind writeKind = gen.getLIRGeneratorTool().getLIRKind(oclStamp);
-        LIRKind accKind = gen.getLIRGeneratorTool().getLIRKind(accStamp);
+  @Override
+  public boolean canNullCheck() {
+    return true;
+  }
 
-        // Atomic Store
-        gen.getLIRGeneratorTool().getArithmetic().emitStore(writeKind, gen.operand(address), gen.operand(value()), gen.state(this), TornadoMemoryOrder.GPU_MEMORY_MODE);
+  @Override
+  public LocationIdentity getKilledLocationIdentity() {
+    unimplemented();
+    return null;
+  }
 
-        // Update the accumulator
-        gen.getLIRGeneratorTool().getArithmetic().emitStore(accKind, gen.operand(accumulator), gen.operand(value()), gen.state(this), TornadoMemoryOrder.GPU_MEMORY_MODE);
-    }
+  @Override
+  public NodeIterable<FrameState> states() {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public boolean canNullCheck() {
-        return true;
-    }
-
-    @Override
-    public LocationIdentity getKilledLocationIdentity() {
-        unimplemented();
-        return null;
-    }
-
-    @Override
-    public NodeIterable<FrameState> states() {
-        unimplemented();
-        return null;
-    }
-
-    //@formatter:off
-    public enum ATOMIC_OPERATION {
-        ADD,
-        MUL,
-        MAX,
-        MIN,
-        SUB,
-        CUSTOM;
-    }
-    //@formatter:on
+  // @formatter:off
+  public enum ATOMIC_OPERATION {
+    ADD,
+    MUL,
+    MAX,
+    MIN,
+    SUB,
+    CUSTOM;
+  }
+  // @formatter:on
 }

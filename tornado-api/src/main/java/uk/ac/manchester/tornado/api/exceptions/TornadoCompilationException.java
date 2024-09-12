@@ -19,16 +19,15 @@ package uk.ac.manchester.tornado.api.exceptions;
 
 public class TornadoCompilationException extends RuntimeException {
 
-    private static final long serialVersionUID = -7515308573010965892L;
-    private final String message;
+  private static final long serialVersionUID = -7515308573010965892L;
+  private final String message;
 
-    public TornadoCompilationException(final String msg) {
-        message = msg;
-    }
+  public TornadoCompilationException(final String msg) {
+    message = msg;
+  }
 
-    @Override
-    public String getMessage() {
-        return message;
-    }
-
+  @Override
+  public String getMessage() {
+    return message;
+  }
 }

@@ -27,21 +27,21 @@ package uk.ac.manchester.tornado.runtime.tasks;
 
 public enum TornadoGraphBitcodes {
 
-    // @formatter:off
-    LOAD_REF ((byte)1),
-    LOAD_PRIM((byte)2),
-    LAUNCH   ((byte)3),
-    ARG_LIST ((byte)4),
-    CONTEXT  ((byte)5);
-    // @formatter:on
+  // @formatter:off
+  LOAD_REF((byte) 1),
+  LOAD_PRIM((byte) 2),
+  LAUNCH((byte) 3),
+  ARG_LIST((byte) 4),
+  CONTEXT((byte) 5);
+  // @formatter:on
 
-    byte index;
+  byte index;
 
-    TornadoGraphBitcodes(byte index) {
-        this.index = index;
-    }
+  TornadoGraphBitcodes(byte index) {
+    this.index = index;
+  }
 
-    public byte index() {
-        return index;
-    }
+  public byte index() {
+    return index;
+  }
 }

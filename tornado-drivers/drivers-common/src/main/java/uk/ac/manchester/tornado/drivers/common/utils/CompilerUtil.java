@@ -42,10 +42,8 @@
 package uk.ac.manchester.tornado.drivers.common.utils;
 
 import java.lang.reflect.Method;
-
-import org.graalvm.compiler.phases.util.Providers;
-
 import jdk.vm.ci.meta.ResolvedJavaMethod;
+import org.graalvm.compiler.phases.util.Providers;
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoSuitesProvider;
 import uk.ac.manchester.tornado.runtime.sketcher.Sketch;
 import uk.ac.manchester.tornado.runtime.sketcher.SketchRequest;
@@ -54,19 +52,30 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class CompilerUtil {
 
-    public static Method getMethodForName(Class<?> klass, String nameMethod) {
-        Method method = null;
-        for (Method m : klass.getMethods()) {
-            if (m.getName().equals(nameMethod)) {
-                method = m;
-            }
-        }
-        return method;
+  public static Method getMethodForName(Class<?> klass, String nameMethod) {
+    Method method = null;
+    for (Method m : klass.getMethods()) {
+      if (m.getName().equals(nameMethod)) {
+        method = m;
+      }
     }
+    return method;
+  }
 
-    public static Sketch buildSketchForJavaMethod(ResolvedJavaMethod resolvedJavaMethod, TaskDataContext taskMetaData, Providers providers, TornadoSuitesProvider suites) {
-        new SketchRequest(resolvedJavaMethod, providers, suites.getGraphBuilderSuite(), suites.getSketchTier(), taskMetaData.getBackendIndex(), taskMetaData.getDeviceIndex())//
-                .run();
-        return TornadoSketcher.lookup(resolvedJavaMethod, taskMetaData.getBackendIndex(), taskMetaData.getDeviceIndex());
-    }
+  public static Sketch buildSketchForJavaMethod(
+      ResolvedJavaMethod resolvedJavaMethod,
+      TaskDataContext taskMetaData,
+      Providers providers,
+      TornadoSuitesProvider suites) {
+    new SketchRequest(
+            resolvedJavaMethod,
+            providers,
+            suites.getGraphBuilderSuite(),
+            suites.getSketchTier(),
+            taskMetaData.getBackendIndex(),
+            taskMetaData.getDeviceIndex()) //
+        .run();
+    return TornadoSketcher.lookup(
+        resolvedJavaMethod, taskMetaData.getBackendIndex(), taskMetaData.getDeviceIndex());
+  }
 }

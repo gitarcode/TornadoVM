@@ -31,68 +31,75 @@ import uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays;
 import uk.ac.manchester.tornado.matrix.SparseMatrixUtils.CSRMatrix;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner spmv
  * </code>
  */
 public class SpmvTornado extends BenchmarkDriver {
 
-    private final CSRMatrix<FloatArray> matrix;
+  private final CSRMatrix<FloatArray> matrix;
 
-    private FloatArray v;
-    private FloatArray y;
+  private FloatArray v;
+  private FloatArray y;
 
-    public SpmvTornado(int iterations, CSRMatrix<FloatArray> matrix) {
-        super(iterations);
-        this.matrix = matrix;
-    }
+  public SpmvTornado(int iterations, CSRMatrix<FloatArray> matrix) {
+    super(iterations);
+    this.matrix = matrix;
+  }
 
-    @Override
-    public void setUp() {
-        v = new FloatArray(matrix.size);
-        y = new FloatArray(matrix.size);
-        initData(v);
-        taskGraph = new TaskGraph("benchmark") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, matrix.vals, matrix.cols, matrix.rows, v, y) //
-                .task("spmv", LinearAlgebraArrays::spmv, matrix.vals, matrix.cols, matrix.rows, v, matrix.size, y) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
+  @Override
+  public void setUp() {
+    v = new FloatArray(matrix.size);
+    y = new FloatArray(matrix.size);
+    initData(v);
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(
+                DataTransferMode.EVERY_EXECUTION, matrix.vals, matrix.cols, matrix.rows, v, y) //
+            .task(
+                "spmv",
+                LinearAlgebraArrays::spmv,
+                matrix.vals,
+                matrix.cols,
+                matrix.rows,
+                v,
+                matrix.size,
+                y) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
 
-        v = null;
-        y = null;
+    v = null;
+    y = null;
 
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
+  @Override
+  public boolean validate(TornadoDevice device) {
 
-        final FloatArray ref = new FloatArray(matrix.size);
+    final FloatArray ref = new FloatArray(matrix.size);
 
-        runBenchmark(device);
-        executionPlan.clearProfiles();
+    runBenchmark(device);
+    executionPlan.clearProfiles();
 
-        spmv(matrix.vals, matrix.cols, matrix.rows, v, matrix.size, ref);
+    spmv(matrix.vals, matrix.cols, matrix.rows, v, matrix.size, ref);
 
-        final float ulp = findULPDistance(y, ref);
-        System.out.printf("ulp is %f\n", ulp);
-        return ulp < MAX_ULP;
-    }
+    final float ulp = findULPDistance(y, ref);
+    System.out.printf("ulp is %f\n", ulp);
+    return ulp < MAX_ULP;
+  }
 }

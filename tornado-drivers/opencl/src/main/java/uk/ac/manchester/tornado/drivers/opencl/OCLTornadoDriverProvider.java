@@ -23,9 +23,8 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl;
 
-import org.graalvm.compiler.options.OptionValues;
-
 import jdk.vm.ci.hotspot.HotSpotJVMCIRuntime;
+import org.graalvm.compiler.options.OptionValues;
 import uk.ac.manchester.tornado.runtime.TornadoAcceleratorBackend;
 import uk.ac.manchester.tornado.runtime.TornadoBackendProvider;
 import uk.ac.manchester.tornado.runtime.TornadoVMConfigAccess;
@@ -33,28 +32,27 @@ import uk.ac.manchester.tornado.runtime.common.enums.TornadoBackends;
 
 public class OCLTornadoDriverProvider implements TornadoBackendProvider {
 
-    /**
-     * Check {@link TornadoBackendProvider} for documentation on priority.
-     */
-    private final TornadoBackends priority = TornadoBackends.OpenCL;
+  /** Check {@link TornadoBackendProvider} for documentation on priority. */
+  private final TornadoBackends priority = TornadoBackends.OpenCL;
 
-    @Override
-    public String getName() {
-        return "OpenCL Driver";
-    }
+  @Override
+  public String getName() {
+    return "OpenCL Driver";
+  }
 
-    @Override
-    public TornadoAcceleratorBackend createBackend(OptionValues options, HotSpotJVMCIRuntime vmRuntime, TornadoVMConfigAccess vmConfig) {
-        return new OCLBackendImpl(options, vmRuntime, vmConfig);
-    }
+  @Override
+  public TornadoAcceleratorBackend createBackend(
+      OptionValues options, HotSpotJVMCIRuntime vmRuntime, TornadoVMConfigAccess vmConfig) {
+    return new OCLBackendImpl(options, vmRuntime, vmConfig);
+  }
 
-    @Override
-    public TornadoBackends getDevicePriority() {
-        return priority;
-    }
+  @Override
+  public TornadoBackends getDevicePriority() {
+    return priority;
+  }
 
-    @Override
-    public int compareTo(TornadoBackendProvider o) {
-        return o.getDevicePriority().value() - priority.value();
-    }
+  @Override
+  public int compareTo(TornadoBackendProvider o) {
+    return o.getDevicePriority().value() - priority.value();
+  }
 }

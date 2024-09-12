@@ -45,19 +45,19 @@ import jdk.vm.ci.code.InstalledCode;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class MetaCompilation {
-    TaskDataContext taskMeta;
-    InstalledCode installedCode;
+  TaskDataContext taskMeta;
+  InstalledCode installedCode;
 
-    public MetaCompilation(TaskDataContext taskMeta, InstalledCode installedCode) {
-        this.taskMeta = taskMeta;
-        this.installedCode = installedCode;
-    }
+  public MetaCompilation(TaskDataContext taskMeta, InstalledCode installedCode) {
+    this.taskMeta = taskMeta;
+    this.installedCode = installedCode;
+  }
 
-    public TaskDataContext getTaskMeta() {
-        return taskMeta;
-    }
+  public TaskDataContext getTaskMeta() {
+    return taskMeta;
+  }
 
-    public InstalledCode getInstalledCode() {
-        return installedCode;
-    }
+  public InstalledCode getInstalledCode() {
+    return installedCode;
+  }
 }

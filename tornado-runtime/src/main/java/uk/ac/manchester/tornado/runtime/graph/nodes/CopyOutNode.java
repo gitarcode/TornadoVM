@@ -29,38 +29,40 @@ import java.util.List;
 
 public class CopyOutNode extends ContextOpNode {
 
-    private DependentReadNode value;
+  private DependentReadNode value;
 
-    public CopyOutNode(ContextNode context) {
-        super(context);
+  public CopyOutNode(ContextNode context) {
+    super(context);
+  }
+
+  public DependentReadNode getValue() {
+    return value;
+  }
+
+  public void setValue(DependentReadNode object) {
+    value = object;
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "[%d]: copy out object %d after task %d",
+        id, value.getValue().getIndex(), value.getDependent().getId());
+  }
+
+  @Override
+  public boolean hasInputs() {
+    return value != null;
+  }
+
+  @Override
+  public List<AbstractNode> getInputs() {
+    if (!hasInputs()) {
+      return Collections.emptyList();
     }
 
-    public DependentReadNode getValue() {
-        return value;
-    }
-
-    public void setValue(DependentReadNode object) {
-        value = object;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("[%d]: copy out object %d after task %d", id, value.getValue().getIndex(), value.getDependent().getId());
-    }
-
-    @Override
-    public boolean hasInputs() {
-        return value != null;
-    }
-
-    @Override
-    public List<AbstractNode> getInputs() {
-        if (!hasInputs()) {
-            return Collections.emptyList();
-        }
-
-        final List<AbstractNode> result = new ArrayList<>();
-        result.add(value);
-        return result;
-    }
+    final List<AbstractNode> result = new ArrayList<>();
+    result.add(value);
+    return result;
+  }
 }

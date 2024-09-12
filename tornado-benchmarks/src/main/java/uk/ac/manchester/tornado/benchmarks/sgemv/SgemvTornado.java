@@ -21,7 +21,6 @@ import static uk.ac.manchester.tornado.api.math.TornadoMath.findULPDistance;
 import static uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays.sgemv;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
@@ -31,81 +30,78 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner sgemv
  * </code>
  */
 public class SgemvTornado extends BenchmarkDriver {
 
-    private final int m;
-    private final int n;
-    private FloatArray a;
-    private FloatArray x;
-    private FloatArray y;
+  private final int m;
+  private final int n;
+  private FloatArray a;
+  private FloatArray x;
+  private FloatArray y;
 
-    public SgemvTornado(int iterations, int m, int n) {
-        super(iterations);
-        this.m = m;
-        this.n = n;
+  public SgemvTornado(int iterations, int m, int n) {
+    super(iterations);
+    this.m = m;
+    this.n = n;
+  }
+
+  @Override
+  public void setUp() {
+    a = new FloatArray(m * n);
+    x = new FloatArray(n);
+    y = new FloatArray(n);
+
+    final Random random = new Random();
+
+    for (int i = 0; i < m; i++) {
+      a.set(i * (m + 1), 1);
     }
 
-    @Override
-    public void setUp() {
-        a = new FloatArray(m * n);
-        x = new FloatArray(n);
-        y = new FloatArray(n);
-
-        final Random random = new Random();
-
-        for (int i = 0; i < m; i++) {
-            a.set(i * (m + 1), 1);
-        }
-
-        for (int i = 0; i < n; i++) {
-            x.set(i, random.nextFloat());
-        }
-
-        taskGraph = new TaskGraph("benchmark") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, x) //
-                .task("sgemv", LinearAlgebraArrays::sgemv, m, n, a, x, y) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+    for (int i = 0; i < n; i++) {
+      x.set(i, random.nextFloat());
     }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, x) //
+            .task("sgemv", LinearAlgebraArrays::sgemv, m, n, a, x, y) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-        a = null;
-        x = null;
-        y = null;
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
 
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+    a = null;
+    x = null;
+    y = null;
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 
-        final FloatArray result = new FloatArray(n);
+  @Override
+  public boolean validate(TornadoDevice device) {
 
-        runBenchmark(device);
-        executionPlan.clearProfiles();
+    final FloatArray result = new FloatArray(n);
 
-        sgemv(m, n, a, x, result);
+    runBenchmark(device);
+    executionPlan.clearProfiles();
 
-        final float ulp = findULPDistance(y, result);
-        return ulp < MAX_ULP;
-    }
+    sgemv(m, n, a, x, result);
 
+    final float ulp = findULPDistance(y, result);
+    return ulp < MAX_ULP;
+  }
 }

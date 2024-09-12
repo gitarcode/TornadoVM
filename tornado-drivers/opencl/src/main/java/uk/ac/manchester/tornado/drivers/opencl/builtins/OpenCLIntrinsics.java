@@ -29,49 +29,44 @@ import org.graalvm.compiler.api.replacements.Fold;
 
 public class OpenCLIntrinsics {
 
-    public static native int get_global_id(int value);
+  public static native int get_global_id(int value);
 
-    public static native int get_local_id(int value);
+  public static native int get_local_id(int value);
 
-    public static native int get_global_size(int value);
+  public static native int get_global_size(int value);
 
-    public static native int get_local_size(int value);
+  public static native int get_local_size(int value);
 
-    public static native int get_group_id(int value);
+  public static native int get_group_id(int value);
 
-    public static native int get_group_size(int value);
+  public static native int get_group_size(int value);
 
-    /**
-     * <p>
-     * <code>
-     * barrier(CLK_LOCAL_MEM_FENCE);
-     * </code>
-     * </p>
-     */
-    public static native void localBarrier();
+  /**
+   * <code>
+   * barrier(CLK_LOCAL_MEM_FENCE);
+   * </code>
+   */
+  public static native void localBarrier();
 
-    /**
-     * <p>
-     * <code>
-     * barrier(CLK_GLOBAL_MEM_FENCE);
-     * </code>
-     * </p>
-     */
-    public static native void globalBarrier();
+  /**
+   * <code>
+   * barrier(CLK_GLOBAL_MEM_FENCE);
+   * </code>
+   */
+  public static native void globalBarrier();
 
-    public static native void printf();
+  public static native void printf();
 
-    public static native void printEmpty();
+  public static native void printEmpty();
 
-    public static native void createLocalMemory(int[] array, int size);
+  public static native void createLocalMemory(int[] array, int size);
 
-    public static int fmax(float a, float b) {
-        return 0;
-    }
+  public static int fmax(float a, float b) {
+    return 0;
+  }
 
-    @Fold
-    public static int fmax() {
-        return 0;
-    }
-
+  @Fold
+  public static int fmax() {
+    return 0;
+  }
 }

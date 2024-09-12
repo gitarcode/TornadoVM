@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.dotimage;
 import static uk.ac.manchester.tornado.api.types.utils.FloatOps.findMaxULP;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
@@ -32,86 +31,83 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner dotimage
  * </code>
  */
 public class DotTornado extends BenchmarkDriver {
 
-    private final int numElementsX;
-    private final int numElementsY;
+  private final int numElementsX;
+  private final int numElementsY;
 
-    private ImageFloat3 a;
-    private ImageFloat3 b;
-    private ImageFloat c;
+  private ImageFloat3 a;
+  private ImageFloat3 b;
+  private ImageFloat c;
 
-    public DotTornado(int iterations, int numElementsX, int numElementsY) {
-        super(iterations);
-        this.numElementsX = numElementsX;
-        this.numElementsY = numElementsY;
+  public DotTornado(int iterations, int numElementsX, int numElementsY) {
+    super(iterations);
+    this.numElementsX = numElementsX;
+    this.numElementsY = numElementsY;
+  }
+
+  @Override
+  public void setUp() {
+    a = new ImageFloat3(numElementsX, numElementsY);
+    b = new ImageFloat3(numElementsX, numElementsY);
+    c = new ImageFloat(numElementsX, numElementsY);
+
+    Random r = new Random();
+    for (int i = 0; i < numElementsX; i++) {
+      for (int j = 0; j < numElementsY; j++) {
+        a.set(i, j, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
+        b.set(i, j, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
+      }
     }
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
+            .task("dotVector", GraphicsKernels::dotImage, a, b, c) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-    @Override
-    public void setUp() {
-        a = new ImageFloat3(numElementsX, numElementsY);
-        b = new ImageFloat3(numElementsX, numElementsY);
-        c = new ImageFloat(numElementsX, numElementsY);
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-        Random r = new Random();
-        for (int i = 0; i < numElementsX; i++) {
-            for (int j = 0; j < numElementsY; j++) {
-                a.set(i, j, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-                b.set(i, j, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-            }
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    a = null;
+    b = null;
+    c = null;
+    executionResult.getProfilerResult().dumpProfiles();
+    super.tearDown();
+  }
+
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+
+    final ImageFloat result = new ImageFloat(numElementsX, numElementsX);
+    runBenchmark(device);
+    executionPlan.clearProfiles();
+
+    GraphicsKernels.dotImage(a, b, result);
+
+    float maxULP = 0f;
+    for (int i = 0; i < c.Y(); i++) {
+      for (int j = 0; j < c.X(); j++) {
+        final float ulp = findMaxULP(c.get(j, i), result.get(j, i));
+
+        if (ulp > maxULP) {
+          maxULP = ulp;
         }
-        taskGraph = new TaskGraph("benchmark") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .task("dotVector", GraphicsKernels::dotImage, a, b, c) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+      }
     }
-
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        a = null;
-        b = null;
-        c = null;
-        executionResult.getProfilerResult().dumpProfiles();
-        super.tearDown();
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-
-        final ImageFloat result = new ImageFloat(numElementsX, numElementsX);
-        runBenchmark(device);
-        executionPlan.clearProfiles();
-
-        GraphicsKernels.dotImage(a, b, result);
-
-        float maxULP = 0f;
-        for (int i = 0; i < c.Y(); i++) {
-            for (int j = 0; j < c.X(); j++) {
-                final float ulp = findMaxULP(c.get(j, i), result.get(j, i));
-
-                if (ulp > maxULP) {
-                    maxULP = ulp;
-                }
-            }
-        }
-        return Float.compare(maxULP, MAX_ULP) <= 0;
-    }
-
+    return Float.compare(maxULP, MAX_ULP) <= 0;
+  }
 }

@@ -23,9 +23,7 @@
 package uk.ac.manchester.tornado.runtime.graal.nodes.interfaces;
 
 /**
- * This interface is used for accessing all dedicated nodes for Int OpenCL math
- * functions outside the scope of opencl-driver package.
+ * This interface is used for accessing all dedicated nodes for Int OpenCL math functions outside
+ * the scope of opencl-driver package.
  */
-public interface MarkIntIntrinsicNode extends MarkIntrinsicsNode {
-
-}
+public interface MarkIntIntrinsicNode extends MarkIntrinsicsNode {}

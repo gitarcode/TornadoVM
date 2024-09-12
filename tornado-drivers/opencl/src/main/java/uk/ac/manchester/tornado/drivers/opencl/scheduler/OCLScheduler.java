@@ -31,79 +31,81 @@ import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 
 public class OCLScheduler {
 
-    /**
-     * Supported Vendors for specific Thread-Schedulers
-     */
-    public enum SUPPORTED_VENDORS {
-        AMD("Advanced Micro Devices"), //
-        CODEPLAY("Codeplay"), //
-        INTEL("Intel"), //
-        NVIDIA("NVIDIA"), //
-        XILINX("Xilinx");
+  /** Supported Vendors for specific Thread-Schedulers */
+  public enum SUPPORTED_VENDORS {
+    AMD("Advanced Micro Devices"), //
+    CODEPLAY("Codeplay"), //
+    INTEL("Intel"), //
+    NVIDIA("NVIDIA"), //
+    XILINX("Xilinx");
 
-        private String name;
+    private String name;
 
-        SUPPORTED_VENDORS(String name) {
-            this.name = name;
-        }
-
-        String getName() {
-            return this.name;
-        }
+    SUPPORTED_VENDORS(String name) {
+      this.name = name;
     }
 
-    private static final int NVIDIA_MAJOR_VERSION_GENERIC_SCHEDULER = 550;
-    private static final int NVIDIA_MINOR_VERSION_GENERIC_SCHEDULER = 67;
-
-    private static boolean isDriverVersionCompatible(OCLTargetDevice device) {
-        int majorVersion = Integer.parseInt(device.getDriverVersion().split("\\.")[0]);
-        int minorVersion = Integer.parseInt(device.getDriverVersion().split("\\.")[1]);
-
-        return majorVersion >= NVIDIA_MAJOR_VERSION_GENERIC_SCHEDULER && minorVersion >= NVIDIA_MINOR_VERSION_GENERIC_SCHEDULER;
+    String getName() {
+      return this.name;
     }
+  }
 
-    private static OCLKernelScheduler getInstanceGPUScheduler(final OCLDeviceContext context) {
-        OCLTargetDevice device = context.getDevice();
-        if (device.getDeviceVendor().contains(SUPPORTED_VENDORS.AMD.getName())) {
-            return new OCLAMDScheduler(context);
-        } else if (device.getDeviceVendor().contains(SUPPORTED_VENDORS.NVIDIA.getName())) {
-            if (isDriverVersionCompatible(device)) {
-                return new OCLNVIDIAGPUScheduler(context);
-            } else {
-                return new OCLGenericGPUScheduler(context);
-            }
+  private static final int NVIDIA_MAJOR_VERSION_GENERIC_SCHEDULER = 550;
+  private static final int NVIDIA_MINOR_VERSION_GENERIC_SCHEDULER = 67;
+
+  private static boolean isDriverVersionCompatible(OCLTargetDevice device) {
+    int majorVersion = Integer.parseInt(device.getDriverVersion().split("\\.")[0]);
+    int minorVersion = Integer.parseInt(device.getDriverVersion().split("\\.")[1]);
+
+    return majorVersion >= NVIDIA_MAJOR_VERSION_GENERIC_SCHEDULER
+        && minorVersion >= NVIDIA_MINOR_VERSION_GENERIC_SCHEDULER;
+  }
+
+  private static OCLKernelScheduler getInstanceGPUScheduler(final OCLDeviceContext context) {
+    OCLTargetDevice device = context.getDevice();
+    if (device.getDeviceVendor().contains(SUPPORTED_VENDORS.AMD.getName())) {
+      return new OCLAMDScheduler(context);
+    } else if (device.getDeviceVendor().contains(SUPPORTED_VENDORS.NVIDIA.getName())) {
+      if (isDriverVersionCompatible(device)) {
+        return new OCLNVIDIAGPUScheduler(context);
+      } else {
+        return new OCLGenericGPUScheduler(context);
+      }
+    } else {
+      return new OCLGenericGPUScheduler(context);
+    }
+  }
+
+  public static OCLKernelScheduler instanceScheduler(
+      OCLDeviceType type, final OCLDeviceContext context) {
+    switch (type) {
+      case CL_DEVICE_TYPE_GPU -> {
+        return getInstanceGPUScheduler(context);
+      }
+      case CL_DEVICE_TYPE_ACCELERATOR -> {
+        if (context.getDevice().getDeviceVendor().contains(SUPPORTED_VENDORS.CODEPLAY.getName())) {
+          return getInstanceGPUScheduler(context);
+        } else if (context.isPlatformFPGA()) {
+          return new OCLFPGAScheduler(context);
         } else {
-            return new OCLGenericGPUScheduler(context);
+          return new OCLCPUScheduler(context);
         }
+      }
+      case CL_DEVICE_TYPE_CPU -> {
+        return TornadoOptions.USE_BLOCK_SCHEDULER
+            ? new OCLCPUScheduler(context)
+            : getInstanceGPUScheduler(context);
+      }
+      default -> new TornadoLogger().fatal("No scheduler available for device: %s", context);
     }
+    return null;
+  }
 
-    public static OCLKernelScheduler instanceScheduler(OCLDeviceType type, final OCLDeviceContext context) {
-        switch (type) {
-            case CL_DEVICE_TYPE_GPU -> {
-                return getInstanceGPUScheduler(context);
-            }
-            case CL_DEVICE_TYPE_ACCELERATOR -> {
-                if (context.getDevice().getDeviceVendor().contains(SUPPORTED_VENDORS.CODEPLAY.getName())) {
-                    return getInstanceGPUScheduler(context);
-                } else if (context.isPlatformFPGA()) {
-                    return new OCLFPGAScheduler(context);
-                } else {
-                    return new OCLCPUScheduler(context);
-                }
-            }
-            case CL_DEVICE_TYPE_CPU -> {
-                return TornadoOptions.USE_BLOCK_SCHEDULER ? new OCLCPUScheduler(context) : getInstanceGPUScheduler(context);
-            }
-            default -> new TornadoLogger().fatal("No scheduler available for device: %s", context);
-        }
-        return null;
+  public static OCLKernelScheduler create(final OCLDeviceContext context) {
+    if (context.getDevice().getDeviceType() != null) {
+      OCLDeviceType type = context.getDevice().getDeviceType();
+      return instanceScheduler(type, context);
     }
-
-    public static OCLKernelScheduler create(final OCLDeviceContext context) {
-        if (context.getDevice().getDeviceType() != null) {
-            OCLDeviceType type = context.getDevice().getDeviceType();
-            return instanceScheduler(type, context);
-        }
-        return null;
-    }
+    return null;
+  }
 }

@@ -25,43 +25,41 @@ import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.types.arrays.DoubleArray;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.examples/uk.ac.manchester.tornado.examples.arrays.ArrayAddDouble
  * </code>
  */
 public class ArrayAddDouble {
 
-    public static void add(DoubleArray a, DoubleArray b, DoubleArray c) {
-        for (@Parallel int i = 0; i < c.getSize(); i++) {
-            c.set(i, a.get(i) + b.get(i));
-        }
+  public static void add(DoubleArray a, DoubleArray b, DoubleArray c) {
+    for (@Parallel int i = 0; i < c.getSize(); i++) {
+      c.set(i, a.get(i) + b.get(i));
     }
+  }
 
-    public static void main(String[] args) {
+  public static void main(String[] args) {
 
-        final int numElements = 8;
-        DoubleArray a = new DoubleArray(numElements);
-        DoubleArray b = new DoubleArray(numElements);
-        DoubleArray c = new DoubleArray(numElements);
+    final int numElements = 8;
+    DoubleArray a = new DoubleArray(numElements);
+    DoubleArray b = new DoubleArray(numElements);
+    DoubleArray c = new DoubleArray(numElements);
 
-        a.init(1);
-        b.init(2);
-        c.init(0);
+    a.init(1);
+    b.init(2);
+    c.init(0);
 
-        TaskGraph taskGraph = new TaskGraph("s0")//
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .task("t0", ArrayAddDouble::add, a, b, c)//
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+            .task("t0", ArrayAddDouble::add, a, b, c) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
-        executor.execute();
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    executor.execute();
 
-        System.out.println("a: " + a);
-        System.out.println("b: " + b);
-        System.out.println("c: " + c);
-    }
+    System.out.println("a: " + a);
+    System.out.println("b: " + b);
+    System.out.println("c: " + c);
+  }
 }

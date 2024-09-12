@@ -35,60 +35,60 @@ import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 /**
  * Example using the Prebuilt API of TornadoVM.
  *
- * <p>
- * <code>
+ * <p><code>
  * $ tornado -m tornado.examples/uk.ac.manchester.tornado.examples.arrays.ArrayAddIntPrebuilt
  * </code>
- * </p>
  */
 public class ArrayAddIntPrebuilt {
 
-    /**
-     * The following method represents the prebuilt code. It performs a vector
-     * addition using three parameters.
-     */
-    public static void add(IntArray a, IntArray b, IntArray c) {
-        for (@Parallel int i = 0; i < c.getSize(); i++) {
-            c.set(i, a.get(i) + b.get(i));
-        }
+  /**
+   * The following method represents the prebuilt code. It performs a vector addition using three
+   * parameters.
+   */
+  public static void add(IntArray a, IntArray b, IntArray c) {
+    for (@Parallel int i = 0; i < c.getSize(); i++) {
+      c.set(i, a.get(i) + b.get(i));
     }
+  }
 
-    public static void main(String[] args) {
+  public static void main(String[] args) {
 
-        final int numElements = 8;
-        IntArray a = new IntArray(numElements);
-        IntArray b = new IntArray(numElements);
-        IntArray c = new IntArray(numElements);
+    final int numElements = 8;
+    IntArray a = new IntArray(numElements);
+    IntArray b = new IntArray(numElements);
+    IntArray c = new IntArray(numElements);
 
-        a.init(1);
-        b.init(2);
-        c.init(0);
+    a.init(1);
+    b.init(2);
+    c.init(0);
 
-        String tornadoSDK = System.getenv("TORNADO_SDK");
+    String tornadoSDK = System.getenv("TORNADO_SDK");
 
-        TornadoDevice device = TornadoRuntimeProvider.getTornadoRuntime().getDefaultDevice();
-        String filePath = tornadoSDK + "/examples/generated/";
-        filePath += device.getPlatformName().contains("PTX") ? "add.ptx" : "add.cl";
+    TornadoDevice device = TornadoRuntimeProvider.getTornadoRuntime().getDefaultDevice();
+    String filePath = tornadoSDK + "/examples/generated/";
+    filePath += device.getPlatformName().contains("PTX") ? "add.ptx" : "add.cl";
 
-        AccessorParameters accessorParameters = new AccessorParameters(3);
-        accessorParameters.set(0, a, Access.READ_ONLY);
-        accessorParameters.set(1, b, Access.READ_ONLY);
-        accessorParameters.set(2, c, Access.WRITE_ONLY);
+    AccessorParameters accessorParameters = new AccessorParameters(3);
+    accessorParameters.set(0, a, Access.READ_ONLY);
+    accessorParameters.set(1, b, Access.READ_ONLY);
+    accessorParameters.set(2, c, Access.WRITE_ONLY);
 
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .prebuiltTask("t0", "add", filePath, accessorParameters) // 
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+            .prebuiltTask("t0", "add", filePath, accessorParameters) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-        WorkerGrid workerGrid = new WorkerGrid1D(numElements);
-        GridScheduler gridScheduler = new GridScheduler("s0.t0", workerGrid);
+    WorkerGrid workerGrid = new WorkerGrid1D(numElements);
+    GridScheduler gridScheduler = new GridScheduler("s0.t0", workerGrid);
 
-        try (TornadoExecutionPlan executor = new TornadoExecutionPlan(taskGraph.snapshot())) {
-            executor.withDevice(device) //
-                    .withGridScheduler(gridScheduler) //
-                    .execute();
-        } catch (TornadoExecutionPlanException e) {
-            e.printStackTrace();
-        }
+    try (TornadoExecutionPlan executor = new TornadoExecutionPlan(taskGraph.snapshot())) {
+      executor
+          .withDevice(device) //
+          .withGridScheduler(gridScheduler) //
+          .execute();
+    } catch (TornadoExecutionPlanException e) {
+      e.printStackTrace();
     }
+  }
 }

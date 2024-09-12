@@ -25,7 +25,6 @@ package uk.ac.manchester.tornado.drivers.opencl.mm;
 import java.lang.foreign.MemorySegment;
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.api.exceptions.TornadoMemoryException;
 import uk.ac.manchester.tornado.api.exceptions.TornadoOutOfMemoryException;
@@ -42,193 +41,267 @@ import uk.ac.manchester.tornado.runtime.common.exceptions.TornadoUnsupportedErro
 
 public class OCLMemorySegmentWrapper implements XPUBuffer {
 
-    private static final int INIT_VALUE = -1;
-    private final OCLDeviceContext deviceContext;
-    private final long batchSize;
-    private long bufferId;
-    private long bufferOffset;
-    private boolean onDevice;
-    private long bufferSize;
+  private static final int INIT_VALUE = -1;
+  private final OCLDeviceContext deviceContext;
+  private final long batchSize;
+  private long bufferId;
+  private long bufferOffset;
+  private boolean onDevice;
+  private long bufferSize;
 
-    private long subregionSize;
+  private long subregionSize;
 
-    public OCLMemorySegmentWrapper(OCLDeviceContext deviceContext, long batchSize) {
-        this.deviceContext = deviceContext;
-        this.batchSize = batchSize;
-        this.bufferSize = INIT_VALUE;
-        this.bufferId = INIT_VALUE;
-        this.bufferOffset = 0;
-        onDevice = false;
+  public OCLMemorySegmentWrapper(OCLDeviceContext deviceContext, long batchSize) {
+    this.deviceContext = deviceContext;
+    this.batchSize = batchSize;
+    this.bufferSize = INIT_VALUE;
+    this.bufferId = INIT_VALUE;
+    this.bufferOffset = 0;
+    onDevice = false;
+  }
+
+  public OCLMemorySegmentWrapper(long bufferSize, OCLDeviceContext deviceContext, long batchSize) {
+    this.deviceContext = deviceContext;
+    this.batchSize = batchSize;
+    this.bufferSize = bufferSize;
+    this.bufferId = INIT_VALUE;
+    this.bufferOffset = 0;
+    onDevice = false;
+  }
+
+  @Override
+  public long toBuffer() {
+    return this.bufferId;
+  }
+
+  @Override
+  public void setBuffer(XPUBufferWrapper bufferWrapper) {
+    this.bufferId = bufferWrapper.buffer;
+    this.bufferOffset = bufferWrapper.bufferOffset;
+
+    bufferWrapper.bufferOffset += bufferSize;
+  }
+
+  @Override
+  public long getBufferOffset() {
+    return bufferOffset;
+  }
+
+  @Override
+  public void read(long executionPlanId, final Object reference) {
+    read(executionPlanId, reference, 0, 0, null, false);
+  }
+
+  private MemorySegment getSegmentWithHeader(final Object reference) {
+    return switch (reference) {
+      case TornadoNativeArray tornadoNativeArray -> tornadoNativeArray.getSegmentWithHeader();
+      case TornadoCollectionInterface<?> tornadoCollectionInterface ->
+          tornadoCollectionInterface.getSegmentWithHeader();
+      case TornadoImagesInterface<?> imagesInterface -> imagesInterface.getSegmentWithHeader();
+      case TornadoMatrixInterface<?> matrixInterface -> matrixInterface.getSegmentWithHeader();
+      case TornadoVolumesInterface<?> volumesInterface -> volumesInterface.getSegmentWithHeader();
+      default ->
+          throw new TornadoMemoryException("Memory Segment not supported: " + reference.getClass());
+    };
+  }
+
+  @Override
+  public int read(
+      long executionPlanId,
+      final Object reference,
+      long hostOffset,
+      long partialReadSize,
+      int[] events,
+      boolean useDeps) {
+    MemorySegment segment;
+    segment = getSegmentWithHeader(reference);
+    final int returnEvent;
+    final long numBytes = getSizeSubRegionSize() > 0 ? getSizeSubRegionSize() : bufferSize;
+    if (partialReadSize != 0) {
+      // Partial Copy Out due to an under demand copy by the user
+      // in this case the host offset is equal to the device offset
+      returnEvent =
+          deviceContext.readBuffer(
+              executionPlanId,
+              toBuffer(),
+              hostOffset,
+              partialReadSize,
+              segment.address(),
+              hostOffset,
+              (useDeps) ? events : null);
+    } else if (batchSize <= 0) {
+      // Partial Copy Out due to batch processing
+      returnEvent =
+          deviceContext.readBuffer(
+              executionPlanId,
+              toBuffer(),
+              bufferOffset,
+              numBytes,
+              segment.address(),
+              hostOffset,
+              (useDeps) ? events : null);
+    } else {
+      // Full copy out (default)
+      returnEvent =
+          deviceContext.readBuffer(
+              executionPlanId,
+              toBuffer(),
+              TornadoNativeArray.ARRAY_HEADER,
+              numBytes,
+              segment.address(),
+              hostOffset + TornadoNativeArray.ARRAY_HEADER,
+              (useDeps) ? events : null);
     }
 
-    public OCLMemorySegmentWrapper(long bufferSize, OCLDeviceContext deviceContext, long batchSize) {
-        this.deviceContext = deviceContext;
-        this.batchSize = batchSize;
-        this.bufferSize = bufferSize;
-        this.bufferId = INIT_VALUE;
-        this.bufferOffset = 0;
-        onDevice = false;
+    return useDeps ? returnEvent : -1;
+  }
+
+  @Override
+  public void write(long executionPlanId, Object reference) {
+    MemorySegment segment;
+    segment = getSegmentWithHeader(reference);
+    if (batchSize <= 0) {
+      deviceContext.writeBuffer(
+          executionPlanId, toBuffer(), bufferOffset, bufferSize, segment.address(), 0, null);
+    } else {
+      throw new TornadoUnsupportedError("[UNSUPPORTED] batch processing for writeBuffer operation");
+    }
+    onDevice = true;
+  }
+
+  @Override
+  public int enqueueRead(
+      long executionPlanId, Object reference, long hostOffset, int[] events, boolean useDeps) {
+    MemorySegment segment;
+    segment = getSegmentWithHeader(reference);
+
+    final int returnEvent;
+    if (batchSize <= 0) {
+      returnEvent =
+          deviceContext.enqueueReadBuffer(
+              executionPlanId,
+              toBuffer(),
+              bufferOffset,
+              bufferSize,
+              segment.address(),
+              hostOffset,
+              (useDeps) ? events : null);
+    } else {
+      throw new TornadoUnsupportedError(
+          "[UNSUPPORTED] batch processing for enqueueReadBuffer operation");
+    }
+    return useDeps ? returnEvent : -1;
+  }
+
+  @Override
+  public List<Integer> enqueueWrite(
+      long executionPlanId,
+      Object reference,
+      long batchSize,
+      long hostOffset,
+      int[] events,
+      boolean useDeps) {
+    List<Integer> returnEvents = new ArrayList<>();
+    MemorySegment segment;
+    segment = getSegmentWithHeader(reference);
+
+    int internalEvent;
+    if (batchSize <= 0) {
+      internalEvent =
+          deviceContext.enqueueWriteBuffer(
+              executionPlanId,
+              toBuffer(),
+              bufferOffset,
+              bufferSize,
+              segment.address(),
+              hostOffset,
+              (useDeps) ? events : null);
+    } else {
+      internalEvent =
+          deviceContext.enqueueWriteBuffer(
+              executionPlanId,
+              toBuffer(),
+              0,
+              TornadoNativeArray.ARRAY_HEADER,
+              segment.address(),
+              0,
+              (useDeps) ? events : null);
+      returnEvents.add(internalEvent);
+      internalEvent =
+          deviceContext.enqueueWriteBuffer(
+              executionPlanId,
+              toBuffer(),
+              bufferOffset + TornadoNativeArray.ARRAY_HEADER,
+              bufferSize,
+              segment.address(),
+              hostOffset + TornadoNativeArray.ARRAY_HEADER,
+              (useDeps) ? events : null);
+    }
+    returnEvents.add(internalEvent);
+    onDevice = true;
+    return returnEvents;
+  }
+
+  @Override
+  public void allocate(Object reference, long batchSize)
+      throws TornadoOutOfMemoryException, TornadoMemoryException {
+    MemorySegment segment;
+    segment = getSegmentWithHeader(reference);
+
+    if (batchSize <= 0) {
+      bufferSize = segment.byteSize();
+      bufferId = deviceContext.getBufferProvider().getOrAllocateBufferWithSize(bufferSize);
+    } else {
+      bufferSize = batchSize;
+      bufferId =
+          deviceContext
+              .getBufferProvider()
+              .getOrAllocateBufferWithSize(bufferSize + TornadoNativeArray.ARRAY_HEADER);
     }
 
-    @Override
-    public long toBuffer() {
-        return this.bufferId;
+    if (bufferSize <= 0) {
+      throw new TornadoMemoryException("[ERROR] Bytes Allocated <= 0: " + bufferSize);
     }
 
-    @Override
-    public void setBuffer(XPUBufferWrapper bufferWrapper) {
-        this.bufferId = bufferWrapper.buffer;
-        this.bufferOffset = bufferWrapper.bufferOffset;
-
-        bufferWrapper.bufferOffset += bufferSize;
+    if (TornadoOptions.FULL_DEBUG) {
+      new TornadoLogger().info("allocated: %s", toString());
     }
+  }
 
-    @Override
-    public long getBufferOffset() {
-        return bufferOffset;
+  @Override
+  public void markAsFreeBuffer() throws TornadoMemoryException {
+    TornadoInternalError.guarantee(
+        bufferId != INIT_VALUE, "Fatal error: trying to deallocate an invalid buffer");
+    deviceContext.getBufferProvider().markBufferReleased(bufferId);
+    bufferId = INIT_VALUE;
+    bufferSize = INIT_VALUE;
+
+    if (TornadoOptions.FULL_DEBUG) {
+      new TornadoLogger().info("deallocated: %s", toString());
     }
+  }
 
-    @Override
-    public void read(long executionPlanId, final Object reference) {
-        read(executionPlanId, reference, 0, 0, null, false);
-    }
+  @Override
+  public long deallocate() {
+    return deviceContext.getBufferProvider().deallocate();
+  }
 
-    private MemorySegment getSegmentWithHeader(final Object reference) {
-        return switch (reference) {
-            case TornadoNativeArray tornadoNativeArray -> tornadoNativeArray.getSegmentWithHeader();
-            case TornadoCollectionInterface<?> tornadoCollectionInterface -> tornadoCollectionInterface.getSegmentWithHeader();
-            case TornadoImagesInterface<?> imagesInterface -> imagesInterface.getSegmentWithHeader();
-            case TornadoMatrixInterface<?> matrixInterface -> matrixInterface.getSegmentWithHeader();
-            case TornadoVolumesInterface<?> volumesInterface -> volumesInterface.getSegmentWithHeader();
-            default -> throw new TornadoMemoryException("Memory Segment not supported: " + reference.getClass());
-        };
-    }
+  @Override
+  public long size() {
+    return bufferSize;
+  }
 
-    @Override
-    public int read(long executionPlanId, final Object reference, long hostOffset, long partialReadSize, int[] events, boolean useDeps) {
-        MemorySegment segment;
-        segment = getSegmentWithHeader(reference);
-        final int returnEvent;
-        final long numBytes = getSizeSubRegionSize() > 0 ? getSizeSubRegionSize() : bufferSize;
-        if (partialReadSize != 0) {
-            // Partial Copy Out due to an under demand copy by the user
-            // in this case the host offset is equal to the device offset
-            returnEvent = deviceContext.readBuffer(executionPlanId, toBuffer(), hostOffset, partialReadSize, segment.address(), hostOffset, (useDeps) ? events : null);
-        } else if (batchSize <= 0) {
-            // Partial Copy Out due to batch processing
-            returnEvent = deviceContext.readBuffer(executionPlanId, toBuffer(), bufferOffset, numBytes, segment.address(), hostOffset, (useDeps) ? events : null);
-        } else {
-            // Full copy out (default)
-            returnEvent = deviceContext.readBuffer(executionPlanId, toBuffer(), TornadoNativeArray.ARRAY_HEADER, numBytes, segment.address(), hostOffset + TornadoNativeArray.ARRAY_HEADER, (useDeps)
-                    ? events
-                    : null);
-        }
+  @Override
+  public void setSizeSubRegion(long batchSize) {
+    this.subregionSize = batchSize;
+  }
 
-        return useDeps ? returnEvent : -1;
-    }
+  @Override
+  public long getSizeSubRegionSize() {
+    return subregionSize;
+  }
 
-    @Override
-
-    public void write(long executionPlanId, Object reference) {
-        MemorySegment segment;
-        segment = getSegmentWithHeader(reference);
-        if (batchSize <= 0) {
-            deviceContext.writeBuffer(executionPlanId, toBuffer(), bufferOffset, bufferSize, segment.address(), 0, null);
-        } else {
-            throw new TornadoUnsupportedError("[UNSUPPORTED] batch processing for writeBuffer operation");
-        }
-        onDevice = true;
-    }
-
-    @Override
-    public int enqueueRead(long executionPlanId, Object reference, long hostOffset, int[] events, boolean useDeps) {
-        MemorySegment segment;
-        segment = getSegmentWithHeader(reference);
-
-        final int returnEvent;
-        if (batchSize <= 0) {
-            returnEvent = deviceContext.enqueueReadBuffer(executionPlanId, toBuffer(), bufferOffset, bufferSize, segment.address(), hostOffset, (useDeps) ? events : null);
-        } else {
-            throw new TornadoUnsupportedError("[UNSUPPORTED] batch processing for enqueueReadBuffer operation");
-        }
-        return useDeps ? returnEvent : -1;
-    }
-
-    @Override
-    public List<Integer> enqueueWrite(long executionPlanId, Object reference, long batchSize, long hostOffset, int[] events, boolean useDeps) {
-        List<Integer> returnEvents = new ArrayList<>();
-        MemorySegment segment;
-        segment = getSegmentWithHeader(reference);
-
-        int internalEvent;
-        if (batchSize <= 0) {
-            internalEvent = deviceContext.enqueueWriteBuffer(executionPlanId, toBuffer(), bufferOffset, bufferSize, segment.address(), hostOffset, (useDeps) ? events : null);
-        } else {
-            internalEvent = deviceContext.enqueueWriteBuffer(executionPlanId, toBuffer(), 0, TornadoNativeArray.ARRAY_HEADER, segment.address(), 0, (useDeps) ? events : null);
-            returnEvents.add(internalEvent);
-            internalEvent = deviceContext.enqueueWriteBuffer(executionPlanId, toBuffer(), bufferOffset + TornadoNativeArray.ARRAY_HEADER, bufferSize, segment.address(),
-                    hostOffset + TornadoNativeArray.ARRAY_HEADER, (useDeps) ? events : null);
-        }
-        returnEvents.add(internalEvent);
-        onDevice = true;
-        return returnEvents;
-    }
-
-    @Override
-    public void allocate(Object reference, long batchSize) throws TornadoOutOfMemoryException, TornadoMemoryException {
-        MemorySegment segment;
-        segment = getSegmentWithHeader(reference);
-
-        if (batchSize <= 0) {
-            bufferSize = segment.byteSize();
-            bufferId = deviceContext.getBufferProvider().getOrAllocateBufferWithSize(bufferSize);
-        } else {
-            bufferSize = batchSize;
-            bufferId = deviceContext.getBufferProvider().getOrAllocateBufferWithSize(bufferSize + TornadoNativeArray.ARRAY_HEADER);
-        }
-
-        if (bufferSize <= 0) {
-            throw new TornadoMemoryException("[ERROR] Bytes Allocated <= 0: " + bufferSize);
-        }
-
-        if (TornadoOptions.FULL_DEBUG) {
-            new TornadoLogger().info("allocated: %s", toString());
-        }
-    }
-
-    @Override
-    public void markAsFreeBuffer() throws TornadoMemoryException {
-        TornadoInternalError.guarantee(bufferId != INIT_VALUE, "Fatal error: trying to deallocate an invalid buffer");
-        deviceContext.getBufferProvider().markBufferReleased(bufferId);
-        bufferId = INIT_VALUE;
-        bufferSize = INIT_VALUE;
-
-        if (TornadoOptions.FULL_DEBUG) {
-            new TornadoLogger().info("deallocated: %s", toString());
-        }
-    }
-
-    @Override
-    public long deallocate() {
-        return deviceContext.getBufferProvider().deallocate();
-    }
-
-    @Override
-    public long size() {
-        return bufferSize;
-    }
-
-    @Override
-    public void setSizeSubRegion(long batchSize) {
-        this.subregionSize = batchSize;
-    }
-
-    @Override
-    public long getSizeSubRegionSize() {
-        return subregionSize;
-    }
-
-    public long getBatchSize() {
-        return batchSize;
-    }
+  public long getBatchSize() {
+    return batchSize;
+  }
 }

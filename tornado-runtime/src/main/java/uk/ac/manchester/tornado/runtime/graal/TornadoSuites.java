@@ -23,14 +23,13 @@
  */
 package uk.ac.manchester.tornado.runtime.graal;
 
+import jdk.vm.ci.meta.MetaAccessProvider;
 import org.graalvm.compiler.lir.phases.LIRPhaseSuite;
 import org.graalvm.compiler.lir.phases.PostAllocationOptimizationPhase.PostAllocationOptimizationContext;
 import org.graalvm.compiler.lir.phases.PreAllocationOptimizationPhase.PreAllocationOptimizationContext;
 import org.graalvm.compiler.options.OptionValues;
 import org.graalvm.compiler.phases.common.AddressLoweringByNodePhase;
 import org.graalvm.compiler.phases.common.CanonicalizerPhase;
-
-import jdk.vm.ci.meta.MetaAccessProvider;
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoCompilerConfiguration;
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoHighTier;
@@ -41,56 +40,60 @@ import uk.ac.manchester.tornado.runtime.graal.phases.TornadoAllocationStage;
 
 public class TornadoSuites {
 
-    private final TornadoSketchTier sketchTier;
-    private final TornadoHighTier highTier;
-    private final TornadoMidTier midTier;
-    private final TornadoLowTier lowTier;
+  private final TornadoSketchTier sketchTier;
+  private final TornadoHighTier highTier;
+  private final TornadoMidTier midTier;
+  private final TornadoLowTier lowTier;
 
-    private final TornadoAllocationStage allocStage;
-    private final LIRPhaseSuite<PreAllocationOptimizationContext> preAllocStage;
-    private final LIRPhaseSuite<PostAllocationOptimizationContext> postAllocStage;
+  private final TornadoAllocationStage allocStage;
+  private final LIRPhaseSuite<PreAllocationOptimizationContext> preAllocStage;
+  private final LIRPhaseSuite<PostAllocationOptimizationContext> postAllocStage;
 
-    public TornadoSuites(OptionValues options, TornadoDeviceContext deviceContext, TornadoCompilerConfiguration config, MetaAccessProvider metaAccessProvider,
-            CanonicalizerPhase.CustomSimplification canonicalizer, AddressLoweringByNodePhase.AddressLowering addressLowering) {
-        sketchTier = config.createSketchTier(options, canonicalizer);
-        highTier = config.createHighTier(options, deviceContext, canonicalizer, metaAccessProvider);
-        midTier = config.createMidTier(options);
-        lowTier = config.createLowTier(options, deviceContext, addressLowering);
-        allocStage = config.createAllocationStage(options);
-        preAllocStage = config.createPreAllocationOptimizationStage(options);
-        postAllocStage = config.createPostAllocationOptimizationStage(options);
-    }
+  public TornadoSuites(
+      OptionValues options,
+      TornadoDeviceContext deviceContext,
+      TornadoCompilerConfiguration config,
+      MetaAccessProvider metaAccessProvider,
+      CanonicalizerPhase.CustomSimplification canonicalizer,
+      AddressLoweringByNodePhase.AddressLowering addressLowering) {
+    sketchTier = config.createSketchTier(options, canonicalizer);
+    highTier = config.createHighTier(options, deviceContext, canonicalizer, metaAccessProvider);
+    midTier = config.createMidTier(options);
+    lowTier = config.createLowTier(options, deviceContext, addressLowering);
+    allocStage = config.createAllocationStage(options);
+    preAllocStage = config.createPreAllocationOptimizationStage(options);
+    postAllocStage = config.createPostAllocationOptimizationStage(options);
+  }
 
-    public TornadoSketchTier getSketchTier() {
-        return sketchTier;
-    }
+  public TornadoSketchTier getSketchTier() {
+    return sketchTier;
+  }
 
-    public TornadoHighTier getHighTier() {
-        return highTier;
-    }
+  public TornadoHighTier getHighTier() {
+    return highTier;
+  }
 
-    public TornadoMidTier getMidTier() {
-        return midTier;
-    }
+  public TornadoMidTier getMidTier() {
+    return midTier;
+  }
 
-    public TornadoLowTier getLowTier() {
-        return lowTier;
-    }
+  public TornadoLowTier getLowTier() {
+    return lowTier;
+  }
 
-    public LIRPhaseSuite<PreAllocationOptimizationContext> getPreAllocationOptimizationStage() {
-        return preAllocStage;
-    }
+  public LIRPhaseSuite<PreAllocationOptimizationContext> getPreAllocationOptimizationStage() {
+    return preAllocStage;
+  }
 
-    public TornadoAllocationStage getAllocationStage() {
-        return allocStage;
-    }
+  public TornadoAllocationStage getAllocationStage() {
+    return allocStage;
+  }
 
-    public LIRPhaseSuite<PostAllocationOptimizationContext> getPostAllocationOptimizationStage() {
-        return postAllocStage;
-    }
+  public LIRPhaseSuite<PostAllocationOptimizationContext> getPostAllocationOptimizationStage() {
+    return postAllocStage;
+  }
 
-    public TornadoLIRSuites getLIRSuites() {
-        return new TornadoLIRSuites(preAllocStage, allocStage, postAllocStage);
-    }
-
+  public TornadoLIRSuites getLIRSuites() {
+    return new TornadoLIRSuites(preAllocStage, allocStage, postAllocStage);
+  }
 }

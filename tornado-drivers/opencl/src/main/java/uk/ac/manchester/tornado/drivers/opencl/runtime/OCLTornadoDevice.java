@@ -38,7 +38,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.api.common.Access;
 import uk.ac.manchester.tornado.api.common.Event;
@@ -104,722 +103,827 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class OCLTornadoDevice implements TornadoXPUDevice {
 
-    private static OCLBackendImpl driver = null;
-    private static final Pattern NAME_PATTERN = Pattern.compile("^OpenCL (\\d)\\.(\\d).*");
-    private final OCLTargetDevice device;
-    private final int deviceIndex;
-    private final int platformIndex;
-    private final String platformName;
-    private XPUBuffer reuseBuffer;
-    private ConcurrentHashMap<Object, Integer> mappingAtomics;
+  private static OCLBackendImpl driver = null;
+  private static final Pattern NAME_PATTERN = Pattern.compile("^OpenCL (\\d)\\.(\\d).*");
+  private final OCLTargetDevice device;
+  private final int deviceIndex;
+  private final int platformIndex;
+  private final String platformName;
+  private XPUBuffer reuseBuffer;
+  private ConcurrentHashMap<Object, Integer> mappingAtomics;
 
-    /**
-     * Constructor used also in SLAMBench/KFusion
-     *
-     * @param platformIndex
-     *     OpenCL Platform index
-     * @param deviceIndex
-     *     OpenCL Device Index
-     */
-    public OCLTornadoDevice(final int platformIndex, final int deviceIndex) {
-        this.platformIndex = platformIndex;
-        this.deviceIndex = deviceIndex;
-        driver = TornadoCoreRuntime.getTornadoRuntime().getBackend(OCLBackendImpl.class);
+  /**
+   * Constructor used also in SLAMBench/KFusion
+   *
+   * @param platformIndex OpenCL Platform index
+   * @param deviceIndex OpenCL Device Index
+   */
+  public OCLTornadoDevice(final int platformIndex, final int deviceIndex) {
+    this.platformIndex = platformIndex;
+    this.deviceIndex = deviceIndex;
+    driver = TornadoCoreRuntime.getTornadoRuntime().getBackend(OCLBackendImpl.class);
 
-        if (driver == null) {
-            throw new RuntimeException("TornadoVM OpenCL Driver not found");
-        }
-
-        platformName = driver.getPlatformContext(platformIndex).getPlatform().getName();
-        device = driver.getPlatformContext(platformIndex).devices().get(deviceIndex);
-        mappingAtomics = new ConcurrentHashMap<>();
+    if (driver == null) {
+      throw new RuntimeException("TornadoVM OpenCL Driver not found");
     }
 
-    @Override
-    public void dumpEvents(long executionPlanId) {
-        getDeviceContext().dumpEvents();
-    }
+    platformName = driver.getPlatformContext(platformIndex).getPlatform().getName();
+    device = driver.getPlatformContext(platformIndex).devices().get(deviceIndex);
+    mappingAtomics = new ConcurrentHashMap<>();
+  }
 
-    @Override
-    public String getDescription() {
-        final String availability = (device.isDeviceAvailable()) ? "available" : "not available";
-        return String.format("%s %s (%s)", device.getDeviceName(), device.getDeviceType(), availability);
-    }
+  @Override
+  public void dumpEvents(long executionPlanId) {
+    getDeviceContext().dumpEvents();
+  }
 
-    @Override
-    public String getPlatformName() {
-        return platformName;
-    }
+  @Override
+  public String getDescription() {
+    final String availability = (device.isDeviceAvailable()) ? "available" : "not available";
+    return String.format(
+        "%s %s (%s)", device.getDeviceName(), device.getDeviceType(), availability);
+  }
 
-    @Override
-    public OCLTargetDevice getPhysicalDevice() {
-        return device;
-    }
+  @Override
+  public String getPlatformName() {
+    return platformName;
+  }
 
-    public int getDeviceIndex() {
-        return deviceIndex;
-    }
+  @Override
+  public OCLTargetDevice getPhysicalDevice() {
+    return device;
+  }
 
-    @Override
-    public TornadoMemoryProvider getMemoryProvider() {
-        return getDeviceContext().getMemoryManager();
-    }
+  public int getDeviceIndex() {
+    return deviceIndex;
+  }
 
-    public int getPlatformIndex() {
-        return platformIndex;
-    }
+  @Override
+  public TornadoMemoryProvider getMemoryProvider() {
+    return getDeviceContext().getMemoryManager();
+  }
 
-    @Override
-    public OCLDeviceContextInterface getDeviceContext() {
-        return getBackend().getDeviceContext();
-    }
+  public int getPlatformIndex() {
+    return platformIndex;
+  }
 
-    public OCLBackend getBackend() {
-        return driver.getBackend(platformIndex, deviceIndex);
-    }
+  @Override
+  public OCLDeviceContextInterface getDeviceContext() {
+    return getBackend().getDeviceContext();
+  }
 
-    private void disableProfilerOptions() {
-        TornadoOptions.TORNADO_PROFILER_LOG = false;
-        TornadoOptions.TORNADO_PROFILER = false;
-    }
+  public OCLBackend getBackend() {
+    return driver.getBackend(platformIndex, deviceIndex);
+  }
 
-    @Override
-    public void clean() {
-        Set<Long> ids = new HashSet<>(device.getDeviceContext().getRegisteredPlanIds());
-        ids.forEach(id -> device.getDeviceContext().reset(id));
-        ids.clear();
-        disableProfilerOptions();
-    }
+  private void disableProfilerOptions() {
+    TornadoOptions.TORNADO_PROFILER_LOG = false;
+    TornadoOptions.TORNADO_PROFILER = false;
+  }
 
-    @Override
-    public String toString() {
-        return String.format(" [" + getPlatformName() + "] -- " + device.getDeviceName());
-    }
+  @Override
+  public void clean() {
+    Set<Long> ids = new HashSet<>(device.getDeviceContext().getRegisteredPlanIds());
+    ids.forEach(id -> device.getDeviceContext().reset(id));
+    ids.clear();
+    disableProfilerOptions();
+  }
 
-    @Override
-    public TornadoSchedulingStrategy getPreferredSchedule() {
-        switch (Objects.requireNonNull(device.getDeviceType())) {
-            case CL_DEVICE_TYPE_GPU, CL_DEVICE_TYPE_ACCELERATOR, CL_DEVICE_TYPE_CUSTOM, CL_DEVICE_TYPE_ALL -> {
-                return TornadoSchedulingStrategy.PER_ACCELERATOR_ITERATION;
-            }
-            case CL_DEVICE_TYPE_CPU -> {
-                if (TornadoOptions.USE_BLOCK_SCHEDULER) {
-                    return TornadoSchedulingStrategy.PER_CPU_BLOCK;
-                } else {
-                    return TornadoSchedulingStrategy.PER_ACCELERATOR_ITERATION;
-                }
-            }
-            default -> {
-                TornadoInternalError.shouldNotReachHere();
-                return TornadoSchedulingStrategy.PER_ACCELERATOR_ITERATION;
-            }
-        }
-    }
+  @Override
+  public String toString() {
+    return String.format(" [" + getPlatformName() + "] -- " + device.getDeviceName());
+  }
 
-    @Override
-    public void ensureLoaded(long executionPlanId) {
-        final OCLBackend backend = getBackend();
-        if (!backend.isInitialised()) {
-            backend.init();
-        }
-    }
-
-    @Override
-    public KernelStackFrame createKernelStackFrame(long executionPlanId, int numArgs) {
-        return getDeviceContext().getMemoryManager().createKernelStackFrame(executionPlanId, numArgs);
-    }
-
-    @Override
-    public XPUBuffer createOrReuseAtomicsBuffer(int[] array) {
-        if (reuseBuffer == null) {
-            reuseBuffer = getDeviceContext().getMemoryManager().createAtomicsBuffer(array);
-        }
-        reuseBuffer.setIntBuffer(array);
-        return reuseBuffer;
-    }
-
-    private boolean isOpenCLPreLoadBinary(OCLDeviceContextInterface deviceContext, String deviceInfo) {
-        OCLCodeCache installedCode = deviceContext.getCodeCache();
-        return (installedCode.isLoadBinaryOptionEnabled() && (installedCode.getOpenCLBinary(deviceInfo) != null));
-    }
-
-    private TornadoInstalledCode compileTask(SchedulableTask task) {
-        final OCLDeviceContextInterface deviceContext = getDeviceContext();
-        final CompilableTask executable = (CompilableTask) task;
-        final ResolvedJavaMethod resolvedMethod = TornadoCoreRuntime.getTornadoRuntime().resolveMethod(executable.getMethod());
-        final Sketch sketch = TornadoSketcher.lookup(resolvedMethod, task.meta().getBackendIndex(), task.meta().getDeviceIndex());
-
-        // Return the code from the cache
-        if (!task.shouldCompile() && deviceContext.isCached(task.getId(), resolvedMethod.getName())) {
-            return deviceContext.getInstalledCode(task.getId(), resolvedMethod.getName());
-        }
-
-        // copy meta data into task
-        final TaskDataContext taskMeta = executable.meta();
-        final Access[] sketchAccess = sketch.getArgumentsAccess();
-        final Access[] taskAccess = taskMeta.getArgumentsAccess();
-        System.arraycopy(sketchAccess, 0, taskAccess, 0, sketchAccess.length);
-
-        try {
-            OCLProviders providers = (OCLProviders) getBackend().getProviders();
-            TornadoProfiler profiler = task.getProfiler();
-            profiler.start(ProfilerType.TASK_COMPILE_GRAAL_TIME, taskMeta.getId());
-            final OCLCompilationResult result = OCLCompiler.compileSketchForDevice(sketch, executable, providers, getBackend(), executable.getProfiler());
-
-            // Update atomics buffer for inner methods that are not inlined
-            ResolvedJavaMethod[] methods = result.getMethods();
-            if (methods.length > 1) {
-                HashMap<Integer, Integer> mapping;
-                for (ResolvedJavaMethod m : methods) {
-                    if (TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(m)) {
-                        mapping = TornadoAtomicIntegerNode.globalAtomicsParameters.get(m);
-                        for (ResolvedJavaMethod mInternal : methods) {
-                            // RE-MAP position
-                            TornadoAtomicIntegerNode.globalAtomicsParameters.put(mInternal, mapping);
-                        }
-                    }
-                }
-            }
-
-            profiler.stop(ProfilerType.TASK_COMPILE_GRAAL_TIME, taskMeta.getId());
-            profiler.sum(ProfilerType.TOTAL_GRAAL_COMPILE_TIME, profiler.getTaskTimer(ProfilerType.TASK_COMPILE_GRAAL_TIME, taskMeta.getId()));
-
-            profiler.start(ProfilerType.TASK_COMPILE_DRIVER_TIME, taskMeta.getId());
-            // Compile the code
-            OCLInstalledCode installedCode;
-            if (OCLBackend.isDeviceAnFPGAAccelerator(deviceContext)) {
-                // A) for FPGA
-                installedCode = deviceContext.installCode(result.getId(), result.getName(), result.getTargetCode(), task.meta().isPrintKernelEnabled());
-            } else {
-                // B) for CPU multi-core or GPU
-                installedCode = deviceContext.installCode(result);
-            }
-            profiler.stop(ProfilerType.TASK_COMPILE_DRIVER_TIME, taskMeta.getId());
-            profiler.sum(ProfilerType.TOTAL_DRIVER_COMPILE_TIME, profiler.getTaskTimer(ProfilerType.TASK_COMPILE_DRIVER_TIME, taskMeta.getId()));
-
-            return installedCode;
-        } catch (Exception e) {
-            TornadoLogger logger = new TornadoLogger();
-            logger.fatal("Unable to compile %s for device %s\n", task.getId(), getDeviceName());
-            logger.fatal("Exception occurred when compiling %s\n", ((CompilableTask) task).getMethod().getName());
-            if (TornadoOptions.RECOVER_BAILOUT) {
-                throw new TornadoBailoutRuntimeException("[Error during the Task Compilation]: " + e.getMessage());
-            } else {
-                throw e;
-            }
-        }
-    }
-
-    private TornadoInstalledCode compilePreBuiltTask(SchedulableTask task) {
-        final OCLDeviceContextInterface deviceContext = getDeviceContext();
-        final PrebuiltTask executable = (PrebuiltTask) task;
-        if (deviceContext.isCached(task.getId(), executable.getEntryPoint())) {
-            return deviceContext.getInstalledCode(task.getId(), executable.getEntryPoint());
-        }
-
-        final Path path = Paths.get(executable.getFilename());
-        TornadoInternalError.guarantee(path.toFile().exists(), "file does not exist: %s", executable.getFilename());
-        try {
-            final byte[] source = Files.readAllBytes(path);
-
-            OCLInstalledCode installedCode;
-            if (OCLBackend.isDeviceAnFPGAAccelerator(deviceContext)) {
-                // A) for FPGA
-                installedCode = deviceContext.installCode(task.getId(), executable.getEntryPoint(), source, task.meta().isPrintKernelEnabled());
-            } else {
-                // B) for CPU multi-core or GPU
-                installedCode = deviceContext.installCode(executable.meta(), task.getId(), executable.getEntryPoint(), source);
-            }
-            return installedCode;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private TornadoInstalledCode compileJavaToAccelerator(SchedulableTask task) {
-        if (task instanceof CompilableTask) {
-            return compileTask(task);
-        } else if (task instanceof PrebuiltTask) {
-            return compilePreBuiltTask(task);
-        }
-        TornadoInternalError.shouldNotReachHere("task of unknown type: " + task.getClass().getSimpleName());
-        return null;
-    }
-
-    private String getTaskEntryName(SchedulableTask task) {
-        return task.getTaskName();
-    }
-
-    private TornadoInstalledCode loadPreCompiledBinaryForTask(SchedulableTask task) {
-        final OCLDeviceContextInterface deviceContext = getDeviceContext();
-        final OCLCodeCache codeCache = deviceContext.getCodeCache();
-        final String deviceFullName = getFullTaskIdDevice(task);
-        final Path lookupPath = Paths.get(codeCache.getOpenCLBinary(deviceFullName));
-        String entry = getTaskEntryName(task);
-
-        if (deviceContext.getInstalledCode(task.getId(), entry) != null) {
-            return deviceContext.getInstalledCode(task.getId(), entry);
+  @Override
+  public TornadoSchedulingStrategy getPreferredSchedule() {
+    switch (Objects.requireNonNull(device.getDeviceType())) {
+      case CL_DEVICE_TYPE_GPU,
+          CL_DEVICE_TYPE_ACCELERATOR,
+          CL_DEVICE_TYPE_CUSTOM,
+          CL_DEVICE_TYPE_ALL -> {
+        return TornadoSchedulingStrategy.PER_ACCELERATOR_ITERATION;
+      }
+      case CL_DEVICE_TYPE_CPU -> {
+        if (TornadoOptions.USE_BLOCK_SCHEDULER) {
+          return TornadoSchedulingStrategy.PER_CPU_BLOCK;
         } else {
-            return codeCache.installEntryPointForBinaryForFPGAs(task.getId(), lookupPath, entry);
+          return TornadoSchedulingStrategy.PER_ACCELERATOR_ITERATION;
         }
+      }
+      default -> {
+        TornadoInternalError.shouldNotReachHere();
+        return TornadoSchedulingStrategy.PER_ACCELERATOR_ITERATION;
+      }
+    }
+  }
+
+  @Override
+  public void ensureLoaded(long executionPlanId) {
+    final OCLBackend backend = getBackend();
+    if (!backend.isInitialised()) {
+      backend.init();
+    }
+  }
+
+  @Override
+  public KernelStackFrame createKernelStackFrame(long executionPlanId, int numArgs) {
+    return getDeviceContext().getMemoryManager().createKernelStackFrame(executionPlanId, numArgs);
+  }
+
+  @Override
+  public XPUBuffer createOrReuseAtomicsBuffer(int[] array) {
+    if (reuseBuffer == null) {
+      reuseBuffer = getDeviceContext().getMemoryManager().createAtomicsBuffer(array);
+    }
+    reuseBuffer.setIntBuffer(array);
+    return reuseBuffer;
+  }
+
+  private boolean isOpenCLPreLoadBinary(
+      OCLDeviceContextInterface deviceContext, String deviceInfo) {
+    OCLCodeCache installedCode = deviceContext.getCodeCache();
+    return (installedCode.isLoadBinaryOptionEnabled()
+        && (installedCode.getOpenCLBinary(deviceInfo) != null));
+  }
+
+  private TornadoInstalledCode compileTask(SchedulableTask task) {
+    final OCLDeviceContextInterface deviceContext = getDeviceContext();
+    final CompilableTask executable = (CompilableTask) task;
+    final ResolvedJavaMethod resolvedMethod =
+        TornadoCoreRuntime.getTornadoRuntime().resolveMethod(executable.getMethod());
+    final Sketch sketch =
+        TornadoSketcher.lookup(
+            resolvedMethod, task.meta().getBackendIndex(), task.meta().getDeviceIndex());
+
+    // Return the code from the cache
+    if (!task.shouldCompile() && deviceContext.isCached(task.getId(), resolvedMethod.getName())) {
+      return deviceContext.getInstalledCode(task.getId(), resolvedMethod.getName());
     }
 
-    private String getFullTaskIdDevice(SchedulableTask task) {
-        TaskContextInterface meta = task.meta();
-        if (meta instanceof TaskDataContext) {
-            TaskDataContext metaData = (TaskDataContext) task.meta();
-            return task.getId() + ".device=" + metaData.getBackendIndex() + ":" + metaData.getDeviceIndex();
-        } else {
-            throw new RuntimeException("[ERROR] TaskMetadata expected");
-        }
-    }
+    // copy meta data into task
+    final TaskDataContext taskMeta = executable.meta();
+    final Access[] sketchAccess = sketch.getArgumentsAccess();
+    final Access[] taskAccess = taskMeta.getArgumentsAccess();
+    System.arraycopy(sketchAccess, 0, taskAccess, 0, sketchAccess.length);
 
-    @Override
-    public boolean isFullJITMode(SchedulableTask task) {
-        final OCLDeviceContextInterface deviceContext = getDeviceContext();
-        final String deviceFullName = getFullTaskIdDevice(task);
-        return (!isOpenCLPreLoadBinary(deviceContext, deviceFullName) && deviceContext.isPlatformFPGA());
-    }
+    try {
+      OCLProviders providers = (OCLProviders) getBackend().getProviders();
+      TornadoProfiler profiler = task.getProfiler();
+      profiler.start(ProfilerType.TASK_COMPILE_GRAAL_TIME, taskMeta.getId());
+      final OCLCompilationResult result =
+          OCLCompiler.compileSketchForDevice(
+              sketch, executable, providers, getBackend(), executable.getProfiler());
 
-    @Override
-    public TornadoInstalledCode getCodeFromCache(SchedulableTask task) {
-        String entry = getTaskEntryName(task);
-        return getDeviceContext().getInstalledCode(task.getId(), entry);
-    }
-
-    @Override
-    public int[] checkAtomicsForTask(SchedulableTask task) {
-        if (TornadoAtomicIntegerNode.globalAtomics.containsKey(task.meta().getCompiledResolvedJavaMethod())) {
-            ArrayList<Integer> values = TornadoAtomicIntegerNode.globalAtomics.get(task.meta().getCompiledResolvedJavaMethod());
-            int[] atomicsArray = new int[values.size()];
-            int j = 0;
-            for (Integer i : values) {
-                atomicsArray[j++] = i;
+      // Update atomics buffer for inner methods that are not inlined
+      ResolvedJavaMethod[] methods = result.getMethods();
+      if (methods.length > 1) {
+        HashMap<Integer, Integer> mapping;
+        for (ResolvedJavaMethod m : methods) {
+          if (TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(m)) {
+            mapping = TornadoAtomicIntegerNode.globalAtomicsParameters.get(m);
+            for (ResolvedJavaMethod mInternal : methods) {
+              // RE-MAP position
+              TornadoAtomicIntegerNode.globalAtomicsParameters.put(mInternal, mapping);
             }
-            return atomicsArray;
+          }
+        }
+      }
+
+      profiler.stop(ProfilerType.TASK_COMPILE_GRAAL_TIME, taskMeta.getId());
+      profiler.sum(
+          ProfilerType.TOTAL_GRAAL_COMPILE_TIME,
+          profiler.getTaskTimer(ProfilerType.TASK_COMPILE_GRAAL_TIME, taskMeta.getId()));
+
+      profiler.start(ProfilerType.TASK_COMPILE_DRIVER_TIME, taskMeta.getId());
+      // Compile the code
+      OCLInstalledCode installedCode;
+      if (OCLBackend.isDeviceAnFPGAAccelerator(deviceContext)) {
+        // A) for FPGA
+        installedCode =
+            deviceContext.installCode(
+                result.getId(),
+                result.getName(),
+                result.getTargetCode(),
+                task.meta().isPrintKernelEnabled());
+      } else {
+        // B) for CPU multi-core or GPU
+        installedCode = deviceContext.installCode(result);
+      }
+      profiler.stop(ProfilerType.TASK_COMPILE_DRIVER_TIME, taskMeta.getId());
+      profiler.sum(
+          ProfilerType.TOTAL_DRIVER_COMPILE_TIME,
+          profiler.getTaskTimer(ProfilerType.TASK_COMPILE_DRIVER_TIME, taskMeta.getId()));
+
+      return installedCode;
+    } catch (Exception e) {
+      TornadoLogger logger = new TornadoLogger();
+      logger.fatal("Unable to compile %s for device %s\n", task.getId(), getDeviceName());
+      logger.fatal(
+          "Exception occurred when compiling %s\n", ((CompilableTask) task).getMethod().getName());
+      if (TornadoOptions.RECOVER_BAILOUT) {
+        throw new TornadoBailoutRuntimeException(
+            "[Error during the Task Compilation]: " + e.getMessage());
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  private TornadoInstalledCode compilePreBuiltTask(SchedulableTask task) {
+    final OCLDeviceContextInterface deviceContext = getDeviceContext();
+    final PrebuiltTask executable = (PrebuiltTask) task;
+    if (deviceContext.isCached(task.getId(), executable.getEntryPoint())) {
+      return deviceContext.getInstalledCode(task.getId(), executable.getEntryPoint());
+    }
+
+    final Path path = Paths.get(executable.getFilename());
+    TornadoInternalError.guarantee(
+        path.toFile().exists(), "file does not exist: %s", executable.getFilename());
+    try {
+      final byte[] source = Files.readAllBytes(path);
+
+      OCLInstalledCode installedCode;
+      if (OCLBackend.isDeviceAnFPGAAccelerator(deviceContext)) {
+        // A) for FPGA
+        installedCode =
+            deviceContext.installCode(
+                task.getId(),
+                executable.getEntryPoint(),
+                source,
+                task.meta().isPrintKernelEnabled());
+      } else {
+        // B) for CPU multi-core or GPU
+        installedCode =
+            deviceContext.installCode(
+                executable.meta(), task.getId(), executable.getEntryPoint(), source);
+      }
+      return installedCode;
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
+  private TornadoInstalledCode compileJavaToAccelerator(SchedulableTask task) {
+    if (task instanceof CompilableTask) {
+      return compileTask(task);
+    } else if (task instanceof PrebuiltTask) {
+      return compilePreBuiltTask(task);
+    }
+    TornadoInternalError.shouldNotReachHere(
+        "task of unknown type: " + task.getClass().getSimpleName());
+    return null;
+  }
+
+  private String getTaskEntryName(SchedulableTask task) {
+    return task.getTaskName();
+  }
+
+  private TornadoInstalledCode loadPreCompiledBinaryForTask(SchedulableTask task) {
+    final OCLDeviceContextInterface deviceContext = getDeviceContext();
+    final OCLCodeCache codeCache = deviceContext.getCodeCache();
+    final String deviceFullName = getFullTaskIdDevice(task);
+    final Path lookupPath = Paths.get(codeCache.getOpenCLBinary(deviceFullName));
+    String entry = getTaskEntryName(task);
+
+    if (deviceContext.getInstalledCode(task.getId(), entry) != null) {
+      return deviceContext.getInstalledCode(task.getId(), entry);
+    } else {
+      return codeCache.installEntryPointForBinaryForFPGAs(task.getId(), lookupPath, entry);
+    }
+  }
+
+  private String getFullTaskIdDevice(SchedulableTask task) {
+    TaskContextInterface meta = task.meta();
+    if (meta instanceof TaskDataContext) {
+      TaskDataContext metaData = (TaskDataContext) task.meta();
+      return task.getId()
+          + ".device="
+          + metaData.getBackendIndex()
+          + ":"
+          + metaData.getDeviceIndex();
+    } else {
+      throw new RuntimeException("[ERROR] TaskMetadata expected");
+    }
+  }
+
+  @Override
+  public boolean isFullJITMode(SchedulableTask task) {
+    final OCLDeviceContextInterface deviceContext = getDeviceContext();
+    final String deviceFullName = getFullTaskIdDevice(task);
+    return (!isOpenCLPreLoadBinary(deviceContext, deviceFullName)
+        && deviceContext.isPlatformFPGA());
+  }
+
+  @Override
+  public TornadoInstalledCode getCodeFromCache(SchedulableTask task) {
+    String entry = getTaskEntryName(task);
+    return getDeviceContext().getInstalledCode(task.getId(), entry);
+  }
+
+  @Override
+  public int[] checkAtomicsForTask(SchedulableTask task) {
+    if (TornadoAtomicIntegerNode.globalAtomics.containsKey(
+        task.meta().getCompiledResolvedJavaMethod())) {
+      ArrayList<Integer> values =
+          TornadoAtomicIntegerNode.globalAtomics.get(task.meta().getCompiledResolvedJavaMethod());
+      int[] atomicsArray = new int[values.size()];
+      int j = 0;
+      for (Integer i : values) {
+        atomicsArray[j++] = i;
+      }
+      return atomicsArray;
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public int[] checkAtomicsForTask(
+      SchedulableTask task, int[] array, int paramIndex, Object value) {
+    if (value instanceof AtomicInteger) {
+      AtomicInteger ai = (AtomicInteger) value;
+      if (TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(
+          task.meta().getCompiledResolvedJavaMethod())) {
+        HashMap<Integer, Integer> values =
+            TornadoAtomicIntegerNode.globalAtomicsParameters.get(
+                task.meta().getCompiledResolvedJavaMethod());
+        int index = values.get(paramIndex);
+        array[index] = ai.get();
+      }
+    }
+    return array;
+  }
+
+  @Override
+  public int[] updateAtomicRegionAndObjectState(
+      SchedulableTask task,
+      int[] array,
+      int paramIndex,
+      Object value,
+      XPUDeviceBufferState objectState) {
+    int[] atomicsArray = checkAtomicsForTask(task, array, paramIndex, value);
+    mappingAtomics.put(value, getAtomicsGlobalIndexForTask(task, paramIndex));
+    XPUBuffer bufferAtomics = objectState.getXPUBuffer();
+    bufferAtomics.setIntBuffer(atomicsArray);
+    setAtomicRegion(bufferAtomics);
+    objectState.setAtomicRegion(bufferAtomics);
+    return atomicsArray;
+  }
+
+  @Override
+  public int getAtomicsGlobalIndexForTask(SchedulableTask task, int paramIndex) {
+    if (TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(
+        task.meta().getCompiledResolvedJavaMethod())) {
+      HashMap<Integer, Integer> values =
+          TornadoAtomicIntegerNode.globalAtomicsParameters.get(
+              task.meta().getCompiledResolvedJavaMethod());
+      return values.get(paramIndex);
+    }
+    return -1;
+  }
+
+  @Override
+  public boolean checkAtomicsParametersForTask(SchedulableTask task) {
+    return TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(
+        task.meta().getCompiledResolvedJavaMethod());
+  }
+
+  private boolean isJITTaskForFGPA(SchedulableTask task) {
+    final OCLDeviceContextInterface deviceContext = getDeviceContext();
+    final String deviceFullName = getFullTaskIdDevice(task);
+    return !isOpenCLPreLoadBinary(deviceContext, deviceFullName) && deviceContext.isPlatformFPGA();
+  }
+
+  private boolean isJITTaskForGPUsAndCPUs(SchedulableTask task) {
+    final OCLDeviceContextInterface deviceContext = getDeviceContext();
+    final String deviceFullName = getFullTaskIdDevice(task);
+    return !isOpenCLPreLoadBinary(deviceContext, deviceFullName) && !deviceContext.isPlatformFPGA();
+  }
+
+  private TornadoInstalledCode compileJavaForFPGAs(SchedulableTask task) {
+    TornadoInstalledCode tornadoInstalledCode = compileJavaToAccelerator(task);
+    if (tornadoInstalledCode != null) {
+      return loadPreCompiledBinaryForTask(task);
+    }
+    return null;
+  }
+
+  @Override
+  public TornadoInstalledCode installCode(SchedulableTask task) {
+    if (isJITTaskForFGPA(task)) {
+      return compileJavaForFPGAs(task);
+    } else if (isJITTaskForGPUsAndCPUs(task)) {
+      return compileJavaToAccelerator(task);
+    }
+    return loadPreCompiledBinaryForTask(task);
+  }
+
+  private XPUBuffer createArrayWrapper(Class<?> type, OCLDeviceContext device, long batchSize) {
+    XPUBuffer result = null;
+    if (type == float[].class) {
+      result = new OCLFloatArrayWrapper(device, batchSize);
+    } else if (type == int[].class) {
+      result = new OCLIntArrayWrapper(device, batchSize);
+    } else if (type == double[].class) {
+      result = new OCLDoubleArrayWrapper(device, batchSize);
+    } else if (type == short[].class) {
+      result = new OCLShortArrayWrapper(device, batchSize);
+    } else if (type == byte[].class) {
+      result = new OCLByteArrayWrapper(device, batchSize);
+    } else if (type == long[].class) {
+      result = new OCLLongArrayWrapper(device, batchSize);
+    } else if (type == char[].class) {
+      result = new OCLCharArrayWrapper(device, batchSize);
+    } else {
+      TornadoInternalError.unimplemented("array of type %s", type.getName());
+    }
+    return result;
+  }
+
+  private XPUBuffer createMultiArrayWrapper(
+      Class<?> componentType, Class<?> type, OCLDeviceContext device, long batchSize) {
+    XPUBuffer result = null;
+
+    if (componentType == int[].class) {
+      result =
+          new OCLMultiDimArrayWrapper<>(
+              device,
+              (OCLDeviceContext context) -> new OCLIntArrayWrapper(context, batchSize),
+              batchSize);
+    } else if (componentType == short[].class) {
+      result =
+          new OCLMultiDimArrayWrapper<>(
+              device,
+              (OCLDeviceContext context) -> new OCLShortArrayWrapper(context, batchSize),
+              batchSize);
+    } else if (componentType == char[].class) {
+      result =
+          new OCLMultiDimArrayWrapper<>(
+              device,
+              (OCLDeviceContext context) -> new OCLCharArrayWrapper(context, batchSize),
+              batchSize);
+    } else if (componentType == byte[].class) {
+      result =
+          new OCLMultiDimArrayWrapper<>(
+              device,
+              (OCLDeviceContext context) -> new OCLByteArrayWrapper(context, batchSize),
+              batchSize);
+    } else if (componentType == float[].class) {
+      result =
+          new OCLMultiDimArrayWrapper<>(
+              device,
+              (OCLDeviceContext context) -> new OCLFloatArrayWrapper(context, batchSize),
+              batchSize);
+    } else if (componentType == double[].class) {
+      result =
+          new OCLMultiDimArrayWrapper<>(
+              device,
+              (OCLDeviceContext context) -> new OCLDoubleArrayWrapper(context, batchSize),
+              batchSize);
+    } else if (componentType == long[].class) {
+      result =
+          new OCLMultiDimArrayWrapper<>(
+              device,
+              (OCLDeviceContext context) -> new OCLLongArrayWrapper(context, batchSize),
+              batchSize);
+    } else {
+      TornadoInternalError.unimplemented("array of type %s", type.getName());
+    }
+    return result;
+  }
+
+  private XPUBuffer createDeviceBuffer(
+      Class<?> type, Object object, OCLDeviceContext deviceContext, long batchSize) {
+    XPUBuffer result = null;
+    if (type.isArray()) {
+      if (!type.getComponentType().isArray()) {
+        result = createArrayWrapper(type, deviceContext, batchSize);
+      } else {
+        final Class<?> componentType = type.getComponentType();
+        if (RuntimeUtilities.isPrimitiveArray(componentType)) {
+          result = createMultiArrayWrapper(componentType, type, deviceContext, batchSize);
         } else {
-            return null;
+          TornadoInternalError.unimplemented("multi-dimensional array of type %s", type.getName());
         }
+      }
+    } else if (!type.isPrimitive()) {
+      if (object instanceof AtomicInteger) {
+        result = new AtomicsBuffer(new int[] {}, deviceContext);
+      } else if (object.getClass().getAnnotation(Vector.class) != null) {
+        result = new OCLVectorWrapper(deviceContext, object, batchSize);
+      } else if (object instanceof MemorySegment) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof IntArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof FloatArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof DoubleArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof LongArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof ShortArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof ByteArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof CharArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else if (object instanceof HalfFloatArray) {
+        result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
+      } else {
+        result = new OCLXPUBuffer(deviceContext, object);
+      }
     }
 
-    @Override
-    public int[] checkAtomicsForTask(SchedulableTask task, int[] array, int paramIndex, Object value) {
-        if (value instanceof AtomicInteger) {
-            AtomicInteger ai = (AtomicInteger) value;
-            if (TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(task.meta().getCompiledResolvedJavaMethod())) {
-                HashMap<Integer, Integer> values = TornadoAtomicIntegerNode.globalAtomicsParameters.get(task.meta().getCompiledResolvedJavaMethod());
-                int index = values.get(paramIndex);
-                array[index] = ai.get();
-            }
-        }
-        return array;
+    TornadoInternalError.guarantee(result != null, "Unable to create buffer for object: " + type);
+    return result;
+  }
+
+  @Override
+  public synchronized long allocateObjects(
+      Object[] objects, long batchSize, DeviceBufferState[] states) {
+    TornadoBufferProvider bufferProvider = getDeviceContext().getBufferProvider();
+    if (!bufferProvider.isNumFreeBuffersAvailable(objects.length)) {
+      bufferProvider.resetBuffers();
+    }
+    long allocatedSpace = 0;
+    for (int i = 0; i < objects.length; i++) {
+      allocatedSpace += allocate(objects[i], batchSize, states[i]);
+    }
+    return allocatedSpace;
+  }
+
+  private XPUBuffer newDeviceBufferAllocation(
+      Object object, long batchSize, DeviceBufferState deviceObjectState) {
+    final XPUBuffer buffer;
+    TornadoInternalError.guarantee(
+        deviceObjectState.isAtomicRegionPresent() || !deviceObjectState.hasObjectBuffer(),
+        "A device memory leak might be occurring.");
+    buffer =
+        createDeviceBuffer(
+            object.getClass(), object, (OCLDeviceContext) getDeviceContext(), batchSize);
+    deviceObjectState.setXPUBuffer(buffer);
+    buffer.allocate(object, batchSize);
+    return buffer;
+  }
+
+  @Override
+  public long allocate(Object object, long batchSize, DeviceBufferState state) {
+    final XPUBuffer buffer;
+    if (state.hasObjectBuffer() && state.isLockedBuffer()) {
+      buffer = state.getXPUBuffer();
+      if (batchSize != 0) {
+        buffer.setSizeSubRegion(batchSize);
+      }
+    } else {
+      buffer = newDeviceBufferAllocation(object, batchSize, state);
     }
 
-    @Override
-    public int[] updateAtomicRegionAndObjectState(SchedulableTask task, int[] array, int paramIndex, Object value, XPUDeviceBufferState objectState) {
-        int[] atomicsArray = checkAtomicsForTask(task, array, paramIndex, value);
-        mappingAtomics.put(value, getAtomicsGlobalIndexForTask(task, paramIndex));
-        XPUBuffer bufferAtomics = objectState.getXPUBuffer();
-        bufferAtomics.setIntBuffer(atomicsArray);
-        setAtomicRegion(bufferAtomics);
-        objectState.setAtomicRegion(bufferAtomics);
-        return atomicsArray;
+    if (buffer.getClass() == AtomicsBuffer.class) {
+      state.setAtomicRegion();
+    }
+    return state.getXPUBuffer().size();
+  }
+
+  @Override
+  public synchronized long deallocate(DeviceBufferState deviceBufferState) {
+    long deallocatedSpace = 0;
+    if (deviceBufferState.isLockedBuffer()) {
+      return deallocatedSpace;
+    }
+    deviceBufferState.getXPUBuffer().markAsFreeBuffer();
+    if (!TornadoOptions.isReusedBuffersEnabled()) {
+      deallocatedSpace = deviceBufferState.getXPUBuffer().deallocate();
+    }
+    deviceBufferState.setContents(false);
+    deviceBufferState.setXPUBuffer(null);
+    return deallocatedSpace;
+  }
+
+  @Override
+  public List<Integer> ensurePresent(
+      long executionPlanId,
+      Object object,
+      DeviceBufferState state,
+      int[] events,
+      long batchSize,
+      long offset) {
+    if (!state.hasContent()) {
+      state.setContents(true);
+      return state
+          .getXPUBuffer()
+          .enqueueWrite(executionPlanId, object, batchSize, offset, events, events == null);
+    }
+    // return a NULL list
+    return null;
+  }
+
+  @Override
+  public List<Integer> streamIn(
+      long executionPlanId,
+      Object object,
+      long batchSize,
+      long offset,
+      DeviceBufferState state,
+      int[] events) {
+    state.setContents(true);
+    return state
+        .getXPUBuffer()
+        .enqueueWrite(executionPlanId, object, batchSize, offset, events, events == null);
+  }
+
+  @Override
+  public int streamOut(
+      long executionPlanId, Object object, long offset, DeviceBufferState state, int[] events) {
+    TornadoInternalError.guarantee(state.hasObjectBuffer(), "invalid variable");
+    int event =
+        state.getXPUBuffer().enqueueRead(executionPlanId, object, offset, events, events == null);
+    if (events != null) {
+      return event;
+    }
+    return -1;
+  }
+
+  @Override
+  public int streamOutBlocking(
+      long executionPlanId, Object object, long hostOffset, DeviceBufferState state, int[] events) {
+    long partialCopySize = state.getPartialCopySize();
+    if (state.isAtomicRegionPresent()) {
+      // Read for Atomics
+      int eventID = state.getXPUBuffer().enqueueRead(executionPlanId, null, 0, null, false);
+      if (object instanceof AtomicInteger) {
+        int[] arr = getAtomic().getIntBuffer();
+        int indexFromGlobalRegion = mappingAtomics.get(object);
+        ((AtomicInteger) object).set(arr[indexFromGlobalRegion]);
+      }
+      return eventID;
+    } else {
+      // Read for any other buffer that is not an atomic buffer
+      TornadoInternalError.guarantee(state.hasObjectBuffer(), "invalid variable");
+      return state
+          .getXPUBuffer()
+          .read(executionPlanId, object, hostOffset, partialCopySize, events, events == null);
+    }
+  }
+
+  @Override
+  public void flush(long executionPlanId) {
+    this.getDeviceContext().flush(executionPlanId);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof OCLTornadoDevice other) {
+      return (other.deviceIndex == deviceIndex && other.platformIndex == platformIndex);
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    int hash = 7;
+    hash = 89 * hash + this.deviceIndex;
+    hash = 89 * hash + this.platformIndex;
+    return hash;
+  }
+
+  @Override
+  public void sync(long executionPlanId) {
+    getDeviceContext().sync(executionPlanId);
+  }
+
+  @Override
+  public int enqueueBarrier(long executionPlanId) {
+    return getDeviceContext().enqueueBarrier(executionPlanId);
+  }
+
+  @Override
+  public int enqueueBarrier(long executionPlanId, int[] events) {
+    return getDeviceContext().enqueueBarrier(executionPlanId, events);
+  }
+
+  @Override
+  public int enqueueMarker(long executionPlanId) {
+    return getDeviceContext().enqueueMarker(executionPlanId);
+  }
+
+  @Override
+  public int enqueueMarker(long executionPlanId, int[] events) {
+    return getDeviceContext().enqueueMarker(executionPlanId, events);
+  }
+
+  @Override
+  public Event resolveEvent(long executionPlanId, int event) {
+    return getDeviceContext().resolveEvent(executionPlanId, event);
+  }
+
+  @Override
+  public void flushEvents(long executionPlanId) {
+    getDeviceContext().flushEvents(executionPlanId);
+  }
+
+  @Override
+  public String getDeviceName() {
+    return String.format("opencl-%d-%d", platformIndex, deviceIndex);
+  }
+
+  @Override
+  public TornadoDeviceType getDeviceType() {
+    OCLDeviceType deviceType = device.getDeviceType();
+    return switch (deviceType) {
+      case CL_DEVICE_TYPE_CPU -> TornadoDeviceType.CPU;
+      case CL_DEVICE_TYPE_GPU -> TornadoDeviceType.GPU;
+      case CL_DEVICE_TYPE_ACCELERATOR -> TornadoDeviceType.ACCELERATOR;
+      case CL_DEVICE_TYPE_CUSTOM -> TornadoDeviceType.CUSTOM;
+      case CL_DEVICE_TYPE_ALL -> TornadoDeviceType.ALL;
+      case CL_DEVICE_TYPE_DEFAULT -> TornadoDeviceType.DEFAULT;
+      default -> throw new RuntimeException("Device not supported");
+    };
+  }
+
+  @Override
+  public long getMaxAllocMemory() {
+    return device.getDeviceMaxAllocationSize();
+  }
+
+  @Override
+  public long getMaxGlobalMemory() {
+    return device.getDeviceGlobalMemorySize();
+  }
+
+  @Override
+  public long getDeviceLocalMemorySize() {
+    return device.getDeviceLocalMemorySize();
+  }
+
+  @Override
+  public long[] getDeviceMaxWorkgroupDimensions() {
+    return device.getDeviceMaxWorkItemSizes();
+  }
+
+  @Override
+  public String getDeviceOpenCLCVersion() {
+    return device.getDeviceOpenCLCVersion();
+  }
+
+  @Override
+  public Object getDeviceInfo() {
+    return device.getDeviceInfo();
+  }
+
+  @Override
+  public int getBackendIndex() {
+    return TornadoCoreRuntime.getTornadoRuntime().getBackendIndex(OCLBackendImpl.class);
+  }
+
+  @Override
+  public XPUBuffer getAtomic() {
+    return reuseBuffer;
+  }
+
+  @Override
+  public void setAtomicsMapping(ConcurrentHashMap<Object, Integer> mappingAtomics) {
+    this.mappingAtomics = mappingAtomics;
+  }
+
+  @Override
+  public void enableThreadSharing() {
+    // OpenCL device context is shared by different threads, by default
+  }
+
+  @Override
+  public void setAtomicRegion(XPUBuffer bufferAtomics) {
+    reuseBuffer = bufferAtomics;
+  }
+
+  @Override
+  public TornadoVMBackendType getTornadoVMBackend() {
+    return TornadoVMBackendType.OPENCL;
+  }
+
+  @Override
+  public boolean isSPIRVSupported() {
+    // An OpenCL device supports SPIR-V if the version is >= 2.1
+    String version = device.getDeviceContext().getPlatformContext().getPlatform().getVersion();
+
+    if (version.contains("CUDA")) {
+      // Currently, the CUDA platform does not allow dispatching SPIR-V kernels
+      return false;
     }
 
-    @Override
-    public int getAtomicsGlobalIndexForTask(SchedulableTask task, int paramIndex) {
-        if (TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(task.meta().getCompiledResolvedJavaMethod())) {
-            HashMap<Integer, Integer> values = TornadoAtomicIntegerNode.globalAtomicsParameters.get(task.meta().getCompiledResolvedJavaMethod());
-            return values.get(paramIndex);
-        }
-        return -1;
+    Matcher matcher = NAME_PATTERN.matcher(version);
+    int major = 0;
+    int minor = 0;
+    if (matcher.find()) {
+      major = Integer.parseInt(matcher.group(1));
+      minor = Integer.parseInt(matcher.group(2));
     }
-
-    @Override
-    public boolean checkAtomicsParametersForTask(SchedulableTask task) {
-        return TornadoAtomicIntegerNode.globalAtomicsParameters.containsKey(task.meta().getCompiledResolvedJavaMethod());
+    if (major > 2) {
+      return true;
     }
-
-    private boolean isJITTaskForFGPA(SchedulableTask task) {
-        final OCLDeviceContextInterface deviceContext = getDeviceContext();
-        final String deviceFullName = getFullTaskIdDevice(task);
-        return !isOpenCLPreLoadBinary(deviceContext, deviceFullName) && deviceContext.isPlatformFPGA();
+    if (major == 2 && minor >= 1) {
+      return true;
     }
-
-    private boolean isJITTaskForGPUsAndCPUs(SchedulableTask task) {
-        final OCLDeviceContextInterface deviceContext = getDeviceContext();
-        final String deviceFullName = getFullTaskIdDevice(task);
-        return !isOpenCLPreLoadBinary(deviceContext, deviceFullName) && !deviceContext.isPlatformFPGA();
-    }
-
-    private TornadoInstalledCode compileJavaForFPGAs(SchedulableTask task) {
-        TornadoInstalledCode tornadoInstalledCode = compileJavaToAccelerator(task);
-        if (tornadoInstalledCode != null) {
-            return loadPreCompiledBinaryForTask(task);
-        }
-        return null;
-    }
-
-    @Override
-    public TornadoInstalledCode installCode(SchedulableTask task) {
-        if (isJITTaskForFGPA(task)) {
-            return compileJavaForFPGAs(task);
-        } else if (isJITTaskForGPUsAndCPUs(task)) {
-            return compileJavaToAccelerator(task);
-        }
-        return loadPreCompiledBinaryForTask(task);
-    }
-
-    private XPUBuffer createArrayWrapper(Class<?> type, OCLDeviceContext device, long batchSize) {
-        XPUBuffer result = null;
-        if (type == float[].class) {
-            result = new OCLFloatArrayWrapper(device, batchSize);
-        } else if (type == int[].class) {
-            result = new OCLIntArrayWrapper(device, batchSize);
-        } else if (type == double[].class) {
-            result = new OCLDoubleArrayWrapper(device, batchSize);
-        } else if (type == short[].class) {
-            result = new OCLShortArrayWrapper(device, batchSize);
-        } else if (type == byte[].class) {
-            result = new OCLByteArrayWrapper(device, batchSize);
-        } else if (type == long[].class) {
-            result = new OCLLongArrayWrapper(device, batchSize);
-        } else if (type == char[].class) {
-            result = new OCLCharArrayWrapper(device, batchSize);
-        } else {
-            TornadoInternalError.unimplemented("array of type %s", type.getName());
-        }
-        return result;
-    }
-
-    private XPUBuffer createMultiArrayWrapper(Class<?> componentType, Class<?> type, OCLDeviceContext device, long batchSize) {
-        XPUBuffer result = null;
-
-        if (componentType == int[].class) {
-            result = new OCLMultiDimArrayWrapper<>(device, (OCLDeviceContext context) -> new OCLIntArrayWrapper(context, batchSize), batchSize);
-        } else if (componentType == short[].class) {
-            result = new OCLMultiDimArrayWrapper<>(device, (OCLDeviceContext context) -> new OCLShortArrayWrapper(context, batchSize), batchSize);
-        } else if (componentType == char[].class) {
-            result = new OCLMultiDimArrayWrapper<>(device, (OCLDeviceContext context) -> new OCLCharArrayWrapper(context, batchSize), batchSize);
-        } else if (componentType == byte[].class) {
-            result = new OCLMultiDimArrayWrapper<>(device, (OCLDeviceContext context) -> new OCLByteArrayWrapper(context, batchSize), batchSize);
-        } else if (componentType == float[].class) {
-            result = new OCLMultiDimArrayWrapper<>(device, (OCLDeviceContext context) -> new OCLFloatArrayWrapper(context, batchSize), batchSize);
-        } else if (componentType == double[].class) {
-            result = new OCLMultiDimArrayWrapper<>(device, (OCLDeviceContext context) -> new OCLDoubleArrayWrapper(context, batchSize), batchSize);
-        } else if (componentType == long[].class) {
-            result = new OCLMultiDimArrayWrapper<>(device, (OCLDeviceContext context) -> new OCLLongArrayWrapper(context, batchSize), batchSize);
-        } else {
-            TornadoInternalError.unimplemented("array of type %s", type.getName());
-        }
-        return result;
-    }
-
-    private XPUBuffer createDeviceBuffer(Class<?> type, Object object, OCLDeviceContext deviceContext, long batchSize) {
-        XPUBuffer result = null;
-        if (type.isArray()) {
-            if (!type.getComponentType().isArray()) {
-                result = createArrayWrapper(type, deviceContext, batchSize);
-            } else {
-                final Class<?> componentType = type.getComponentType();
-                if (RuntimeUtilities.isPrimitiveArray(componentType)) {
-                    result = createMultiArrayWrapper(componentType, type, deviceContext, batchSize);
-                } else {
-                    TornadoInternalError.unimplemented("multi-dimensional array of type %s", type.getName());
-                }
-            }
-        } else if (!type.isPrimitive()) {
-            if (object instanceof AtomicInteger) {
-                result = new AtomicsBuffer(new int[] {}, deviceContext);
-            } else if (object.getClass().getAnnotation(Vector.class) != null) {
-                result = new OCLVectorWrapper(deviceContext, object, batchSize);
-            } else if (object instanceof MemorySegment) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof IntArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof FloatArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof DoubleArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof LongArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof ShortArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof ByteArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof CharArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else if (object instanceof HalfFloatArray) {
-                result = new OCLMemorySegmentWrapper(deviceContext, batchSize);
-            } else {
-                result = new OCLXPUBuffer(deviceContext, object);
-            }
-        }
-
-        TornadoInternalError.guarantee(result != null, "Unable to create buffer for object: " + type);
-        return result;
-    }
-
-    @Override
-    public synchronized long allocateObjects(Object[] objects, long batchSize, DeviceBufferState[] states) {
-        TornadoBufferProvider bufferProvider = getDeviceContext().getBufferProvider();
-        if (!bufferProvider.isNumFreeBuffersAvailable(objects.length)) {
-            bufferProvider.resetBuffers();
-        }
-        long allocatedSpace = 0;
-        for (int i = 0; i < objects.length; i++) {
-            allocatedSpace += allocate(objects[i], batchSize, states[i]);
-        }
-        return allocatedSpace;
-    }
-
-    private XPUBuffer newDeviceBufferAllocation(Object object, long batchSize, DeviceBufferState deviceObjectState) {
-        final XPUBuffer buffer;
-        TornadoInternalError.guarantee(deviceObjectState.isAtomicRegionPresent() || !deviceObjectState.hasObjectBuffer(), "A device memory leak might be occurring.");
-        buffer = createDeviceBuffer(object.getClass(), object, (OCLDeviceContext) getDeviceContext(), batchSize);
-        deviceObjectState.setXPUBuffer(buffer);
-        buffer.allocate(object, batchSize);
-        return buffer;
-    }
-
-    @Override
-    public long allocate(Object object, long batchSize, DeviceBufferState state) {
-        final XPUBuffer buffer;
-        if (state.hasObjectBuffer() && state.isLockedBuffer()) {
-            buffer = state.getXPUBuffer();
-            if (batchSize != 0) {
-                buffer.setSizeSubRegion(batchSize);
-            }
-        } else {
-            buffer = newDeviceBufferAllocation(object, batchSize, state);
-        }
-
-        if (buffer.getClass() == AtomicsBuffer.class) {
-            state.setAtomicRegion();
-        }
-        return state.getXPUBuffer().size();
-    }
-
-    @Override
-    public synchronized long deallocate(DeviceBufferState deviceBufferState) {
-        long deallocatedSpace = 0;
-        if (deviceBufferState.isLockedBuffer()) {
-            return deallocatedSpace;
-        }
-        deviceBufferState.getXPUBuffer().markAsFreeBuffer();
-        if (!TornadoOptions.isReusedBuffersEnabled()) {
-            deallocatedSpace = deviceBufferState.getXPUBuffer().deallocate();
-        }
-        deviceBufferState.setContents(false);
-        deviceBufferState.setXPUBuffer(null);
-        return deallocatedSpace;
-    }
-
-    @Override
-    public List<Integer> ensurePresent(long executionPlanId, Object object, DeviceBufferState state, int[] events, long batchSize, long offset) {
-        if (!state.hasContent()) {
-            state.setContents(true);
-            return state.getXPUBuffer().enqueueWrite(executionPlanId, object, batchSize, offset, events, events == null);
-        }
-        // return a NULL list
-        return null;
-    }
-
-    @Override
-    public List<Integer> streamIn(long executionPlanId, Object object, long batchSize, long offset, DeviceBufferState state, int[] events) {
-        state.setContents(true);
-        return state.getXPUBuffer().enqueueWrite(executionPlanId, object, batchSize, offset, events, events == null);
-    }
-
-    @Override
-    public int streamOut(long executionPlanId, Object object, long offset, DeviceBufferState state, int[] events) {
-        TornadoInternalError.guarantee(state.hasObjectBuffer(), "invalid variable");
-        int event = state.getXPUBuffer().enqueueRead(executionPlanId, object, offset, events, events == null);
-        if (events != null) {
-            return event;
-        }
-        return -1;
-    }
-
-    @Override
-    public int streamOutBlocking(long executionPlanId, Object object, long hostOffset, DeviceBufferState state, int[] events) {
-        long partialCopySize = state.getPartialCopySize();
-        if (state.isAtomicRegionPresent()) {
-            // Read for Atomics
-            int eventID = state.getXPUBuffer().enqueueRead(executionPlanId, null, 0, null, false);
-            if (object instanceof AtomicInteger) {
-                int[] arr = getAtomic().getIntBuffer();
-                int indexFromGlobalRegion = mappingAtomics.get(object);
-                ((AtomicInteger) object).set(arr[indexFromGlobalRegion]);
-            }
-            return eventID;
-        } else {
-            // Read for any other buffer that is not an atomic buffer
-            TornadoInternalError.guarantee(state.hasObjectBuffer(), "invalid variable");
-            return state.getXPUBuffer().read(executionPlanId, object, hostOffset, partialCopySize, events, events == null);
-        }
-    }
-
-    @Override
-    public void flush(long executionPlanId) {
-        this.getDeviceContext().flush(executionPlanId);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof OCLTornadoDevice other) {
-            return (other.deviceIndex == deviceIndex && other.platformIndex == platformIndex);
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 89 * hash + this.deviceIndex;
-        hash = 89 * hash + this.platformIndex;
-        return hash;
-    }
-
-    @Override
-    public void sync(long executionPlanId) {
-        getDeviceContext().sync(executionPlanId);
-    }
-
-    @Override
-    public int enqueueBarrier(long executionPlanId) {
-        return getDeviceContext().enqueueBarrier(executionPlanId);
-    }
-
-    @Override
-    public int enqueueBarrier(long executionPlanId, int[] events) {
-        return getDeviceContext().enqueueBarrier(executionPlanId, events);
-    }
-
-    @Override
-    public int enqueueMarker(long executionPlanId) {
-        return getDeviceContext().enqueueMarker(executionPlanId);
-    }
-
-    @Override
-    public int enqueueMarker(long executionPlanId, int[] events) {
-        return getDeviceContext().enqueueMarker(executionPlanId, events);
-    }
-
-    @Override
-    public Event resolveEvent(long executionPlanId, int event) {
-        return getDeviceContext().resolveEvent(executionPlanId, event);
-    }
-
-    @Override
-    public void flushEvents(long executionPlanId) {
-        getDeviceContext().flushEvents(executionPlanId);
-    }
-
-    @Override
-    public String getDeviceName() {
-        return String.format("opencl-%d-%d", platformIndex, deviceIndex);
-    }
-
-    @Override
-    public TornadoDeviceType getDeviceType() {
-        OCLDeviceType deviceType = device.getDeviceType();
-        return switch (deviceType) {
-            case CL_DEVICE_TYPE_CPU -> TornadoDeviceType.CPU;
-            case CL_DEVICE_TYPE_GPU -> TornadoDeviceType.GPU;
-            case CL_DEVICE_TYPE_ACCELERATOR -> TornadoDeviceType.ACCELERATOR;
-            case CL_DEVICE_TYPE_CUSTOM -> TornadoDeviceType.CUSTOM;
-            case CL_DEVICE_TYPE_ALL -> TornadoDeviceType.ALL;
-            case CL_DEVICE_TYPE_DEFAULT -> TornadoDeviceType.DEFAULT;
-            default -> throw new RuntimeException("Device not supported");
-        };
-    }
-
-    @Override
-    public long getMaxAllocMemory() {
-        return device.getDeviceMaxAllocationSize();
-    }
-
-    @Override
-    public long getMaxGlobalMemory() {
-        return device.getDeviceGlobalMemorySize();
-    }
-
-    @Override
-    public long getDeviceLocalMemorySize() {
-        return device.getDeviceLocalMemorySize();
-    }
-
-    @Override
-    public long[] getDeviceMaxWorkgroupDimensions() {
-        return device.getDeviceMaxWorkItemSizes();
-    }
-
-    @Override
-    public String getDeviceOpenCLCVersion() {
-        return device.getDeviceOpenCLCVersion();
-    }
-
-    @Override
-    public Object getDeviceInfo() {
-        return device.getDeviceInfo();
-    }
-
-    @Override
-    public int getBackendIndex() {
-        return TornadoCoreRuntime.getTornadoRuntime().getBackendIndex(OCLBackendImpl.class);
-    }
-
-    @Override
-    public XPUBuffer getAtomic() {
-        return reuseBuffer;
-    }
-
-    @Override
-    public void setAtomicsMapping(ConcurrentHashMap<Object, Integer> mappingAtomics) {
-        this.mappingAtomics = mappingAtomics;
-    }
-
-    @Override
-    public void enableThreadSharing() {
-        // OpenCL device context is shared by different threads, by default
-    }
-
-    @Override
-    public void setAtomicRegion(XPUBuffer bufferAtomics) {
-        reuseBuffer = bufferAtomics;
-    }
-
-    @Override
-    public TornadoVMBackendType getTornadoVMBackend() {
-        return TornadoVMBackendType.OPENCL;
-    }
-
-    @Override
-    public boolean isSPIRVSupported() {
-        // An OpenCL device supports SPIR-V if the version is >= 2.1
-        String version = device.getDeviceContext().getPlatformContext().getPlatform().getVersion();
-
-        if (version.contains("CUDA")) {
-            // Currently, the CUDA platform does not allow dispatching SPIR-V kernels
-            return false;
-        }
-
-        Matcher matcher = NAME_PATTERN.matcher(version);
-        int major = 0;
-        int minor = 0;
-        if (matcher.find()) {
-            major = Integer.parseInt(matcher.group(1));
-            minor = Integer.parseInt(matcher.group(2));
-        }
-        if (major > 2) {
-            return true;
-        }
-        if (major == 2 && minor >= 1) {
-            return true;
-        }
-        return false;
-    }
-
+    return false;
+  }
 }

@@ -21,16 +21,15 @@ import java.util.BitSet;
 
 public interface TornadoEvents {
 
-    int cardinality();
+  int cardinality();
 
-    void reset();
+  void reset();
 
-    boolean hasNext();
+  boolean hasNext();
 
-    Event next();
+  Event next();
 
-    BitSet getProfiles();
+  BitSet getProfiles();
 
-    TornadoDevice getDevice();
-
+  TornadoDevice getDevice();
 }

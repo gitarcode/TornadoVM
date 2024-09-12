@@ -24,7 +24,6 @@
 package uk.ac.manchester.tornado.runtime.tasks;
 
 import java.util.concurrent.ConcurrentHashMap;
-
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
 import uk.ac.manchester.tornado.api.memory.ObjectState;
@@ -33,48 +32,51 @@ import uk.ac.manchester.tornado.runtime.common.XPUDeviceBufferState;
 
 public class DataObjectState implements ObjectState {
 
-    private ConcurrentHashMap<TornadoXPUDevice, XPUDeviceBufferState> deviceStates;
+  private ConcurrentHashMap<TornadoXPUDevice, XPUDeviceBufferState> deviceStates;
 
-    public DataObjectState() {
-        deviceStates = new ConcurrentHashMap<>();
+  public DataObjectState() {
+    deviceStates = new ConcurrentHashMap<>();
+  }
+
+  @Override
+  public XPUDeviceBufferState getDeviceBufferState(TornadoDevice device) {
+    if (!(device instanceof TornadoXPUDevice)) {
+      throw new TornadoRuntimeException("[ERROR] Device not compatible: " + device.getClass());
     }
-
-    @Override
-    public XPUDeviceBufferState getDeviceBufferState(TornadoDevice device) {
-        if (!(device instanceof TornadoXPUDevice)) {
-            throw new TornadoRuntimeException("[ERROR] Device not compatible: " + device.getClass());
-        }
-        if (!deviceStates.containsKey(device)) {
-            deviceStates.put((TornadoXPUDevice) device, new XPUDeviceBufferState());
-        }
-        return deviceStates.get(device);
+    if (!deviceStates.containsKey(device)) {
+      deviceStates.put((TornadoXPUDevice) device, new XPUDeviceBufferState());
     }
+    return deviceStates.get(device);
+  }
 
-    @Override
-    public DataObjectState clone() {
-        DataObjectState dataObjectState = new DataObjectState();
-        dataObjectState.deviceStates = new ConcurrentHashMap<>();
-        deviceStates.keySet().forEach(device -> {
-            XPUDeviceBufferState xpuDeviceBufferState = deviceStates.get(device).createSnapshot();
-            dataObjectState.deviceStates.put(device, xpuDeviceBufferState);
-        });
-        return dataObjectState;
+  @Override
+  public DataObjectState clone() {
+    DataObjectState dataObjectState = new DataObjectState();
+    dataObjectState.deviceStates = new ConcurrentHashMap<>();
+    deviceStates
+        .keySet()
+        .forEach(
+            device -> {
+              XPUDeviceBufferState xpuDeviceBufferState = deviceStates.get(device).createSnapshot();
+              dataObjectState.deviceStates.put(device, xpuDeviceBufferState);
+            });
+    return dataObjectState;
+  }
+
+  @Override
+  public void clear() {
+    deviceStates.clear();
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+
+    for (TornadoXPUDevice device : deviceStates.keySet()) {
+      sb.append(device.toString()).append(" ");
     }
+    sb.append("]");
 
-    @Override
-    public void clear() {
-        deviceStates.clear();
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        for (TornadoXPUDevice device : deviceStates.keySet()) {
-            sb.append(device.toString()).append(" ");
-        }
-        sb.append("]");
-
-        return sb.toString();
-    }
+    return sb.toString();
+  }
 }

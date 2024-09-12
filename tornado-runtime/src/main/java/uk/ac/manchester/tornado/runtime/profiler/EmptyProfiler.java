@@ -28,97 +28,75 @@ import uk.ac.manchester.tornado.api.profiler.TornadoProfiler;
 
 public class EmptyProfiler implements TornadoProfiler {
 
-    public EmptyProfiler() {
+  public EmptyProfiler() {}
 
-    }
+  @Override
+  public synchronized void addValueToMetric(ProfilerType type, String taskName, long value) {}
 
-    @Override
-    public synchronized void addValueToMetric(ProfilerType type, String taskName, long value) {
-    }
+  @Override
+  public synchronized void start(ProfilerType type) {}
 
-    @Override
-    public synchronized void start(ProfilerType type) {
-    }
+  @Override
+  public synchronized void start(ProfilerType type, String taskName) {}
 
-    @Override
-    public synchronized void start(ProfilerType type, String taskName) {
-    }
+  @Override
+  public synchronized void registerDeviceName(String taskName, String deviceInfo) {}
 
-    @Override
-    public synchronized void registerDeviceName(String taskName, String deviceInfo) {
+  @Override
+  public synchronized void registerBackend(String taskName, String backend) {}
 
-    }
+  @Override
+  public synchronized void registerDeviceID(String taskName, String deviceID) {}
 
-    @Override
-    public synchronized void registerBackend(String taskName, String backend) {
+  @Override
+  public synchronized void registerMethodHandle(
+      ProfilerType type, String taskName, String methodName) {}
 
-    }
+  @Override
+  public synchronized void stop(ProfilerType type) {}
 
-    @Override
-    public synchronized void registerDeviceID(String taskName, String deviceID) {
-    }
+  @Override
+  public synchronized void stop(ProfilerType type, String taskName) {}
 
-    @Override
-    public synchronized void registerMethodHandle(ProfilerType type, String taskName, String methodName) {
-    }
+  @Override
+  public synchronized long getTimer(ProfilerType type) {
+    System.out.println("Enable the profiler with: -Dtornado.profiler=True");
+    return 0;
+  }
 
-    @Override
-    public synchronized void stop(ProfilerType type) {
-    }
+  @Override
+  public long getSize(ProfilerType type) {
+    return 0;
+  }
 
-    @Override
-    public synchronized void stop(ProfilerType type, String taskName) {
-    }
+  @Override
+  public synchronized long getTaskTimer(ProfilerType type, String taskName) {
+    return 0;
+  }
 
-    @Override
-    public synchronized long getTimer(ProfilerType type) {
-        System.out.println("Enable the profiler with: -Dtornado.profiler=True");
-        return 0;
-    }
+  @Override
+  public synchronized void setTimer(ProfilerType type, long time) {}
 
-    @Override
-    public long getSize(ProfilerType type) {
-        return 0;
-    }
+  @Override
+  public synchronized void dump() {}
 
-    @Override
-    public synchronized long getTaskTimer(ProfilerType type, String taskName) {
-        return 0;
-    }
+  @Override
+  public synchronized String createJson(StringBuilder json, String sectionName) {
+    return null;
+  }
 
-    @Override
-    public synchronized void setTimer(ProfilerType type, long time) {
+  @Override
+  public synchronized void dumpJson(StringBuilder stringBuffer, String id) {}
 
-    }
+  @Override
+  public synchronized void clean() {}
 
-    @Override
-    public synchronized void dump() {
-    }
+  @Override
+  public synchronized void setTaskTimer(ProfilerType type, String taskId, long timer) {}
 
-    @Override
-    public synchronized String createJson(StringBuilder json, String sectionName) {
-        return null;
-    }
+  @Override
+  public void setTaskPowerUsage(ProfilerType type, String taskId, long power) {}
 
-    @Override
-    public synchronized void dumpJson(StringBuilder stringBuffer, String id) {
-    }
-
-    @Override
-    public synchronized void clean() {
-    }
-
-    @Override
-    public synchronized void setTaskTimer(ProfilerType type, String taskId, long timer) {
-    }
-
-    @Override
-    public void setTaskPowerUsage(ProfilerType type, String taskId, long power) {
-    }
-
-    @Override
-    public synchronized void sum(ProfilerType type, long sum) {
-
-    }
-
+  @Override
+  public synchronized void sum(ProfilerType type, long sum) {}
 }

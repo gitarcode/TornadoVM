@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
@@ -30,8 +31,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLUnaryIntrinsic;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
@@ -40,22 +39,26 @@ import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkGlobalThreadI
 @NodeInfo
 public class GlobalThreadIdNode extends FloatingNode implements LIRLowerable, MarkGlobalThreadID {
 
-    public static final NodeClass<GlobalThreadIdNode> TYPE = NodeClass.create(GlobalThreadIdNode.class);
+  public static final NodeClass<GlobalThreadIdNode> TYPE =
+      NodeClass.create(GlobalThreadIdNode.class);
 
-    @Input
-    protected ConstantNode index;
+  @Input protected ConstantNode index;
 
-    public GlobalThreadIdNode(ConstantNode value) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        assert stamp != null;
-        index = value;
-    }
+  public GlobalThreadIdNode(ConstantNode value) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    assert stamp != null;
+    index = value;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        tool.append(new AssignStmt(result, new OCLUnary.Intrinsic(OCLUnaryIntrinsic.GLOBAL_ID, tool.getLIRKind(stamp), gen.operand(index))));
-        gen.setResult(this, result);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    tool.append(
+        new AssignStmt(
+            result,
+            new OCLUnary.Intrinsic(
+                OCLUnaryIntrinsic.GLOBAL_ID, tool.getLIRKind(stamp), gen.operand(index))));
+    gen.setResult(this, result);
+  }
 }

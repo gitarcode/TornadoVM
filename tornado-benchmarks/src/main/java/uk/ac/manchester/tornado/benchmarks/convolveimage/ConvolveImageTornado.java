@@ -30,87 +30,82 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner convolveimage
  * </code>
  */
 public class ConvolveImageTornado extends BenchmarkDriver {
 
-    private final int imageSizeX;
-    private final int imageSizeY;
-    private final int filterSize;
+  private final int imageSizeX;
+  private final int imageSizeY;
+  private final int filterSize;
 
-    private ImageFloat input;
-    private ImageFloat output;
-    private ImageFloat filter;
+  private ImageFloat input;
+  private ImageFloat output;
+  private ImageFloat filter;
 
-    public ConvolveImageTornado(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
-        super(iterations);
-        this.imageSizeX = imageSizeX;
-        this.imageSizeY = imageSizeY;
-        this.filterSize = filterSize;
-    }
+  public ConvolveImageTornado(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
+    super(iterations);
+    this.imageSizeX = imageSizeX;
+    this.imageSizeY = imageSizeY;
+    this.filterSize = filterSize;
+  }
 
-    @Override
-    public void setUp() {
-        input = new ImageFloat(imageSizeX, imageSizeY);
-        output = new ImageFloat(imageSizeX, imageSizeY);
-        filter = new ImageFloat(filterSize, filterSize);
+  @Override
+  public void setUp() {
+    input = new ImageFloat(imageSizeX, imageSizeY);
+    output = new ImageFloat(imageSizeX, imageSizeY);
+    filter = new ImageFloat(filterSize, filterSize);
 
-        createImage(input);
-        createFilter(filter);
+    createImage(input);
+    createFilter(filter);
 
-        taskGraph = new TaskGraph("benchmark");
-        taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, input, filter);
-        taskGraph.task("convolveImage", GraphicsKernels::convolveImage, input, filter, output);
-        taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+    taskGraph = new TaskGraph("benchmark");
+    taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, input, filter);
+    taskGraph.task("convolveImage", GraphicsKernels::convolveImage, input, filter, output);
+    taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-    }
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
+    input = null;
+    output = null;
+    filter = null;
 
-        input = null;
-        output = null;
-        filter = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
 
-    @Override
-    public boolean validate(TornadoDevice device) {
+    final ImageFloat result = new ImageFloat(imageSizeX, imageSizeY);
 
-        final ImageFloat result = new ImageFloat(imageSizeX, imageSizeY);
+    runBenchmark(device);
 
-        runBenchmark(device);
+    GraphicsKernels.convolveImage(input, filter, result);
 
-        GraphicsKernels.convolveImage(input, filter, result);
+    float maxULP = 0f;
+    for (int y = 0; y < output.Y(); y++) {
+      for (int x = 0; x < output.X(); x++) {
+        final float ulp = FloatOps.findMaxULP(output.get(x, y), result.get(x, y));
 
-        float maxULP = 0f;
-        for (int y = 0; y < output.Y(); y++) {
-            for (int x = 0; x < output.X(); x++) {
-                final float ulp = FloatOps.findMaxULP(output.get(x, y), result.get(x, y));
-
-                if (ulp > maxULP) {
-                    maxULP = ulp;
-                }
-            }
+        if (ulp > maxULP) {
+          maxULP = ulp;
         }
-        return Float.compare(maxULP, MAX_ULP) <= 0;
+      }
     }
-
+    return Float.compare(maxULP, MAX_ULP) <= 0;
+  }
 }

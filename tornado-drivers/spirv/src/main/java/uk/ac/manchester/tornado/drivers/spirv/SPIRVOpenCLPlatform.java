@@ -25,59 +25,56 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.manchester.tornado.drivers.opencl.OCLContextInterface;
 import uk.ac.manchester.tornado.drivers.opencl.TornadoPlatformInterface;
 
 public class SPIRVOpenCLPlatform implements SPIRVPlatform {
 
-    private TornadoPlatformInterface oclPlatform;
-    private OCLContextInterface context;
-    private List<SPIRVDevice> spirvDevices;
+  private TornadoPlatformInterface oclPlatform;
+  private OCLContextInterface context;
+  private List<SPIRVDevice> spirvDevices;
 
-    public SPIRVOpenCLPlatform(int platformIndex, TornadoPlatformInterface oclPlatform) {
-        this.oclPlatform = oclPlatform;
-        context = this.oclPlatform.createContext();
+  public SPIRVOpenCLPlatform(int platformIndex, TornadoPlatformInterface oclPlatform) {
+    this.oclPlatform = oclPlatform;
+    context = this.oclPlatform.createContext();
 
-        spirvDevices = new ArrayList<>();
+    spirvDevices = new ArrayList<>();
 
-        for (int i = 0; i < context.getNumDevices(); i++) {
-            SPIRVDevice spirvDevice = new SPIRVOCLDevice(platformIndex, i, context.devices().get(i));
-            spirvDevices.add(spirvDevice);
-        }
-
+    for (int i = 0; i < context.getNumDevices(); i++) {
+      SPIRVDevice spirvDevice = new SPIRVOCLDevice(platformIndex, i, context.devices().get(i));
+      spirvDevices.add(spirvDevice);
     }
+  }
 
-    public TornadoPlatformInterface getPlatform() {
-        return this.oclPlatform;
+  public TornadoPlatformInterface getPlatform() {
+    return this.oclPlatform;
+  }
+
+  @Override
+  public int getNumDevices() {
+    return context.getNumDevices();
+  }
+
+  @Override
+  public SPIRVDevice getDevice(int deviceIndex) {
+    return spirvDevices.get(deviceIndex);
+  }
+
+  @Override
+  public SPIRVOCLContext createContext() {
+    if (context == null) {
+      context = oclPlatform.createContext();
     }
+    return new SPIRVOCLContext(this, spirvDevices, context);
+  }
 
-    @Override
-    public int getNumDevices() {
-        return context.getNumDevices();
-    }
+  @Override
+  public SPIRVDevice[] getDevices() {
+    return spirvDevices.toArray(new SPIRVDevice[0]);
+  }
 
-    @Override
-    public SPIRVDevice getDevice(int deviceIndex) {
-        return spirvDevices.get(deviceIndex);
-    }
-
-    @Override
-    public SPIRVOCLContext createContext() {
-        if (context == null) {
-            context = oclPlatform.createContext();
-        }
-        return new SPIRVOCLContext(this, spirvDevices, context);
-    }
-
-    @Override
-    public SPIRVDevice[] getDevices() {
-        return spirvDevices.toArray(new SPIRVDevice[0]);
-    }
-
-    @Override
-    public SPIRVRuntimeType getRuntime() {
-        return SPIRVRuntimeType.OPENCL;
-    }
-
+  @Override
+  public SPIRVRuntimeType getRuntime() {
+    return SPIRVRuntimeType.OPENCL;
+  }
 }

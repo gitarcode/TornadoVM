@@ -22,7 +22,6 @@ import static uk.ac.manchester.tornado.benchmarks.BenchmarkUtils.createImage;
 import static uk.ac.manchester.tornado.benchmarks.GraphicsKernels.convolveImageArray;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -40,7 +39,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -49,78 +47,93 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.convolvearray.JMHConvolveArray
  * </code>
  */
 public class JMHConvolveArray {
 
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        int imageSizeX = Integer.parseInt(System.getProperty("x", "2048"));
-        int imageSizeY = Integer.parseInt(System.getProperty("y", "2048"));
-        int filterSize = Integer.parseInt(System.getProperty("z", "5"));
-        FloatArray input;
-        FloatArray output;
-        FloatArray filter;
-        TornadoExecutionPlan executor;
+    int imageSizeX = Integer.parseInt(System.getProperty("x", "2048"));
+    int imageSizeY = Integer.parseInt(System.getProperty("y", "2048"));
+    int filterSize = Integer.parseInt(System.getProperty("z", "5"));
+    FloatArray input;
+    FloatArray output;
+    FloatArray filter;
+    TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            input = new FloatArray(imageSizeX * imageSizeY);
-            output = new FloatArray(imageSizeX * imageSizeY);
-            filter = new FloatArray(filterSize * filterSize);
+    @Setup(Level.Trial)
+    public void doSetup() {
+      input = new FloatArray(imageSizeX * imageSizeY);
+      output = new FloatArray(imageSizeX * imageSizeY);
+      filter = new FloatArray(filterSize * filterSize);
 
-            createImage(input, imageSizeX, imageSizeY);
-            createFilter(filter, filterSize, filterSize);
+      createImage(input, imageSizeX, imageSizeY);
+      createFilter(filter, filterSize, filterSize);
 
-            TaskGraph taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, input, filter) //
-                    .task("convolveImageArray", GraphicsKernels::convolveImageArray, input, filter, output, imageSizeX, imageSizeY, filterSize, filterSize) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withDefaultScheduler().withWarmUp();
-        }
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, input, filter) //
+              .task(
+                  "convolveImageArray",
+                  GraphicsKernels::convolveImageArray,
+                  input,
+                  filter,
+                  output,
+                  imageSizeX,
+                  imageSizeY,
+                  filterSize,
+                  filterSize) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withDefaultScheduler().withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void convolveImageArrayJava(BenchmarkSetup state) {
-        convolveImageArray(state.input, state.filter, state.output, state.imageSizeX, state.imageSizeY, state.filterSize, state.filterSize);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void convolveImageArrayJava(BenchmarkSetup state) {
+    convolveImageArray(
+        state.input,
+        state.filter,
+        state.output,
+        state.imageSizeX,
+        state.imageSizeY,
+        state.filterSize,
+        state.filterSize);
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void convolveImageArrayTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void convolveImageArrayTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHConvolveArray.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHConvolveArray.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

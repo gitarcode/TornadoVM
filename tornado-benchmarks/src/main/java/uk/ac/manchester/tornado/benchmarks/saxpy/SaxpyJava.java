@@ -25,52 +25,49 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class SaxpyJava extends BenchmarkDriver {
 
-    private final int numElements;
+  private final int numElements;
 
-    private FloatArray x;
-    private FloatArray y;
-    private final float alpha = 2f;
+  private FloatArray x;
+  private FloatArray y;
+  private final float alpha = 2f;
 
-    public SaxpyJava(int iterations, int numElements) {
-        super(iterations);
-        this.numElements = numElements;
+  public SaxpyJava(int iterations, int numElements) {
+    super(iterations);
+    this.numElements = numElements;
+  }
+
+  @Override
+  public void setUp() {
+    x = new FloatArray(numElements);
+    y = new FloatArray(numElements);
+
+    for (int i = 0; i < numElements; i++) {
+      x.set(i, i);
     }
+  }
 
-    @Override
-    public void setUp() {
-        x = new FloatArray(numElements);
-        y = new FloatArray(numElements);
+  @Override
+  public void tearDown() {
+    x = null;
+    y = null;
+    super.tearDown();
+  }
 
-        for (int i = 0; i < numElements; i++) {
-            x.set(i, i);
-        }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    saxpy(alpha, x, y);
+  }
 
-    }
+  @Override
+  public void barrier() {}
 
-    @Override
-    public void tearDown() {
-        x = null;
-        y = null;
-        super.tearDown();
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        saxpy(alpha, x, y);
-    }
-
-    @Override
-    public void barrier() {
-
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

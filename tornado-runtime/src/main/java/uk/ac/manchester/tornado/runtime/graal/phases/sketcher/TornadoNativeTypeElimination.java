@@ -24,7 +24,6 @@ package uk.ac.manchester.tornado.runtime.graal.phases.sketcher;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.FixedGuardNode;
@@ -41,7 +40,6 @@ import org.graalvm.compiler.nodes.java.InstanceOfNode;
 import org.graalvm.compiler.nodes.java.LoadFieldNode;
 import org.graalvm.compiler.nodes.memory.address.OffsetAddressNode;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
 import uk.ac.manchester.tornado.api.internal.annotations.SegmentElementSize;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
@@ -50,158 +48,174 @@ import uk.ac.manchester.tornado.runtime.graal.phases.TornadoSketchTierContext;
 
 public class TornadoNativeTypeElimination extends BasePhase<TornadoSketchTierContext> {
 
-    private static void removeFixedGuardNodes(FixedGuardNode fixedGuardNode, LoadFieldNode loadFieldSegment) {
-        ArrayList<Node> nodesToBeRemoved = new ArrayList<>();
-        nodesToBeRemoved.add(fixedGuardNode);
-        for (Node node : fixedGuardNode.inputs()) {
-            if (node instanceof InstanceOfNode || node instanceof IsNullNode) {
-                nodesToBeRemoved.add(node);
-            }
-        }
+  private static void removeFixedGuardNodes(
+      FixedGuardNode fixedGuardNode, LoadFieldNode loadFieldSegment) {
+    ArrayList<Node> nodesToBeRemoved = new ArrayList<>();
+    nodesToBeRemoved.add(fixedGuardNode);
+    for (Node node : fixedGuardNode.inputs()) {
+      if (node instanceof InstanceOfNode || node instanceof IsNullNode) {
+        nodesToBeRemoved.add(node);
+      }
+    }
 
-        // identify the usages that need to be removed
-        for (Node node : fixedGuardNode.usages()) {
-            if (node instanceof PiNode piNode && (piNode.usages().filter(OffsetAddressNode.class).isNotEmpty())) {
-                for (OffsetAddressNode offsetAddressNode : piNode.usages().filter(OffsetAddressNode.class)) {
-                    if (piHasParameterInput(piNode)) {
-                        return;
-                    }
-                    if (piNodeUsageReplacement(offsetAddressNode, piNode, loadFieldSegment)) {
-                        nodesToBeRemoved.add(piNode);
-                    }
+    // identify the usages that need to be removed
+    for (Node node : fixedGuardNode.usages()) {
+      if (node instanceof PiNode piNode
+          && (piNode.usages().filter(OffsetAddressNode.class).isNotEmpty())) {
+        for (OffsetAddressNode offsetAddressNode :
+            piNode.usages().filter(OffsetAddressNode.class)) {
+          if (piHasParameterInput(piNode)) {
+            return;
+          }
+          if (piNodeUsageReplacement(offsetAddressNode, piNode, loadFieldSegment)) {
+            nodesToBeRemoved.add(piNode);
+          }
+        }
+      } else if (node instanceof PiNode piNode
+          && (piNode.usages().filter(LoadHubNode.class).isNotEmpty())) {
+        // NOTE: This is a special case where Graal includes additional FixedGuardNodes during
+        // sketching
+        // It was encountered in the TestMatrixTypes unittest
+        nodesToBeRemoved.add(piNode);
+        LoadHubNode loadHubNode = piNode.usages().filter(LoadHubNode.class).first();
+        nodesToBeRemoved.add(loadHubNode);
+        for (Node pointerEqualsNode : loadHubNode.usages().filter(PointerEqualsNode.class)) {
+          nodesToBeRemoved.add(pointerEqualsNode);
+          // the constant node associated with the PointerEquals node is not necessary and should
+          // also be removed
+          nodesToBeRemoved.add(pointerEqualsNode.inputs().filter(ConstantNode.class).first());
+          if (pointerEqualsNode.usages().filter(FixedGuardNode.class).isNotEmpty()) {
+            FixedGuardNode typeCheckingFixed =
+                pointerEqualsNode.usages().filter(FixedGuardNode.class).first();
+            nodesToBeRemoved.add(typeCheckingFixed);
+            for (PiNode piNodeOfTypeCheckingFixed :
+                typeCheckingFixed.usages().filter(PiNode.class)) {
+              for (OffsetAddressNode offsetAddressNode :
+                  piNodeOfTypeCheckingFixed.usages().filter(OffsetAddressNode.class)) {
+                if (piHasParameterInput(piNodeOfTypeCheckingFixed)) {
+                  return;
                 }
-            } else if (node instanceof PiNode piNode && (piNode.usages().filter(LoadHubNode.class).isNotEmpty())) {
-                //NOTE: This is a special case where Graal includes additional FixedGuardNodes during sketching
-                // It was encountered in the TestMatrixTypes unittest
-                nodesToBeRemoved.add(piNode);
-                LoadHubNode loadHubNode = piNode.usages().filter(LoadHubNode.class).first();
-                nodesToBeRemoved.add(loadHubNode);
-                for (Node pointerEqualsNode : loadHubNode.usages().filter(PointerEqualsNode.class)) {
-                    nodesToBeRemoved.add(pointerEqualsNode);
-                    // the constant node associated with the PointerEquals node is not necessary and should also be removed
-                    nodesToBeRemoved.add(pointerEqualsNode.inputs().filter(ConstantNode.class).first());
-                    if (pointerEqualsNode.usages().filter(FixedGuardNode.class).isNotEmpty()) {
-                        FixedGuardNode typeCheckingFixed = pointerEqualsNode.usages().filter(FixedGuardNode.class).first();
-                        nodesToBeRemoved.add(typeCheckingFixed);
-                        for (PiNode piNodeOfTypeCheckingFixed : typeCheckingFixed.usages().filter(PiNode.class)) {
-                            for (OffsetAddressNode offsetAddressNode : piNodeOfTypeCheckingFixed.usages().filter(OffsetAddressNode.class)) {
-                                if (piHasParameterInput(piNodeOfTypeCheckingFixed)) {
-                                    return;
-                                }
-                                if (piNodeUsageReplacement(offsetAddressNode, piNodeOfTypeCheckingFixed, loadFieldSegment)) {
-                                    nodesToBeRemoved.add(piNodeOfTypeCheckingFixed);
-                                }
-                            }
-                        }
-                    }
+                if (piNodeUsageReplacement(
+                    offsetAddressNode, piNodeOfTypeCheckingFixed, loadFieldSegment)) {
+                  nodesToBeRemoved.add(piNodeOfTypeCheckingFixed);
                 }
+              }
             }
+          }
         }
-        deleteFixedGuardAndInputNodes(nodesToBeRemoved);
+      }
     }
+    deleteFixedGuardAndInputNodes(nodesToBeRemoved);
+  }
 
-    private static boolean piHasParameterInput(PiNode piNode) {
-        return piNode.inputs().filter(ParameterNode.class).isNotEmpty();
+  private static boolean piHasParameterInput(PiNode piNode) {
+    return piNode.inputs().filter(ParameterNode.class).isNotEmpty();
+  }
+
+  private static boolean piNodeUsageReplacement(
+      OffsetAddressNode off, PiNode piNode, LoadFieldNode loadFieldSegment) {
+    if (off.usages().filter(JavaReadNode.class).isNotEmpty()
+        || off.usages().filter(JavaWriteNode.class).isNotEmpty()
+        || off.usages().filter(WriteAtomicNode.class).isNotEmpty()) {
+      if (piNode.inputs().filter(LoadFieldNode.class).isNotEmpty()) {
+        LoadFieldNode ldf = piNode.inputs().filter(LoadFieldNode.class).first();
+        off.replaceFirstInput(piNode, ldf);
+      } else {
+        off.replaceFirstInput(piNode, loadFieldSegment);
+      }
+      return true;
     }
+    return false;
+  }
 
-    private static boolean piNodeUsageReplacement(OffsetAddressNode off, PiNode piNode, LoadFieldNode loadFieldSegment) {
-        if (off.usages().filter(JavaReadNode.class).isNotEmpty() || off.usages().filter(JavaWriteNode.class).isNotEmpty() || off.usages().filter(WriteAtomicNode.class).isNotEmpty()) {
-            if (piNode.inputs().filter(LoadFieldNode.class).isNotEmpty()) {
-                LoadFieldNode ldf = piNode.inputs().filter(LoadFieldNode.class).first();
-                off.replaceFirstInput(piNode, ldf);
-            } else {
-                off.replaceFirstInput(piNode, loadFieldSegment);
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private static void deleteFixedGuardAndInputNodes(ArrayList<Node> nodesToBeRemoved) {
-        for (Node n : nodesToBeRemoved) {
-            if (n != null && !n.isDeleted()) {
-                if (n instanceof FixedGuardNode) {
-                    deleteFixed(n);
-                } else {
-                    n.safeDelete();
-                }
-            }
-        }
-    }
-
-    private static void deleteFixed(Node node) {
-        if (!node.isDeleted()) {
-            Node predecessor = node.predecessor();
-            Node successor = node.successors().first();
-
-            node.replaceFirstSuccessor(successor, null);
-            node.replaceAtPredecessor(successor);
-            predecessor.replaceFirstSuccessor(node, successor);
-
-            for (Node us : node.usages()) {
-                node.removeUsage(us);
-            }
-            node.clearInputs();
-            node.safeDelete();
-        }
-    }
-
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
-
-    private int getElementKindSize(LoadFieldNode baseIndexNode) {
-        int kindElement = 0;
-        Annotation[] declaredAnnotations = baseIndexNode.field().getDeclaringClass().getDeclaredAnnotations();
-        if (declaredAnnotations.length == 0) {
-            throw new TornadoRuntimeException("Annotation is missing");
+  private static void deleteFixedGuardAndInputNodes(ArrayList<Node> nodesToBeRemoved) {
+    for (Node n : nodesToBeRemoved) {
+      if (n != null && !n.isDeleted()) {
+        if (n instanceof FixedGuardNode) {
+          deleteFixed(n);
         } else {
-            for (Annotation annotation : declaredAnnotations) {
-                if (annotation instanceof SegmentElementSize panamaElementSize) {
-                    kindElement = panamaElementSize.size();
-                }
-            }
+          n.safeDelete();
         }
-        return kindElement;
+      }
     }
+  }
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
-        for (LoadFieldNode loadFieldSegment : graph.getNodes().filter(LoadFieldNode.class)) {
-            if (loadFieldSegment.toString().contains("segment")) {
+  private static void deleteFixed(Node node) {
+    if (!node.isDeleted()) {
+      Node predecessor = node.predecessor();
+      Node successor = node.successors().first();
 
-                // Remove the loadField#baseIndex and replace it with a Constant value
-                if (loadFieldSegment.successors().first() instanceof LoadFieldNode baseIndexNode) {
-                    int elementKindSize = getElementKindSize(baseIndexNode);
-                    int panamaObjectHeaderSize = (int) TornadoOptions.PANAMA_OBJECT_HEADER_SIZE;
-                    int baseIndexPosition = panamaObjectHeaderSize / elementKindSize;
-                    ConstantNode constantNode = graph.addOrUnique(ConstantNode.forInt(baseIndexPosition));
-                    baseIndexNode.replaceAtUsages(constantNode);
-                    deleteFixed(baseIndexNode);
-                }
+      node.replaceFirstSuccessor(successor, null);
+      node.replaceAtPredecessor(successor);
+      predecessor.replaceFirstSuccessor(node, successor);
 
-                // Remove FixedGuard nodes with its PI Node
-                if (loadFieldSegment.successors().filter(FixedGuardNode.class).isNotEmpty()) {
-                    FixedGuardNode fixedGuardNode = loadFieldSegment.successors().filter(FixedGuardNode.class).first();
-                    removeFixedGuardNodes(fixedGuardNode, loadFieldSegment);
-                }
+      for (Node us : node.usages()) {
+        node.removeUsage(us);
+      }
+      node.clearInputs();
+      node.safeDelete();
+    }
+  }
 
-                for (PiNode piNode : loadFieldSegment.inputs().filter(PiNode.class)) {
-                    for (OffsetAddressNode offsetAddressNode : loadFieldSegment.usages().filter(OffsetAddressNode.class)) {
-                        offsetAddressNode.replaceFirstInput(loadFieldSegment, piNode);
-                    }
-                }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-                if (loadFieldSegment.predecessor() instanceof FixedGuardNode fixedGuardNode) {
-                    deleteFixed(loadFieldSegment);
-                    if (fixedGuardNode.predecessor() instanceof LoadFieldNode ldf) {
-                        removeFixedGuardNodes(fixedGuardNode, ldf);
-                    }
-                } else {
-                    deleteFixed(loadFieldSegment);
-                }
-            }
+  private int getElementKindSize(LoadFieldNode baseIndexNode) {
+    int kindElement = 0;
+    Annotation[] declaredAnnotations =
+        baseIndexNode.field().getDeclaringClass().getDeclaredAnnotations();
+    if (declaredAnnotations.length == 0) {
+      throw new TornadoRuntimeException("Annotation is missing");
+    } else {
+      for (Annotation annotation : declaredAnnotations) {
+        if (annotation instanceof SegmentElementSize panamaElementSize) {
+          kindElement = panamaElementSize.size();
         }
+      }
     }
+    return kindElement;
+  }
+
+  @Override
+  protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
+    for (LoadFieldNode loadFieldSegment : graph.getNodes().filter(LoadFieldNode.class)) {
+      if (loadFieldSegment.toString().contains("segment")) {
+
+        // Remove the loadField#baseIndex and replace it with a Constant value
+        if (loadFieldSegment.successors().first() instanceof LoadFieldNode baseIndexNode) {
+          int elementKindSize = getElementKindSize(baseIndexNode);
+          int panamaObjectHeaderSize = (int) TornadoOptions.PANAMA_OBJECT_HEADER_SIZE;
+          int baseIndexPosition = panamaObjectHeaderSize / elementKindSize;
+          ConstantNode constantNode = graph.addOrUnique(ConstantNode.forInt(baseIndexPosition));
+          baseIndexNode.replaceAtUsages(constantNode);
+          deleteFixed(baseIndexNode);
+        }
+
+        // Remove FixedGuard nodes with its PI Node
+        if (loadFieldSegment.successors().filter(FixedGuardNode.class).isNotEmpty()) {
+          FixedGuardNode fixedGuardNode =
+              loadFieldSegment.successors().filter(FixedGuardNode.class).first();
+          removeFixedGuardNodes(fixedGuardNode, loadFieldSegment);
+        }
+
+        for (PiNode piNode : loadFieldSegment.inputs().filter(PiNode.class)) {
+          for (OffsetAddressNode offsetAddressNode :
+              loadFieldSegment.usages().filter(OffsetAddressNode.class)) {
+            offsetAddressNode.replaceFirstInput(loadFieldSegment, piNode);
+          }
+        }
+
+        if (loadFieldSegment.predecessor() instanceof FixedGuardNode fixedGuardNode) {
+          deleteFixed(loadFieldSegment);
+          if (fixedGuardNode.predecessor() instanceof LoadFieldNode ldf) {
+            removeFixedGuardNodes(fixedGuardNode, ldf);
+          }
+        } else {
+          deleteFixed(loadFieldSegment);
+        }
+      }
+    }
+  }
 }

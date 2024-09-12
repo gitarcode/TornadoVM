@@ -27,14 +27,13 @@ import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 public final class TornadoCodeGenerator {
 
-    public static final TornadoLogger log = new TornadoLogger(TornadoCodeGenerator.class);
+  public static final TornadoLogger log = new TornadoLogger(TornadoCodeGenerator.class);
 
-    public static void debug(final String msg) {
-        log.debug(msg);
-    }
+  public static void debug(final String msg) {
+    log.debug(msg);
+  }
 
-    public static void debug(final String pattern, final Object... args) {
-        debug(String.format(pattern, args));
-    }
-
+  public static void debug(final String pattern, final Object... args) {
+    debug(String.format(pattern, args));
+  }
 }

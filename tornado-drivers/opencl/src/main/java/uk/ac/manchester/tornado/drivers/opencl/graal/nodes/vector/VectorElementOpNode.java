@@ -26,6 +26,8 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.nodes.vector;
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.guarantee;
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 
+import jdk.vm.ci.meta.JavaConstant;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.ObjectStamp;
 import org.graalvm.compiler.core.common.type.Stamp;
@@ -40,76 +42,87 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaConstant;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLVectorElementSelect;
 
-/**
- * The {@code LoadIndexedNode} represents a read from an element of an array.
- */
+/** The {@code LoadIndexedNode} represents a read from an element of an array. */
 @NodeInfo(nameTemplate = "Op .s{p#lane}")
-public abstract class VectorElementOpNode extends FloatingNode implements LIRLowerable, Comparable<VectorElementOpNode> {
+public abstract class VectorElementOpNode extends FloatingNode
+    implements LIRLowerable, Comparable<VectorElementOpNode> {
 
-    public static final NodeClass<VectorElementOpNode> TYPE = NodeClass.create(VectorElementOpNode.class);
-    protected final OCLKind oclKind;
-    @Input(InputType.Extension)
-    ValueNode vector;
-    @Input
-    ValueNode lane;
+  public static final NodeClass<VectorElementOpNode> TYPE =
+      NodeClass.create(VectorElementOpNode.class);
+  protected final OCLKind oclKind;
 
-    protected VectorElementOpNode(NodeClass<? extends VectorElementOpNode> c, OCLKind kind, ValueNode vector, ValueNode lane) {
-        super(c, StampFactory.forKind(kind.asJavaKind()));
-        this.oclKind = kind;
-        this.vector = vector;
-        this.lane = lane;
-        Stamp vectorStamp = vector.stamp(NodeView.DEFAULT);
-        OCLKind vectorKind;
-        if (vectorStamp instanceof ObjectStamp) {
-            ObjectStamp objectStamp = (ObjectStamp) vector.stamp(NodeView.DEFAULT);
-            if (objectStamp.type() != null) {
-                vectorKind = OCLKind.fromResolvedJavaType(objectStamp.type());
-                guarantee(vectorKind.isVector(), "Cannot apply vector operation to non-vector type: %s", vectorKind);
-                guarantee(vectorKind.getVectorLength() >= laneId(), "Invalid lane %d on type %s", laneId(), oclKind);
-            }
-        } else {
-            shouldNotReachHere("invalid type on vector operation: %s (stamp=%s (class=%s))", vector, vector.stamp(NodeView.DEFAULT), vector.stamp(NodeView.DEFAULT).getClass().getName());
-        }
+  @Input(InputType.Extension)
+  ValueNode vector;
 
+  @Input ValueNode lane;
+
+  protected VectorElementOpNode(
+      NodeClass<? extends VectorElementOpNode> c, OCLKind kind, ValueNode vector, ValueNode lane) {
+    super(c, StampFactory.forKind(kind.asJavaKind()));
+    this.oclKind = kind;
+    this.vector = vector;
+    this.lane = lane;
+    Stamp vectorStamp = vector.stamp(NodeView.DEFAULT);
+    OCLKind vectorKind;
+    if (vectorStamp instanceof ObjectStamp) {
+      ObjectStamp objectStamp = (ObjectStamp) vector.stamp(NodeView.DEFAULT);
+      if (objectStamp.type() != null) {
+        vectorKind = OCLKind.fromResolvedJavaType(objectStamp.type());
+        guarantee(
+            vectorKind.isVector(),
+            "Cannot apply vector operation to non-vector type: %s",
+            vectorKind);
+        guarantee(
+            vectorKind.getVectorLength() >= laneId(),
+            "Invalid lane %d on type %s",
+            laneId(),
+            oclKind);
+      }
+    } else {
+      shouldNotReachHere(
+          "invalid type on vector operation: %s (stamp=%s (class=%s))",
+          vector,
+          vector.stamp(NodeView.DEFAULT),
+          vector.stamp(NodeView.DEFAULT).getClass().getName());
     }
+  }
 
-    @Override
-    public int compareTo(VectorElementOpNode o) {
-        return Integer.compare(laneId(), o.laneId());
-    }
+  @Override
+  public int compareTo(VectorElementOpNode o) {
+    return Integer.compare(laneId(), o.laneId());
+  }
 
-    @Override
-    public boolean inferStamp() {
-        return updateStamp(StampFactory.forKind(oclKind.asJavaKind()));
-    }
+  @Override
+  public boolean inferStamp() {
+    return updateStamp(StampFactory.forKind(oclKind.asJavaKind()));
+  }
 
-    public final int laneId() {
-        guarantee(lane instanceof ConstantNode, "Invalid lane: %s", lane);
-        return (lane instanceof ConstantNode) ? lane.asJavaConstant().asInt() : -1;
-    }
+  public final int laneId() {
+    guarantee(lane instanceof ConstantNode, "Invalid lane: %s", lane);
+    return (lane instanceof ConstantNode) ? lane.asJavaConstant().asInt() : -1;
+  }
 
-    public final ValueNode getLaneId() {
-        return this.lane;
-    }
+  public final ValueNode getLaneId() {
+    return this.lane;
+  }
 
-    public ValueNode getVector() {
-        return vector;
-    }
+  public ValueNode getVector() {
+    return vector;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        guarantee(vector != null, "vector is null");
-        Value targetVector = gen.operand(getVector());
-        guarantee(targetVector != null, "vector is null");
-        final OCLVectorElementSelect element = new OCLVectorElementSelect(gen.getLIRGeneratorTool().getLIRKind(stamp), targetVector, new ConstantValue(LIRKind.value(OCLKind.INT), JavaConstant.forInt(
-                laneId())));
-        gen.setResult(this, element);
-    }
-
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    guarantee(vector != null, "vector is null");
+    Value targetVector = gen.operand(getVector());
+    guarantee(targetVector != null, "vector is null");
+    final OCLVectorElementSelect element =
+        new OCLVectorElementSelect(
+            gen.getLIRGeneratorTool().getLIRKind(stamp),
+            targetVector,
+            new ConstantValue(LIRKind.value(OCLKind.INT), JavaConstant.forInt(laneId())));
+    gen.setResult(this, element);
+  }
 }

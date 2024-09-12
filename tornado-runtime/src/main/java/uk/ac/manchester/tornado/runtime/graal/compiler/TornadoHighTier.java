@@ -25,18 +25,17 @@ package uk.ac.manchester.tornado.runtime.graal.compiler;
 
 import org.graalvm.compiler.phases.PhaseSuite;
 import org.graalvm.compiler.phases.common.CanonicalizerPhase;
-
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoHighTierContext;
 
 public abstract class TornadoHighTier extends PhaseSuite<TornadoHighTierContext> {
 
-    protected final CanonicalizerPhase.CustomSimplification customCanonicalizer;
+  protected final CanonicalizerPhase.CustomSimplification customCanonicalizer;
 
-    public CanonicalizerPhase.CustomSimplification getCustomCanonicalizer() {
-        return customCanonicalizer;
-    }
+  public CanonicalizerPhase.CustomSimplification getCustomCanonicalizer() {
+    return customCanonicalizer;
+  }
 
-    public TornadoHighTier(CanonicalizerPhase.CustomSimplification customCanonicalizer) {
-        this.customCanonicalizer = customCanonicalizer;
-    }
+  public TornadoHighTier(CanonicalizerPhase.CustomSimplification customCanonicalizer) {
+    this.customCanonicalizer = customCanonicalizer;
+  }
 }

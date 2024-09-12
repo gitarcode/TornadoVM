@@ -24,6 +24,6 @@
 package uk.ac.manchester.tornado.drivers.spirv;
 
 public enum SPIRVRuntimeType {
-    OPENCL, //
-    LEVEL_ZERO,
+  OPENCL, //
+  LEVEL_ZERO,
 }

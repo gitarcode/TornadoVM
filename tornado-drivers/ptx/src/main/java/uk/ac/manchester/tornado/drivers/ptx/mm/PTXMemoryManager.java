@@ -28,36 +28,37 @@ import static uk.ac.manchester.tornado.runtime.common.TornadoOptions.DEVICE_AVAI
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import uk.ac.manchester.tornado.api.memory.TornadoMemoryProvider;
 import uk.ac.manchester.tornado.drivers.ptx.PTXDeviceContext;
 
 public class PTXMemoryManager implements TornadoMemoryProvider {
 
-    private final PTXDeviceContext deviceContext;
-    private final Map<Long, PTXKernelStackFrame> ptxKernelStackFrame = new ConcurrentHashMap<>();
+  private final PTXDeviceContext deviceContext;
+  private final Map<Long, PTXKernelStackFrame> ptxKernelStackFrame = new ConcurrentHashMap<>();
 
-    public PTXMemoryManager(PTXDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
-    }
+  public PTXMemoryManager(PTXDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+  }
 
-    @Override
-    public long getHeapSize() {
-        return DEVICE_AVAILABLE_MEMORY;
-    }
+  @Override
+  public long getHeapSize() {
+    return DEVICE_AVAILABLE_MEMORY;
+  }
 
-    public PTXKernelStackFrame createCallWrapper(final long threadId, final int maxArgs) {
-        if (!ptxKernelStackFrame.containsKey(threadId)) {
-            long kernelCallBuffer = deviceContext.getDevice().getPTXContext().allocateMemory(RESERVED_SLOTS * Long.BYTES);
-            ptxKernelStackFrame.put(threadId, new PTXKernelStackFrame(kernelCallBuffer, maxArgs, deviceContext));
-        }
-        return ptxKernelStackFrame.get(threadId);
+  public PTXKernelStackFrame createCallWrapper(final long threadId, final int maxArgs) {
+    if (!ptxKernelStackFrame.containsKey(threadId)) {
+      long kernelCallBuffer =
+          deviceContext.getDevice().getPTXContext().allocateMemory(RESERVED_SLOTS * Long.BYTES);
+      ptxKernelStackFrame.put(
+          threadId, new PTXKernelStackFrame(kernelCallBuffer, maxArgs, deviceContext));
     }
+    return ptxKernelStackFrame.get(threadId);
+  }
 
-    public void releaseKernelStackFrame(long executionPlanId) {
-        PTXKernelStackFrame stackFrame = ptxKernelStackFrame.remove(executionPlanId);
-        if (stackFrame != null) {
-            stackFrame.invalidate();
-        }
+  public void releaseKernelStackFrame(long executionPlanId) {
+    PTXKernelStackFrame stackFrame = ptxKernelStackFrame.remove(executionPlanId);
+    if (stackFrame != null) {
+      stackFrame.invalidate();
     }
+  }
 }

@@ -28,91 +28,90 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner dft
  * </code>
  */
 public class DFTTornado extends BenchmarkDriver {
 
-    private int size;
-    private FloatArray inReal;
-    private FloatArray inImag;
-    private FloatArray outReal;
-    private FloatArray outImag;
+  private int size;
+  private FloatArray inReal;
+  private FloatArray inImag;
+  private FloatArray outReal;
+  private FloatArray outImag;
 
-    public DFTTornado(int iterations, int size) {
-        super(iterations);
-        this.size = size;
+  public DFTTornado(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
+
+  private void initData() {
+    inReal = new FloatArray(size);
+    inImag = new FloatArray(size);
+    outReal = new FloatArray(size);
+    outImag = new FloatArray(size);
+    for (int i = 0; i < size; i++) {
+      inReal.set(i, (1 / (i + 2)));
+      inImag.set(i, (1 / (i + 2)));
     }
+  }
 
-    private void initData() {
-        inReal = new FloatArray(size);
-        inImag = new FloatArray(size);
-        outReal = new FloatArray(size);
-        outImag = new FloatArray(size);
-        for (int i = 0; i < size; i++) {
-            inReal.set(i, (1 / (i + 2)));
-            inImag.set(i, (1 / (i + 2)));
-        }
+  @Override
+  public void setUp() {
+    initData();
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, inReal, inImag) //
+            .task("t0", ComputeKernels::computeDFT, inReal, inImag, outReal, outImag) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, outReal, outImag);
+
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+    boolean validation = true;
+    FloatArray outRealTor = new FloatArray(size);
+    FloatArray outImagTor = new FloatArray(size);
+
+    executionPlan
+        .withDevice(device) //
+        .withWarmUp() //
+        .execute();
+
+    ComputeKernels.computeDFT(inReal, inImag, outRealTor, outImagTor);
+
+    executionPlan.clearProfiles();
+
+    for (int i = 0; i < size; i++) {
+      if (abs(outImagTor.get(i) - outImag.get(i)) > 0.01) {
+        validation = false;
+        break;
+      }
+      if (abs(outReal.get(i) - outRealTor.get(i)) > 0.01) {
+        validation = false;
+        break;
+      }
     }
+    System.out.print("Is correct?: " + validation + "\n");
+    return validation;
+  }
 
-    @Override
-    public void setUp() {
-        initData();
-        taskGraph = new TaskGraph("benchmark") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, inReal, inImag) //
-                .task("t0", ComputeKernels::computeDFT, inReal, inImag, outReal, outImag) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, outReal, outImag);
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
+    outImag = null;
+    outReal = null;
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        boolean validation = true;
-        FloatArray outRealTor = new FloatArray(size);
-        FloatArray outImagTor = new FloatArray(size);
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-        executionPlan.withDevice(device) //
-                .withWarmUp() //
-                .execute();
-
-        ComputeKernels.computeDFT(inReal, inImag, outRealTor, outImagTor);
-
-        executionPlan.clearProfiles();
-
-        for (int i = 0; i < size; i++) {
-            if (abs(outImagTor.get(i) - outImag.get(i)) > 0.01) {
-                validation = false;
-                break;
-            }
-            if (abs(outReal.get(i) - outRealTor.get(i)) > 0.01) {
-                validation = false;
-                break;
-            }
-        }
-        System.out.print("Is correct?: " + validation + "\n");
-        return validation;
-    }
-
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-
-        outImag = null;
-        outReal = null;
-
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 }

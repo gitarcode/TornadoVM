@@ -1,5 +1,5 @@
 /*
- * This file is part of Tornado: A heterogeneous programming framework: 
+ * This file is part of Tornado: A heterogeneous programming framework:
  * https://github.com/beehive-lab/tornadovm
  *
  * Copyright (c) 2013-2020, APT Group, Department of Computer Science,
@@ -27,23 +27,21 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.Opcode;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 
 @Opcode("PRINTF")
 public class OCLPrintString extends OCLLIROp {
 
-    private String string;
+  private String string;
 
-    public OCLPrintString(String string) {
-        super(LIRKind.Illegal);
-        this.string = string;
-    }
+  public OCLPrintString(String string) {
+    super(LIRKind.Illegal);
+    this.string = string;
+  }
 
-    @Override
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-        asm.emitLine("printf(" + string + ")");
-    }
-
+  @Override
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+    asm.emitLine("printf(" + string + ")");
+  }
 }

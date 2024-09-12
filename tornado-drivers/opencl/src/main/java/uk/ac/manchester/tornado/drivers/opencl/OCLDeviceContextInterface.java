@@ -34,56 +34,55 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public interface OCLDeviceContextInterface extends TornadoDeviceContext {
 
-    OCLTargetDevice getDevice();
+  OCLTargetDevice getDevice();
 
-    OCLCodeCache getCodeCache();
+  OCLCodeCache getCodeCache();
 
-    boolean isCached(String id, String entryPoint);
+  boolean isCached(String id, String entryPoint);
 
-    OCLInstalledCode getInstalledCode(String id, String entryPoint);
+  OCLInstalledCode getInstalledCode(String id, String entryPoint);
 
-    OCLInstalledCode installCode(String id, String entryPoint, byte[] code, boolean printKernel);
+  OCLInstalledCode installCode(String id, String entryPoint, byte[] code, boolean printKernel);
 
-    OCLInstalledCode installCode(OCLCompilationResult result);
+  OCLInstalledCode installCode(OCLCompilationResult result);
 
-    OCLInstalledCode installCode(TaskDataContext meta, String id, String entryPoint, byte[] code);
+  OCLInstalledCode installCode(TaskDataContext meta, String id, String entryPoint, byte[] code);
 
-    boolean isKernelAvailable();
+  boolean isKernelAvailable();
 
-    void reset(long executionPlanId);
+  void reset(long executionPlanId);
 
-    TornadoXPUDevice toDevice();
+  TornadoXPUDevice toDevice();
 
-    void dumpEvents();
+  void dumpEvents();
 
-    void flush(long executionPlanId);
+  void flush(long executionPlanId);
 
-    OCLMemoryManager getMemoryManager();
+  OCLMemoryManager getMemoryManager();
 
-    TornadoBufferProvider getBufferProvider();
+  TornadoBufferProvider getBufferProvider();
 
-    void sync(long executionPlanId);
+  void sync(long executionPlanId);
 
-    int enqueueBarrier(long executionPlanId);
+  int enqueueBarrier(long executionPlanId);
 
-    int enqueueBarrier(long executionPlanId, int[] events);
+  int enqueueBarrier(long executionPlanId, int[] events);
 
-    int enqueueMarker(long executionPlanId);
+  int enqueueMarker(long executionPlanId);
 
-    int enqueueMarker(long executionPlanId, int[] events);
+  int enqueueMarker(long executionPlanId, int[] events);
 
-    Event resolveEvent(long executionPlanId, int event);
+  Event resolveEvent(long executionPlanId, int event);
 
-    void flushEvents(long executionPlanId);
+  void flushEvents(long executionPlanId);
 
-    OCLContextInterface getPlatformContext();
+  OCLContextInterface getPlatformContext();
 
-    long getDeviceId();
+  long getDeviceId();
 
-    OCLProgram createProgramWithSource(byte[] source, long[] lengths);
+  OCLProgram createProgramWithSource(byte[] source, long[] lengths);
 
-    OCLProgram createProgramWithBinary(byte[] binary, long[] lengths);
+  OCLProgram createProgramWithBinary(byte[] binary, long[] lengths);
 
-    OCLProgram createProgramWithIL(byte[] binary, long[] lengths);
-
+  OCLProgram createProgramWithIL(byte[] binary, long[] lengths);
 }

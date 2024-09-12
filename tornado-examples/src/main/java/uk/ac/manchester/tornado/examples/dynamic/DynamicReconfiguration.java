@@ -28,40 +28,38 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 
 /**
  * Simple example to show to dynamic reconfiguration in action.
- * <p>
- * How to run?
- * </p>
- * <code>
+ *
+ * <p>How to run? <code>
  * tornado -m tornado.examples/uk.ac.manchester.tornado.examples.dynamic.DynamicReconfiguration
  * </code>
  */
 public class DynamicReconfiguration {
 
-    public static void saxpy(float alpha, FloatArray x, FloatArray y) {
-        for (@Parallel int i = 0; i < y.getSize(); i++) {
-            y.set(i, alpha * x.get(i));
-        }
+  public static void saxpy(float alpha, FloatArray x, FloatArray y) {
+    for (@Parallel int i = 0; i < y.getSize(); i++) {
+      y.set(i, alpha * x.get(i));
     }
+  }
 
-    public static void main(String[] args) {
-        new DynamicReconfiguration().runWithDynamicProfiler();
-    }
+  public static void main(String[] args) {
+    new DynamicReconfiguration().runWithDynamicProfiler();
+  }
 
-    public void runWithDynamicProfiler() {
-        int numElements = 16777216;
-        FloatArray a = new FloatArray(numElements);
-        FloatArray b = new FloatArray(numElements);
-        a.init(10);
+  public void runWithDynamicProfiler() {
+    int numElements = 16777216;
+    FloatArray a = new FloatArray(numElements);
+    FloatArray b = new FloatArray(numElements);
+    a.init(10);
 
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a) //
-                .task("t0", DynamicReconfiguration::saxpy, 2.0f, a, b) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, b);
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, a) //
+            .task("t0", DynamicReconfiguration::saxpy, 2.0f, a, b) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, b);
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        new TornadoExecutionPlan(immutableTaskGraph) //
-                .withDynamicReconfiguration(Policy.PERFORMANCE, DRMode.PARALLEL) //
-                .execute();
-
-    }
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    new TornadoExecutionPlan(immutableTaskGraph) //
+        .withDynamicReconfiguration(Policy.PERFORMANCE, DRMode.PARALLEL) //
+        .execute();
+  }
 }

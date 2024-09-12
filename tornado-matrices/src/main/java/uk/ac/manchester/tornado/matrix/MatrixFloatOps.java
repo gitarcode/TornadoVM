@@ -19,16 +19,15 @@ package uk.ac.manchester.tornado.matrix;
 
 import org.ejml.data.SingularMatrixException;
 import org.ejml.simple.SimpleMatrix;
-
 import uk.ac.manchester.tornado.api.types.matrix.Matrix4x4Float;
 
 public class MatrixFloatOps {
 
-    public static void inverse(Matrix4x4Float m) {
-        try {
-            SimpleMatrix sm = EjmlUtil.toMatrix(m).invert();
-            m.set(EjmlUtil.toMatrix4x4Float(sm));
-        } catch (SingularMatrixException e) {
-        }
+  public static void inverse(Matrix4x4Float m) {
+    try {
+      SimpleMatrix sm = EjmlUtil.toMatrix(m).invert();
+      m.set(EjmlUtil.toMatrix4x4Float(sm));
+    } catch (SingularMatrixException e) {
     }
+  }
 }

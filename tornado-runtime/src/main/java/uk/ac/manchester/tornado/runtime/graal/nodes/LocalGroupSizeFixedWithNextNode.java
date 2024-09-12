@@ -28,44 +28,42 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.Lowerable;
 import org.graalvm.compiler.nodes.spi.LoweringTool;
-
 import uk.ac.manchester.tornado.api.KernelContext;
 
 /**
- * The {@link LocalGroupSizeFixedWithNextNode} is used to replace the FieldNodes
- * that correspond to the {@link KernelContext}. In essence, these fields are:
- * localGroupSizeX, localGroupSizeY and localGroupSizeZ.
+ * The {@link LocalGroupSizeFixedWithNextNode} is used to replace the FieldNodes that correspond to
+ * the {@link KernelContext}. In essence, these fields are: localGroupSizeX, localGroupSizeY and
+ * localGroupSizeZ.
  *
- * During lowering, this node is replaced with a FloatingNode that corresponds
- * to a TornadoVM backend (OpenCL, PTX). That replacement is performed in
- * OCLLoweringProvider, or PTXLoweringProvider, and drives the
- * {@link LocalGroupSizeFixedWithNextNode} to extend FixedWithNextNode in order
- * to be replaced by a FloatingNode.
+ * <p>During lowering, this node is replaced with a FloatingNode that corresponds to a TornadoVM
+ * backend (OpenCL, PTX). That replacement is performed in OCLLoweringProvider, or
+ * PTXLoweringProvider, and drives the {@link LocalGroupSizeFixedWithNextNode} to extend
+ * FixedWithNextNode in order to be replaced by a FloatingNode.
  */
 @NodeInfo(shortName = "LocalGroupSize")
 public class LocalGroupSizeFixedWithNextNode extends FixedWithNextNode implements Lowerable {
 
-    public static final NodeClass<LocalGroupSizeFixedWithNextNode> TYPE = NodeClass.create(LocalGroupSizeFixedWithNextNode.class);
-    private final int dimension;
-    @Input
-    ValueNode object;
+  public static final NodeClass<LocalGroupSizeFixedWithNextNode> TYPE =
+      NodeClass.create(LocalGroupSizeFixedWithNextNode.class);
+  private final int dimension;
+  @Input ValueNode object;
 
-    public LocalGroupSizeFixedWithNextNode(ValueNode index, int dimension) {
-        super(TYPE, StampFactory.forUnsignedInteger(32));
-        this.object = index;
-        this.dimension = dimension;
-    }
+  public LocalGroupSizeFixedWithNextNode(ValueNode index, int dimension) {
+    super(TYPE, StampFactory.forUnsignedInteger(32));
+    this.object = index;
+    this.dimension = dimension;
+  }
 
-    public ValueNode object() {
-        return this.object;
-    }
+  public ValueNode object() {
+    return this.object;
+  }
 
-    public int getDimension() {
-        return dimension;
-    }
+  public int getDimension() {
+    return dimension;
+  }
 
-    @Override
-    public void lower(LoweringTool loweringTool) {
-        loweringTool.getLowerer().lower(this, loweringTool);
-    }
+  @Override
+  public void lower(LoweringTool loweringTool) {
+    loweringTool.getLowerer().lower(this, loweringTool);
+  }
 }

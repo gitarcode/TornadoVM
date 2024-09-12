@@ -21,15 +21,13 @@ import uk.ac.manchester.tornado.api.TornadoExecutionResult;
 
 public enum ProfilerMode {
 
-    /**
-     * Reports profiler via STDOUT once the executor finishes.
-     */
-    CONSOLE, //
+  /** Reports profiler via STDOUT once the executor finishes. */
+  CONSOLE, //
 
-    /**
-     * Stores all the profiler information in an internal object that can be queried
-     * after the executor finishes the execution using the
-     * {@link TornadoExecutionResult#getProfilerResult()} method.
-     */
-    SILENT;
+  /**
+   * Stores all the profiler information in an internal object that can be queried after the
+   * executor finishes the execution using the {@link TornadoExecutionResult#getProfilerResult()}
+   * method.
+   */
+  SILENT;
 }

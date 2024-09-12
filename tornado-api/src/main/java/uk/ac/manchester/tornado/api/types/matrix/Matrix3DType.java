@@ -19,38 +19,32 @@ package uk.ac.manchester.tornado.api.types.matrix;
 
 abstract class Matrix3DType {
 
-    /**
-     * Number of rows.
-     */
-    protected final int ROWS;
+  /** Number of rows. */
+  protected final int ROWS;
 
-    /**
-     * Number of columns.
-     */
-    protected final int COLUMNS;
+  /** Number of columns. */
+  protected final int COLUMNS;
 
-    /**
-     * Depth.
-     */
-    protected final int DEPTH;
+  /** Depth. */
+  protected final int DEPTH;
 
-    Matrix3DType(int numRows, int numColumns, int depth) {
-        this.ROWS = numRows;
-        this.COLUMNS = numColumns;
-        this.DEPTH = depth;
-    }
+  Matrix3DType(int numRows, int numColumns, int depth) {
+    this.ROWS = numRows;
+    this.COLUMNS = numColumns;
+    this.DEPTH = depth;
+  }
 
-    public int getNumRows() {
-        return ROWS;
-    }
+  public int getNumRows() {
+    return ROWS;
+  }
 
-    public int getNumColumns() {
-        return COLUMNS;
-    }
+  public int getNumColumns() {
+    return COLUMNS;
+  }
 
-    public int getNumDepth() {
-        return DEPTH;
-    }
+  public int getNumDepth() {
+    return DEPTH;
+  }
 
-    public abstract void clear();
+  public abstract void clear();
 }

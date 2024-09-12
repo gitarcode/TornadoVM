@@ -28,31 +28,64 @@ import uk.ac.manchester.tornado.drivers.spirv.SPIRVDeviceContext;
 
 public class SPIRVIntArrayWrapper extends SPIRVArrayWrapper<int[]> {
 
-    public SPIRVIntArrayWrapper(SPIRVDeviceContext device, long batchSize) {
-        super(device, JavaKind.Int, batchSize);
-    }
+  public SPIRVIntArrayWrapper(SPIRVDeviceContext device, long batchSize) {
+    super(device, JavaKind.Int, batchSize);
+  }
 
-    protected SPIRVIntArrayWrapper(final int[] array, final SPIRVDeviceContext device, long batchSize) {
-        super(array, device, JavaKind.Int, batchSize);
-    }
+  protected SPIRVIntArrayWrapper(
+      final int[] array, final SPIRVDeviceContext device, long batchSize) {
+    super(array, device, JavaKind.Int, batchSize);
+  }
 
-    @Override
-    protected int readArrayData(long executionPlanId, long bufferId, long offset, long bytes, int[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.readBuffer(executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected int readArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      int[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.readBuffer(
+        executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected void writeArrayData(long executionPlanId, long bufferId, long offset, long bytes, int[] value, long hostOffset, int[] waitEvents) {
-        deviceContext.writeBuffer(executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected void writeArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      int[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    deviceContext.writeBuffer(
+        executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected int enqueueReadArrayData(long executionPlanId, long bufferId, long offset, long bytes, int[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.enqueueReadBuffer(executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected int enqueueReadArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      int[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.enqueueReadBuffer(
+        executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
+  }
 
-    @Override
-    protected int enqueueWriteArrayData(long executionPlanId, long bufferId, long offset, long bytes, int[] value, long hostOffset, int[] waitEvents) {
-        return deviceContext.enqueueWriteBuffer(executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
-    }
+  @Override
+  protected int enqueueWriteArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      int[] value,
+      long hostOffset,
+      int[] waitEvents) {
+    return deviceContext.enqueueWriteBuffer(
+        executionPlanId, bufferId, offset, bytes, value, hostOffset, waitEvents);
+  }
 }

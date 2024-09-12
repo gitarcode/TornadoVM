@@ -26,45 +26,44 @@ import uk.ac.manchester.tornado.matrix.SparseMatrixUtils.CSRMatrix;
 
 public class SpmvJava extends BenchmarkDriver {
 
-    private final CSRMatrix<FloatArray> matrix;
-    private FloatArray v;
-    private FloatArray y;
+  private final CSRMatrix<FloatArray> matrix;
+  private FloatArray v;
+  private FloatArray y;
 
-    public SpmvJava(int iterations, CSRMatrix<FloatArray> matrix) {
-        super(iterations);
-        this.matrix = matrix;
-    }
+  public SpmvJava(int iterations, CSRMatrix<FloatArray> matrix) {
+    super(iterations);
+    this.matrix = matrix;
+  }
 
-    @Override
-    public void setUp() {
-        v = new FloatArray(matrix.size);
-        y = new FloatArray(matrix.size);
-        Benchmark.initData(v);
-    }
+  @Override
+  public void setUp() {
+    v = new FloatArray(matrix.size);
+    y = new FloatArray(matrix.size);
+    Benchmark.initData(v);
+  }
 
-    @Override
-    public void tearDown() {
-        v = null;
-        y = null;
-        super.tearDown();
-    }
+  @Override
+  public void tearDown() {
+    v = null;
+    y = null;
+    super.tearDown();
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        spmv(matrix.vals, matrix.cols, matrix.rows, v, matrix.size, y);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    spmv(matrix.vals, matrix.cols, matrix.rows, v, matrix.size, y);
+  }
 
-    @Override
-    public void barrier() {
-    }
+  @Override
+  public void barrier() {}
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

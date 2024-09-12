@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes.vector;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
@@ -29,8 +30,6 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLStampFactory;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLBinaryOp;
@@ -41,42 +40,45 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 @NodeInfo(shortName = "Vector(-)")
 public class VectorSubNode extends FloatingNode implements LIRLowerable, VectorOp {
 
-    public static final NodeClass<VectorSubNode> TYPE = NodeClass.create(VectorSubNode.class);
+  public static final NodeClass<VectorSubNode> TYPE = NodeClass.create(VectorSubNode.class);
 
-    @Input
-    ValueNode x;
-    @Input
-    ValueNode y;
+  @Input ValueNode x;
+  @Input ValueNode y;
 
-    public VectorSubNode(OCLKind kind, ValueNode x, ValueNode y) {
-        this(TYPE, kind, x, y);
-    }
+  public VectorSubNode(OCLKind kind, ValueNode x, ValueNode y) {
+    this(TYPE, kind, x, y);
+  }
 
-    protected VectorSubNode(NodeClass<? extends VectorSubNode> c, OCLKind kind, ValueNode x, ValueNode y) {
-        super(c, OCLStampFactory.getStampFor(kind));
-        this.x = x;
-        this.y = y;
-    }
+  protected VectorSubNode(
+      NodeClass<? extends VectorSubNode> c, OCLKind kind, ValueNode x, ValueNode y) {
+    super(c, OCLStampFactory.getStampFor(kind));
+    this.x = x;
+    this.y = y;
+  }
 
-    public ValueNode getX() {
-        return x;
-    }
+  public ValueNode getX() {
+    return x;
+  }
 
-    public ValueNode getY() {
-        return y;
-    }
+  public ValueNode getY() {
+    return y;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
-        final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
+    final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
 
-        final Value input1 = gen.operand(x);
-        final Value input2 = gen.operand(y);
+    final Value input1 = gen.operand(x);
+    final Value input2 = gen.operand(y);
 
-        Logger.traceBuildLIR(Logger.BACKEND.OpenCL, "emitVectorSub: %s + %s", input1, input2);
-        gen.getLIRGeneratorTool().append(new AssignStmt(result, new OCLBinary.Expr(OCLBinaryOp.SUB, gen.getLIRGeneratorTool().getLIRKind(stamp), input1, input2)));
-        gen.setResult(this, result);
-    }
-
+    Logger.traceBuildLIR(Logger.BACKEND.OpenCL, "emitVectorSub: %s + %s", input1, input2);
+    gen.getLIRGeneratorTool()
+        .append(
+            new AssignStmt(
+                result,
+                new OCLBinary.Expr(
+                    OCLBinaryOp.SUB, gen.getLIRGeneratorTool().getLIRKind(stamp), input1, input2)));
+    gen.setResult(this, result);
+  }
 }

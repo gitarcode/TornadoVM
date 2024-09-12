@@ -24,31 +24,31 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.compiler;
 
+import jdk.vm.ci.meta.MetaAccessProvider;
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.spi.SimplifierTool;
 import org.graalvm.compiler.phases.common.CanonicalizerPhase;
-
-import jdk.vm.ci.meta.MetaAccessProvider;
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class SPIRVCanonicalizer implements CanonicalizerPhase.CustomSimplification {
 
-    protected MetaAccessProvider metaAccess;
-    protected ResolvedJavaMethod method;
-    protected TaskDataContext meta;
-    protected Object[] args;
+  protected MetaAccessProvider metaAccess;
+  protected ResolvedJavaMethod method;
+  protected TaskDataContext meta;
+  protected Object[] args;
 
-    public void setContext(MetaAccessProvider metaAccess, ResolvedJavaMethod method, Object[] args, TaskDataContext meta) {
-        this.metaAccess = metaAccess;
-        this.method = method;
-        this.meta = meta;
-        this.args = args;
-    }
+  public void setContext(
+      MetaAccessProvider metaAccess,
+      ResolvedJavaMethod method,
+      Object[] args,
+      TaskDataContext meta) {
+    this.metaAccess = metaAccess;
+    this.method = method;
+    this.meta = meta;
+    this.args = args;
+  }
 
-    @Override
-    public void simplify(Node node, SimplifierTool tool) {
-
-    }
-
+  @Override
+  public void simplify(Node node, SimplifierTool tool) {}
 }

@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -35,93 +34,94 @@ import uk.ac.manchester.tornado.unittests.TestHello;
 /**
  * How to test?
  *
- * <p>
- * <code>
+ * <p><code>
  * tornado-test -V uk.ac.manchester.tornado.unittests.memory.TestMemoryLimit
  * </code>
- * </p>
  */
 public class TestMemoryLimit extends TestMemoryCommon {
 
-    @BeforeClass
-    public static void setUpBeforeClass() {
-        a = new IntArray(NUM_ELEMENTS);
-        b = new IntArray(NUM_ELEMENTS);
-        c = new IntArray(NUM_ELEMENTS);
-        a.init(1);
-        b.init(2);
+  @BeforeClass
+  public static void setUpBeforeClass() {
+    a = new IntArray(NUM_ELEMENTS);
+    b = new IntArray(NUM_ELEMENTS);
+    c = new IntArray(NUM_ELEMENTS);
+    a.init(1);
+    b.init(2);
+  }
+
+  public static void add(IntArray a, IntArray b, IntArray c, int value) {
+    for (@Parallel int i = 0; i < c.getSize(); i++) {
+      c.set(i, a.get(i) + b.get(i) + value);
     }
+  }
 
-    public static void add(IntArray a, IntArray b, IntArray c, int value) {
-        for (@Parallel int i = 0; i < c.getSize(); i++) {
-            c.set(i, a.get(i) + b.get(i) + value);
-        }
+  @Test
+  public void testWithMemoryLimitOver() throws TornadoExecutionPlanException {
+
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+            .task("t0", TestMemoryLimit::add, a, b, c, value) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
+
+      // Limit the amount of memory to be used on the target accelerator.
+      executionPlan.withMemoryLimit("1GB").execute();
+
+      for (int i = 0; i < c.getSize(); i++) {
+        assertEquals(a.get(i) + b.get(i) + value, c.get(i), 0.001);
+      }
     }
+  }
 
-    @Test
-    public void testWithMemoryLimitOver() throws TornadoExecutionPlanException {
+  @Test(expected = TornadoMemoryException.class)
+  public void testWithMemoryLimitUnder() {
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+            .task("t0", TestHello::add, a, b, c) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .task("t0", TestMemoryLimit::add, a, b, c, value) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        try (TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph)) {
+    // Limit the amount of memory to be used on the target accelerator.
+    // Since the memory required is ~900MB, the TornadoVM runtime will throw an
+    // exception because we set the limit to 512MB.
+    executionPlan.withMemoryLimit("512MB").execute();
 
-            // Limit the amount of memory to be used on the target accelerator.
-            executionPlan.withMemoryLimit("1GB").execute();
-
-            for (int i = 0; i < c.getSize(); i++) {
-                assertEquals(a.get(i) + b.get(i) + value, c.get(i), 0.001);
-            }
-        }
+    for (int i = 0; i < c.getSize(); i++) {
+      assertEquals(a.get(i) + b.get(i), c.get(i), 0.001);
     }
+  }
 
-    @Test(expected = TornadoMemoryException.class)
-    public void testWithMemoryLimitUnder() {
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .task("t0", TestHello::add, a, b, c) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+  /**
+   * Test that sets a limit before executing the execution plan the first time, and it disables it
+   * for the second execution.
+   */
+  @Test
+  public void enableAndDisable() {
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
+            .task("t0", TestHello::add, a, b, c) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-        // Limit the amount of memory to be used on the target accelerator.
-        // Since the memory required is ~900MB, the TornadoVM runtime will throw an
-        // exception because we set the limit to 512MB.
-        executionPlan.withMemoryLimit("512MB").execute();
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
 
-        for (int i = 0; i < c.getSize(); i++) {
-            assertEquals(a.get(i) + b.get(i), c.get(i), 0.001);
-        }
+    // Limit the amount of memory to be used on the target accelerator.
+    executionPlan.withMemoryLimit("1GB").execute();
+
+    // Unlimit the amount of memory.
+    executionPlan.withoutMemoryLimit().execute();
+
+    for (int i = 0; i < c.getSize(); i++) {
+      assertEquals(a.get(i) + b.get(i), c.get(i), 0.001);
     }
-
-    /**
-     * Test that sets a limit before executing the execution plan the first time,
-     * and it disables it for the second execution.
-     */
-    @Test
-    public void enableAndDisable() {
-
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, a, b) //
-                .task("t0", TestHello::add, a, b, c) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-
-        // Limit the amount of memory to be used on the target accelerator.
-        executionPlan.withMemoryLimit("1GB").execute();
-
-        // Unlimit the amount of memory. 
-        executionPlan.withoutMemoryLimit().execute();
-
-        for (int i = 0; i < c.getSize(); i++) {
-            assertEquals(a.get(i) + b.get(i), c.get(i), 0.001);
-        }
-        executionPlan.freeDeviceMemory();
-    }
+    executionPlan.freeDeviceMemory();
+  }
 }

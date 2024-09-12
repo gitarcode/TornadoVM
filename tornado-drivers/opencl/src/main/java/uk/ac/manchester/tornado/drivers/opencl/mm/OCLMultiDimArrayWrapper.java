@@ -25,7 +25,6 @@ package uk.ac.manchester.tornado.drivers.opencl.mm;
 
 import java.lang.reflect.Array;
 import java.util.function.Function;
-
 import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.api.exceptions.TornadoMemoryException;
 import uk.ac.manchester.tornado.api.exceptions.TornadoOutOfMemoryException;
@@ -34,107 +33,141 @@ import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 public class OCLMultiDimArrayWrapper<T, E> extends OCLArrayWrapper<T> {
 
-    private final Function<OCLDeviceContext, ? extends OCLArrayWrapper<E>> innerWrapperFactory;
-    private final OCLLongArrayWrapper tableWrapper;
-    private long[] addresses;
-    private OCLArrayWrapper<E>[] wrappers;
-    private final OCLDeviceContext deviceContext;
+  private final Function<OCLDeviceContext, ? extends OCLArrayWrapper<E>> innerWrapperFactory;
+  private final OCLLongArrayWrapper tableWrapper;
+  private long[] addresses;
+  private OCLArrayWrapper<E>[] wrappers;
+  private final OCLDeviceContext deviceContext;
 
-    public OCLMultiDimArrayWrapper(OCLDeviceContext device, Function<OCLDeviceContext, ? extends OCLArrayWrapper<E>> factory, long batchSize) {
-        super(device, JavaKind.Object, batchSize);
-        this.deviceContext = device;
-        innerWrapperFactory = factory;
-        tableWrapper = new OCLLongArrayWrapper(device, batchSize);
+  public OCLMultiDimArrayWrapper(
+      OCLDeviceContext device,
+      Function<OCLDeviceContext, ? extends OCLArrayWrapper<E>> factory,
+      long batchSize) {
+    super(device, JavaKind.Object, batchSize);
+    this.deviceContext = device;
+    innerWrapperFactory = factory;
+    tableWrapper = new OCLLongArrayWrapper(device, batchSize);
+  }
+
+  @Override
+  public long toBuffer() {
+    return tableWrapper.toBuffer();
+  }
+
+  @Override
+  public long size() {
+    return tableWrapper.size();
+  }
+
+  @Override
+  public void allocate(Object value, long batchSize)
+      throws TornadoOutOfMemoryException, TornadoMemoryException {
+
+    if (batchSize > 0) {
+      throw new TornadoMemoryException(
+          "[ERROR] BatchSize Allocation currently not supported. BatchSize = "
+              + batchSize
+              + " (bytes)");
     }
 
-    @Override
-    public long toBuffer() {
-        return tableWrapper.toBuffer();
+    if (Array.getLength(value) < 0) {
+      throw new TornadoMemoryException("[ERROR] Bytes Allocated < 0: " + Array.getLength(value));
     }
+    addresses = new long[Array.getLength(value)];
+    wrappers = new OCLArrayWrapper[Array.getLength(value)];
+    tableWrapper.allocate(addresses, batchSize);
+    allocateElements((T) value, batchSize);
+  }
 
-    @Override
-    public long size() {
-        return tableWrapper.size();
+  private void allocateElements(T values, long batchSize) {
+    final E[] elements = innerCast(values);
+    try {
+      for (int i = 0; i < elements.length; i++) {
+        wrappers[i] = innerWrapperFactory.apply(deviceContext);
+        wrappers[i].allocate(elements[i], batchSize);
+        addresses[i] = wrappers[i].toBuffer();
+      }
+    } catch (TornadoOutOfMemoryException | TornadoMemoryException e) {
+      new TornadoLogger().fatal("OOM: multi-dim array: %s", e.getMessage());
+      System.exit(-1);
     }
+  }
 
-    @Override
-    public void allocate(Object value, long batchSize) throws TornadoOutOfMemoryException, TornadoMemoryException {
-
-        if (batchSize > 0) {
-            throw new TornadoMemoryException("[ERROR] BatchSize Allocation currently not supported. BatchSize = " + batchSize + " (bytes)");
-        }
-
-        if (Array.getLength(value) < 0) {
-            throw new TornadoMemoryException("[ERROR] Bytes Allocated < 0: " + Array.getLength(value));
-        }
-        addresses = new long[Array.getLength(value)];
-        wrappers = new OCLArrayWrapper[Array.getLength(value)];
-        tableWrapper.allocate(addresses, batchSize);
-        allocateElements((T) value, batchSize);
+  private int writeElements(long executionPlanId, T values) {
+    final E[] elements = innerCast(values);
+    for (int i = 0; i < elements.length; i++) {
+      wrappers[i].enqueueWrite(executionPlanId, elements[i], 0, 0, null, false);
     }
+    return deviceContext.enqueueBarrier(executionPlanId);
+  }
 
-    private void allocateElements(T values, long batchSize) {
-        final E[] elements = innerCast(values);
-        try {
-            for (int i = 0; i < elements.length; i++) {
-                wrappers[i] = innerWrapperFactory.apply(deviceContext);
-                wrappers[i].allocate(elements[i], batchSize);
-                addresses[i] = wrappers[i].toBuffer();
-            }
-        } catch (TornadoOutOfMemoryException | TornadoMemoryException e) {
-            new TornadoLogger().fatal("OOM: multi-dim array: %s", e.getMessage());
-            System.exit(-1);
-        }
+  private int readElements(long executionPlanId, T values) {
+    final E[] elements = innerCast(values);
+    // XXX: Offset is 0
+    for (int i = 0; i < elements.length; i++) {
+      wrappers[i].enqueueRead(executionPlanId, elements[i], 0, null, false);
     }
+    return deviceContext.enqueueBarrier(executionPlanId);
+  }
 
-    private int writeElements(long executionPlanId, T values) {
-        final E[] elements = innerCast(values);
-        for (int i = 0; i < elements.length; i++) {
-            wrappers[i].enqueueWrite(executionPlanId, elements[i], 0, 0, null, false);
-        }
-        return deviceContext.enqueueBarrier(executionPlanId);
+  @SuppressWarnings("unchecked")
+  private E[] innerCast(T value) {
+    return (E[]) value;
+  }
+
+  @Override
+  protected int enqueueReadArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      T value,
+      long hostOffset,
+      int[] waitEvents) {
+    return readElements(executionPlanId, value);
+  }
+
+  @Override
+  protected int enqueueWriteArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      T value,
+      long hostOffset,
+      int[] waitEvents) {
+    if (hostOffset > 0) {
+      System.out.println("[WARNING] writing in offset 0");
     }
+    tableWrapper.enqueueWrite(executionPlanId, addresses, 0, 0, null, false);
+    return writeElements(executionPlanId, value);
+  }
 
-    private int readElements(long executionPlanId, T values) {
-        final E[] elements = innerCast(values);
-        // XXX: Offset is 0
-        for (int i = 0; i < elements.length; i++) {
-            wrappers[i].enqueueRead(executionPlanId, elements[i], 0, null, false);
-        }
-        return deviceContext.enqueueBarrier(executionPlanId);
+  @Override
+  protected int readArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      T value,
+      long hostOffset,
+      int[] waitEvents) {
+    return readElements(executionPlanId, value);
+  }
+
+  @Override
+  protected void writeArrayData(
+      long executionPlanId,
+      long bufferId,
+      long offset,
+      long bytes,
+      T value,
+      long hostOffset,
+      int[] waitEvents) {
+    if (hostOffset > 0) {
+      System.out.println("[WARNING] writing in offset 0");
     }
-
-    @SuppressWarnings("unchecked")
-    private E[] innerCast(T value) {
-        return (E[]) value;
-    }
-
-    @Override
-    protected int enqueueReadArrayData(long executionPlanId, long bufferId, long offset, long bytes, T value, long hostOffset, int[] waitEvents) {
-        return readElements(executionPlanId, value);
-    }
-
-    @Override
-    protected int enqueueWriteArrayData(long executionPlanId, long bufferId, long offset, long bytes, T value, long hostOffset, int[] waitEvents) {
-        if (hostOffset > 0) {
-            System.out.println("[WARNING] writing in offset 0");
-        }
-        tableWrapper.enqueueWrite(executionPlanId, addresses, 0, 0, null, false);
-        return writeElements(executionPlanId, value);
-    }
-
-    @Override
-    protected int readArrayData(long executionPlanId, long bufferId, long offset, long bytes, T value, long hostOffset, int[] waitEvents) {
-        return readElements(executionPlanId, value);
-    }
-
-    @Override
-    protected void writeArrayData(long executionPlanId, long bufferId, long offset, long bytes, T value, long hostOffset, int[] waitEvents) {
-        if (hostOffset > 0) {
-            System.out.println("[WARNING] writing in offset 0");
-        }
-        tableWrapper.enqueueWrite(executionPlanId, addresses, 0, 0, null, false);
-        writeElements(executionPlanId, value);
-    }
-
+    tableWrapper.enqueueWrite(executionPlanId, addresses, 0, 0, null, false);
+    writeElements(executionPlanId, value);
+  }
 }

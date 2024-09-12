@@ -23,7 +23,6 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.Opcode;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIROp;
@@ -31,15 +30,15 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIROp;
 @Opcode("XclPipelineAttribute")
 public class XclPipelineAttribute extends OCLLIROp {
 
-    private int initiationIntervalValue;
+  private int initiationIntervalValue;
 
-    public XclPipelineAttribute(int initiationIntervalValue) {
-        super(LIRKind.Illegal);
-        this.initiationIntervalValue = initiationIntervalValue;
-    }
+  public XclPipelineAttribute(int initiationIntervalValue) {
+    super(LIRKind.Illegal);
+    this.initiationIntervalValue = initiationIntervalValue;
+  }
 
-    @Override
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-        asm.emitLine("__attribute__((xcl_pipeline_loop(" + initiationIntervalValue + ")))");
-    }
+  @Override
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+    asm.emitLine("__attribute__((xcl_pipeline_loop(" + initiationIntervalValue + ")))");
+  }
 }

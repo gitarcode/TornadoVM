@@ -24,6 +24,8 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -34,9 +36,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.spirv.SPIRVThreadBuiltIn;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
@@ -44,23 +43,27 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
 @NodeInfo(shortName = "SPIRV-Thread-Size")
 public class GlobalThreadSizeNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<GlobalThreadSizeNode> TYPE = NodeClass.create(GlobalThreadSizeNode.class);
+  public static final NodeClass<GlobalThreadSizeNode> TYPE =
+      NodeClass.create(GlobalThreadSizeNode.class);
 
-    @Input
-    protected ConstantNode dimensionIndex;
+  @Input protected ConstantNode dimensionIndex;
 
-    public GlobalThreadSizeNode(ConstantNode dimension) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        this.dimensionIndex = dimension;
-    }
+  public GlobalThreadSizeNode(ConstantNode dimension) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    this.dimensionIndex = dimension;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        Value valueDimension = generator.operand(dimensionIndex);
-        LIRKind lirKind = tool.getLIRKind(stamp);
-        tool.append(new SPIRVLIRStmt.AssignStmt(result, new SPIRVUnary.ThreadBuiltinCallForSPIRV(SPIRVThreadBuiltIn.GLOBAL_SIZE, result, lirKind, valueDimension)));
-        generator.setResult(this, result);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    Value valueDimension = generator.operand(dimensionIndex);
+    LIRKind lirKind = tool.getLIRKind(stamp);
+    tool.append(
+        new SPIRVLIRStmt.AssignStmt(
+            result,
+            new SPIRVUnary.ThreadBuiltinCallForSPIRV(
+                SPIRVThreadBuiltIn.GLOBAL_SIZE, result, lirKind, valueDimension)));
+    generator.setResult(this, result);
+  }
 }

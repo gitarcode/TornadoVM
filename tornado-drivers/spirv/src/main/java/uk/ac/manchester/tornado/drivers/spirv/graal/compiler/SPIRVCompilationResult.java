@@ -27,85 +27,84 @@ package uk.ac.manchester.tornado.drivers.spirv.graal.compiler;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Set;
-
-import org.graalvm.compiler.code.CompilationResult;
-
 import jdk.vm.ci.meta.ResolvedJavaMethod;
+import org.graalvm.compiler.code.CompilationResult;
 import uk.ac.manchester.tornado.drivers.spirv.graal.asm.SPIRVAssembler;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 /**
- * Object that represents the result of a SPIRV compilation (from GraalIR to
- * SPIR-V binary) after all optimizations phases.
- * 
- * This object stores the set of methods that were compiled as well as the
- * compilation ID that TornadoVM sets for each task within the task-schedule.
+ * Object that represents the result of a SPIRV compilation (from GraalIR to SPIR-V binary) after
+ * all optimizations phases.
+ *
+ * <p>This object stores the set of methods that were compiled as well as the compilation ID that
+ * TornadoVM sets for each task within the task-schedule.
  */
 public class SPIRVCompilationResult extends CompilationResult {
 
-    private Set<ResolvedJavaMethod> nonInlinedMethods;
-    private TaskDataContext taskMetaData;
-    private String compilationId;
-    private ByteBuffer spirvBinary;
-    private SPIRVAssembler spirvAssembler;
+  private Set<ResolvedJavaMethod> nonInlinedMethods;
+  private TaskDataContext taskMetaData;
+  private String compilationId;
+  private ByteBuffer spirvBinary;
+  private SPIRVAssembler spirvAssembler;
 
-    public SPIRVCompilationResult(String compilationId, String methodName, TaskDataContext taskMetaData) {
-        super(methodName);
-        this.compilationId = compilationId;
-        this.taskMetaData = taskMetaData;
-    }
+  public SPIRVCompilationResult(
+      String compilationId, String methodName, TaskDataContext taskMetaData) {
+    super(methodName);
+    this.compilationId = compilationId;
+    this.taskMetaData = taskMetaData;
+  }
 
-    public Set<ResolvedJavaMethod> getNonInlinedMethods() {
-        return nonInlinedMethods;
-    }
+  public Set<ResolvedJavaMethod> getNonInlinedMethods() {
+    return nonInlinedMethods;
+  }
 
-    public void setNonInlinedMethods(Set<ResolvedJavaMethod> value) {
-        nonInlinedMethods = value;
-    }
+  public void setNonInlinedMethods(Set<ResolvedJavaMethod> value) {
+    nonInlinedMethods = value;
+  }
 
-    private byte[] prependToTargetCode(byte[] targetCode, byte[] codeToPrepend) {
-        final int size = targetCode.length + codeToPrepend.length + 1;
+  private byte[] prependToTargetCode(byte[] targetCode, byte[] codeToPrepend) {
+    final int size = targetCode.length + codeToPrepend.length + 1;
 
-        final byte[] newCode = new byte[size];
-        Arrays.fill(newCode, (byte) 0);
+    final byte[] newCode = new byte[size];
+    Arrays.fill(newCode, (byte) 0);
 
-        final ByteBuffer buffer = ByteBuffer.wrap(newCode);
-        buffer.put(codeToPrepend);
-        buffer.put((byte) '\n');
-        buffer.put(targetCode);
-        return newCode;
-    }
+    final ByteBuffer buffer = ByteBuffer.wrap(newCode);
+    buffer.put(codeToPrepend);
+    buffer.put((byte) '\n');
+    buffer.put(targetCode);
+    return newCode;
+  }
 
-    public void addCompiledMethodCode(byte[] code) {
-        byte[] newCode = prependToTargetCode(getTargetCode(), code);
-        setTargetCode(newCode, newCode.length);
-    }
+  public void addCompiledMethodCode(byte[] code) {
+    byte[] newCode = prependToTargetCode(getTargetCode(), code);
+    setTargetCode(newCode, newCode.length);
+  }
 
-    public TaskDataContext getTaskMetaData() {
-        return this.taskMetaData;
-    }
+  public TaskDataContext getTaskMetaData() {
+    return this.taskMetaData;
+  }
 
-    public TaskDataContext getMeta() {
-        return taskMetaData;
-    }
+  public TaskDataContext getMeta() {
+    return taskMetaData;
+  }
 
-    public String getId() {
-        return compilationId;
-    }
+  public String getId() {
+    return compilationId;
+  }
 
-    public byte[] getSPIRVBinary() {
-        return spirvBinary.array();
-    }
+  public byte[] getSPIRVBinary() {
+    return spirvBinary.array();
+  }
 
-    public void setSPIRVBinary(ByteBuffer spirvByteBuffer) {
-        this.spirvBinary = spirvByteBuffer;
-    }
+  public void setSPIRVBinary(ByteBuffer spirvByteBuffer) {
+    this.spirvBinary = spirvByteBuffer;
+  }
 
-    public SPIRVAssembler getAssembler() {
-        return spirvAssembler;
-    }
+  public SPIRVAssembler getAssembler() {
+    return spirvAssembler;
+  }
 
-    public void setAssembler(SPIRVAssembler assembler) {
-        spirvAssembler = assembler;
-    }
+  public void setAssembler(SPIRVAssembler assembler) {
+    spirvAssembler = assembler;
+  }
 }

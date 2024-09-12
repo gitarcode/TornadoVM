@@ -25,104 +25,107 @@ package uk.ac.manchester.tornado.runtime.graph;
 import java.util.BitSet;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.runtime.graph.nodes.AbstractNode;
 
 /**
- * The TornadoGraph class represents a graph data structure that stores nodes
- * based on Task-graphs relationships. It provides methods to add, retrieve,
- * delete, and filter nodes based on various criteria.
+ * The TornadoGraph class represents a graph data structure that stores nodes based on Task-graphs
+ * relationships. It provides methods to add, retrieve, delete, and filter nodes based on various
+ * criteria.
  */
 public class TornadoGraph {
 
-    private static final int INITIAL_SIZE = 256;
+  private static final int INITIAL_SIZE = 256;
 
-    private AbstractNode[] nodes;
-    private BitSet valid;
-    private int nextNode;
+  private AbstractNode[] nodes;
+  private BitSet valid;
+  private int nextNode;
 
-    TornadoGraph() {
-        nodes = new AbstractNode[INITIAL_SIZE];
-        valid = new BitSet(INITIAL_SIZE);
-        nextNode = 0;
+  TornadoGraph() {
+    nodes = new AbstractNode[INITIAL_SIZE];
+    valid = new BitSet(INITIAL_SIZE);
+    nextNode = 0;
+  }
+
+  public AbstractNode getNode(int index) {
+    return nodes[index];
+  }
+
+  public void add(AbstractNode node) {
+    if (nextNode >= nodes.length) {
+      resize();
     }
 
-    public AbstractNode getNode(int index) {
-        return nodes[index];
+    node.setId(nextNode);
+    nodes[nextNode] = node;
+    valid.set(nextNode);
+    nextNode++;
+  }
+
+  @SuppressWarnings("unchecked")
+  <T extends AbstractNode> T addUnique(T node) {
+    for (int i = valid.nextSetBit(0); i != -1 && i < nodes.length; i = valid.nextSetBit(i + 1)) {
+      if (nodes[i].compareTo(node) == 0) {
+        return (T) nodes[i];
+      }
     }
+    add(node);
+    return node;
+  }
 
-    public void add(AbstractNode node) {
-        if (nextNode >= nodes.length) {
-            resize();
-        }
+  public void delete(AbstractNode node) {
+    valid.clear(node.getId());
+    node.setId(-node.getId());
+  }
 
-        node.setId(nextNode);
-        nodes[nextNode] = node;
-        valid.set(nextNode);
-        nextNode++;
-    }
+  private void resize() {
+    TornadoInternalError.unimplemented("Tornado Graph resize not implemented yet.");
+  }
 
-    @SuppressWarnings("unchecked")
-    <T extends AbstractNode> T addUnique(T node) {
-        for (int i = valid.nextSetBit(0); i != -1 && i < nodes.length; i = valid.nextSetBit(i + 1)) {
-            if (nodes[i].compareTo(node) == 0) {
-                return (T) nodes[i];
-            }
-        }
-        add(node);
-        return node;
-    }
-
-    public void delete(AbstractNode node) {
-        valid.clear(node.getId());
-        node.setId(-node.getId());
-    }
-
-    private void resize() {
-        TornadoInternalError.unimplemented("Tornado Graph resize not implemented yet.");
-    }
-
-    public <T extends AbstractNode> BitSet filter(Class<T> type) {
-        final BitSet nodes = new BitSet(valid.length());
-        apply((AbstractNode n) -> {
-            if (n.getClass().equals(type)) {
-                nodes.set(n.getId());
-            }
+  public <T extends AbstractNode> BitSet filter(Class<T> type) {
+    final BitSet nodes = new BitSet(valid.length());
+    apply(
+        (AbstractNode n) -> {
+          if (n.getClass().equals(type)) {
+            nodes.set(n.getId());
+          }
         });
-        return nodes;
-    }
+    return nodes;
+  }
 
-    public BitSet filter(Predicate<AbstractNode> test) {
-        final BitSet nodes = new BitSet(valid.length());
-        apply((AbstractNode n) -> {
-            if (test.test(n)) {
-                nodes.set(n.getId());
-            }
+  public BitSet filter(Predicate<AbstractNode> test) {
+    final BitSet nodes = new BitSet(valid.length());
+    apply(
+        (AbstractNode n) -> {
+          if (test.test(n)) {
+            nodes.set(n.getId());
+          }
         });
-        return nodes;
-    }
+    return nodes;
+  }
 
-    private void pApply(BitSet predicates, Consumer<AbstractNode> consumer) {
-        for (int i = predicates.nextSetBit(0); i != -1 && i < predicates.length(); i = predicates.nextSetBit(i + 1)) {
-            consumer.accept(nodes[i]);
-        }
+  private void pApply(BitSet predicates, Consumer<AbstractNode> consumer) {
+    for (int i = predicates.nextSetBit(0);
+        i != -1 && i < predicates.length();
+        i = predicates.nextSetBit(i + 1)) {
+      consumer.accept(nodes[i]);
     }
+  }
 
-    public void apply(Consumer<AbstractNode> consumer) {
-        pApply(valid, consumer);
-    }
+  public void apply(Consumer<AbstractNode> consumer) {
+    pApply(valid, consumer);
+  }
 
-    public void dumpTornadoGraph() {
-        final String ansiCyan = "\u001B[36m";
-        final String ansiReset = "\u001B[0m";
-        System.out.println("-----------------------------------");
-        System.out.println(ansiCyan + "TaskGraph:" + ansiReset);
-        apply(System.out::println);
-        System.out.println("-----------------------------------");
-    }
+  public void dumpTornadoGraph() {
+    final String ansiCyan = "\u001B[36m";
+    final String ansiReset = "\u001B[0m";
+    System.out.println("-----------------------------------");
+    System.out.println(ansiCyan + "TaskGraph:" + ansiReset);
+    apply(System.out::println);
+    System.out.println("-----------------------------------");
+  }
 
-    public BitSet getValid() {
-        return valid;
-    }
+  public BitSet getValid() {
+    return valid;
+  }
 }

@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.api.types.vectors;
 
 import java.nio.ShortBuffer;
-
 import uk.ac.manchester.tornado.api.internal.annotations.Payload;
 import uk.ac.manchester.tornado.api.internal.annotations.Vector;
 import uk.ac.manchester.tornado.api.math.TornadoMath;
@@ -27,180 +26,175 @@ import uk.ac.manchester.tornado.api.types.utils.ShortOps;
 @Vector
 public final class Short2 implements TornadoVectorsInterface<ShortBuffer> {
 
-    public static final Class<Short2> TYPE = Short2.class;
+  public static final Class<Short2> TYPE = Short2.class;
 
-    /**
-     * number of elements in the storage.
-     */
-    private static final int NUM_ELEMENTS = 2;
-    /**
-     * backing array.
-     */
-    @Payload
-    private final short[] storage;
+  /** number of elements in the storage. */
+  private static final int NUM_ELEMENTS = 2;
 
-    private Short2(short[] nativeVectorShort) {
-        this.storage = nativeVectorShort;
-    }
+  /** backing array. */
+  @Payload private final short[] storage;
 
-    public Short2() {
-        this(new short[NUM_ELEMENTS]);
-    }
+  private Short2(short[] nativeVectorShort) {
+    this.storage = nativeVectorShort;
+  }
 
-    public Short2(short x, short y) {
-        this();
-        setX(x);
-        setY(y);
-    }
+  public Short2() {
+    this(new short[NUM_ELEMENTS]);
+  }
 
-    /*
-     * vector = op( vector, vector )
-     */
-    public static Short2 add(Short2 a, Short2 b) {
-        return new Short2((short) (a.getX() + b.getX()), (short) (a.getY() + b.getY()));
-    }
+  public Short2(short x, short y) {
+    this();
+    setX(x);
+    setY(y);
+  }
 
-    public static Short2 sub(Short2 a, Short2 b) {
-        return new Short2((short) (a.getX() - b.getX()), (short) (a.getY() - b.getY()));
-    }
+  /*
+   * vector = op( vector, vector )
+   */
+  public static Short2 add(Short2 a, Short2 b) {
+    return new Short2((short) (a.getX() + b.getX()), (short) (a.getY() + b.getY()));
+  }
 
-    public static Short2 div(Short2 a, Short2 b) {
-        return new Short2((short) (a.getX() / b.getX()), (short) (a.getY() / b.getY()));
-    }
+  public static Short2 sub(Short2 a, Short2 b) {
+    return new Short2((short) (a.getX() - b.getX()), (short) (a.getY() - b.getY()));
+  }
 
-    public static Short2 mult(Short2 a, Short2 b) {
-        return new Short2((short) (a.getX() * b.getX()), (short) (a.getY() * b.getY()));
-    }
+  public static Short2 div(Short2 a, Short2 b) {
+    return new Short2((short) (a.getX() / b.getX()), (short) (a.getY() / b.getY()));
+  }
 
-    public static Short2 min(Short2 a, Short2 b) {
-        return new Short2(TornadoMath.min(a.getX(), b.getX()), TornadoMath.min(a.getY(), b.getY()));
-    }
+  public static Short2 mult(Short2 a, Short2 b) {
+    return new Short2((short) (a.getX() * b.getX()), (short) (a.getY() * b.getY()));
+  }
 
-    public static Short2 max(Short2 a, Short2 b) {
-        return new Short2(TornadoMath.max(a.getX(), b.getX()), TornadoMath.max(a.getY(), b.getY()));
-    }
+  public static Short2 min(Short2 a, Short2 b) {
+    return new Short2(TornadoMath.min(a.getX(), b.getX()), TornadoMath.min(a.getY(), b.getY()));
+  }
 
-    /*
-     * vector = op (vector, scalar)
-     */
-    public static Short2 add(Short2 a, short b) {
-        return new Short2((short) (a.getX() + b), (short) (a.getY() + b));
-    }
+  public static Short2 max(Short2 a, Short2 b) {
+    return new Short2(TornadoMath.max(a.getX(), b.getX()), TornadoMath.max(a.getY(), b.getY()));
+  }
 
-    public static Short2 sub(Short2 a, short b) {
-        return new Short2((short) (a.getX() - b), (short) (a.getY() - b));
-    }
+  /*
+   * vector = op (vector, scalar)
+   */
+  public static Short2 add(Short2 a, short b) {
+    return new Short2((short) (a.getX() + b), (short) (a.getY() + b));
+  }
 
-    public static Short2 mult(Short2 a, short b) {
-        return new Short2((short) (a.getX() * b), (short) (a.getY() * b));
-    }
+  public static Short2 sub(Short2 a, short b) {
+    return new Short2((short) (a.getX() - b), (short) (a.getY() - b));
+  }
 
-    public static Short2 div(Short2 a, short b) {
-        return new Short2((short) (a.getX() / b), (short) (a.getY() / b));
-    }
+  public static Short2 mult(Short2 a, short b) {
+    return new Short2((short) (a.getX() * b), (short) (a.getY() * b));
+  }
 
-    public static Short2 inc(Short2 a, short value) {
-        return add(a, value);
-    }
+  public static Short2 div(Short2 a, short b) {
+    return new Short2((short) (a.getX() / b), (short) (a.getY() / b));
+  }
 
-    public static Short2 dec(Short2 a, short value) {
-        return sub(a, value);
-    }
+  public static Short2 inc(Short2 a, short value) {
+    return add(a, value);
+  }
 
-    public static Short2 scale(Short2 a, short value) {
-        return mult(a, value);
-    }
+  public static Short2 dec(Short2 a, short value) {
+    return sub(a, value);
+  }
 
-    public static Short2 clamp(Short2 x, short min, short max) {
-        return new Short2(TornadoMath.clamp(x.getX(), min, max), TornadoMath.clamp(x.getY(), min, max));
-    }
+  public static Short2 scale(Short2 a, short value) {
+    return mult(a, value);
+  }
 
-    /*
-     * vector wide operations
-     */
-    public static short min(Short2 value) {
-        return TornadoMath.min(value.getX(), value.getY());
-    }
+  public static Short2 clamp(Short2 x, short min, short max) {
+    return new Short2(TornadoMath.clamp(x.getX(), min, max), TornadoMath.clamp(x.getY(), min, max));
+  }
 
-    public static short max(Short2 value) {
-        return TornadoMath.max(value.getX(), value.getY());
-    }
+  /*
+   * vector wide operations
+   */
+  public static short min(Short2 value) {
+    return TornadoMath.min(value.getX(), value.getY());
+  }
 
-    public static boolean isEqual(Short2 a, Short2 b) {
-        return TornadoMath.isEqual(a.toArray(), b.toArray());
-    }
+  public static short max(Short2 value) {
+    return TornadoMath.max(value.getX(), value.getY());
+  }
 
-    public short get(int index) {
-        return storage[index];
-    }
+  public static boolean isEqual(Short2 a, Short2 b) {
+    return TornadoMath.isEqual(a.toArray(), b.toArray());
+  }
 
-    public void set(int index, short value) {
-        storage[index] = value;
-    }
+  public short get(int index) {
+    return storage[index];
+  }
 
-    public void set(Short2 value) {
-        setX(value.getX());
-        setY(value.getY());
-    }
+  public void set(int index, short value) {
+    storage[index] = value;
+  }
 
-    public short getX() {
-        return get(0);
-    }
+  public void set(Short2 value) {
+    setX(value.getX());
+    setY(value.getY());
+  }
 
-    public void setX(short value) {
-        set(0, value);
-    }
+  public short getX() {
+    return get(0);
+  }
 
-    public short getY() {
-        return get(1);
-    }
+  public void setX(short value) {
+    set(0, value);
+  }
 
-    public void setY(short value) {
-        set(1, value);
-    }
+  public short getY() {
+    return get(1);
+  }
 
-    /**
-     * Duplicates this vector.
-     *
-     * @return {@link Short2}
-     */
-    public Short2 duplicate() {
-        Short2 vector = new Short2();
-        vector.set(this);
-        return vector;
-    }
+  public void setY(short value) {
+    set(1, value);
+  }
 
-    public String toString(String fmt) {
-        return String.format(fmt, getX(), getY());
-    }
+  /**
+   * Duplicates this vector.
+   *
+   * @return {@link Short2}
+   */
+  public Short2 duplicate() {
+    Short2 vector = new Short2();
+    vector.set(this);
+    return vector;
+  }
 
-    @Override
-    public String toString() {
-        return toString(ShortOps.FMT_2);
-    }
+  public String toString(String fmt) {
+    return String.format(fmt, getX(), getY());
+  }
 
-    @Override
-    public void loadFromBuffer(ShortBuffer buffer) {
-        asBuffer().put(buffer);
-    }
+  @Override
+  public String toString() {
+    return toString(ShortOps.FMT_2);
+  }
 
-    @Override
-    public ShortBuffer asBuffer() {
-        return ShortBuffer.wrap(storage);
-    }
+  @Override
+  public void loadFromBuffer(ShortBuffer buffer) {
+    asBuffer().put(buffer);
+  }
 
-    @Override
-    public int size() {
-        return NUM_ELEMENTS;
-    }
+  @Override
+  public ShortBuffer asBuffer() {
+    return ShortBuffer.wrap(storage);
+  }
 
-    public short[] toArray() {
-        return storage;
-    }
+  @Override
+  public int size() {
+    return NUM_ELEMENTS;
+  }
 
-    @Override
-    public long getNumBytes() {
-        return NUM_ELEMENTS * 2;
-    }
+  public short[] toArray() {
+    return storage;
+  }
 
+  @Override
+  public long getNumBytes() {
+    return NUM_ELEMENTS * 2;
+  }
 }

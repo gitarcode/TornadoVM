@@ -21,12 +21,11 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.phases;
 
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.phases.OptimisticOptimizations;
 import org.graalvm.compiler.phases.PhaseSuite;
 import org.graalvm.compiler.phases.tiers.HighTierContext;
 import org.graalvm.compiler.phases.util.Providers;
-
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.api.common.Access;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.runtime.TornadoRuntimeProvider;
@@ -34,43 +33,51 @@ import uk.ac.manchester.tornado.runtime.graal.phases.sketcher.TornadoDataflowAna
 
 public class TornadoSketchTierContext extends HighTierContext {
 
-    private final ResolvedJavaMethod method;
+  private final ResolvedJavaMethod method;
 
-    /**
-     * Contains the argument accesses of the {@link #method}. The array gets populated in the {@link TornadoDataflowAnalysis} phase.
-     * It includes accesses of arguments passed to non-inlined callees of the {@link #method}.
-     */
-    private final Access[] argumentAccess;
-    private boolean batchWriteThreadIndex;
+  /**
+   * Contains the argument accesses of the {@link #method}. The array gets populated in the {@link
+   * TornadoDataflowAnalysis} phase. It includes accesses of arguments passed to non-inlined callees
+   * of the {@link #method}.
+   */
+  private final Access[] argumentAccess;
 
-    private TornadoDevice device;
+  private boolean batchWriteThreadIndex;
 
-    public TornadoSketchTierContext(Providers providers, PhaseSuite<HighTierContext> graphBuilderSuite, OptimisticOptimizations optimisticOpts, ResolvedJavaMethod method, int backendIndex,
-            int deviceIndex) {
-        super(providers, graphBuilderSuite, optimisticOpts);
-        this.method = method;
-        int parameterCount = method.getParameters().length;
-        this.argumentAccess = new Access[method.isStatic() ? parameterCount : parameterCount + 1];
-        device = TornadoRuntimeProvider.getTornadoRuntime().getBackend(backendIndex).getDevice(deviceIndex);
-    }
+  private TornadoDevice device;
 
-    public TornadoDevice getDevice() {
-        return device;
-    }
+  public TornadoSketchTierContext(
+      Providers providers,
+      PhaseSuite<HighTierContext> graphBuilderSuite,
+      OptimisticOptimizations optimisticOpts,
+      ResolvedJavaMethod method,
+      int backendIndex,
+      int deviceIndex) {
+    super(providers, graphBuilderSuite, optimisticOpts);
+    this.method = method;
+    int parameterCount = method.getParameters().length;
+    this.argumentAccess = new Access[method.isStatic() ? parameterCount : parameterCount + 1];
+    device =
+        TornadoRuntimeProvider.getTornadoRuntime().getBackend(backendIndex).getDevice(deviceIndex);
+  }
 
-    public ResolvedJavaMethod getMethod() {
-        return method;
-    }
+  public TornadoDevice getDevice() {
+    return device;
+  }
 
-    public Access[] getAccesses() {
-        return argumentAccess;
-    }
+  public ResolvedJavaMethod getMethod() {
+    return method;
+  }
 
-    public void setBatchWriteThreadIndex() {
-        this.batchWriteThreadIndex = true;
-    }
+  public Access[] getAccesses() {
+    return argumentAccess;
+  }
 
-    public boolean getBatchWriteThreadIndex() {
-        return this.batchWriteThreadIndex;
-    }
+  public void setBatchWriteThreadIndex() {
+    this.batchWriteThreadIndex = true;
+  }
+
+  public boolean getBatchWriteThreadIndex() {
+    return this.batchWriteThreadIndex;
+  }
 }

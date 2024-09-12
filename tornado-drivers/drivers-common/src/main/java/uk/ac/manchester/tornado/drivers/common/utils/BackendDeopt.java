@@ -23,17 +23,18 @@
  */
 package uk.ac.manchester.tornado.drivers.common.utils;
 
-import org.graalvm.compiler.phases.util.Providers;
-
 import jdk.vm.ci.meta.DeoptimizationAction;
 import jdk.vm.ci.meta.DeoptimizationReason;
 import jdk.vm.ci.meta.JavaConstant;
+import org.graalvm.compiler.phases.util.Providers;
 
 public class BackendDeopt {
 
-    public static String decodeDeopt(long value, Providers providers) {
-        DeoptimizationReason reason = providers.getMetaAccess().decodeDeoptReason(JavaConstant.forLong(value));
-        DeoptimizationAction action = providers.getMetaAccess().decodeDeoptAction(JavaConstant.forLong(value));
-        return String.format("deopt: reason=%s, action=%s", reason.toString(), action.toString());
-    }
+  public static String decodeDeopt(long value, Providers providers) {
+    DeoptimizationReason reason =
+        providers.getMetaAccess().decodeDeoptReason(JavaConstant.forLong(value));
+    DeoptimizationAction action =
+        providers.getMetaAccess().decodeDeoptAction(JavaConstant.forLong(value));
+    return String.format("deopt: reason=%s, action=%s", reason.toString(), action.toString());
+  }
 }

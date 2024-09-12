@@ -22,7 +22,6 @@
 package uk.ac.manchester.tornado.drivers.opencl.graal.phases;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.iterators.NodeIterable;
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.FixedNode;
@@ -31,62 +30,58 @@ import org.graalvm.compiler.nodes.ParameterNode;
 import org.graalvm.compiler.nodes.StartNode;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.phases.Phase;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.IncAtomicNode;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.NodeAtomic;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.TornadoAtomicIntegerNode;
 
 /**
- * This phase scans the IR and checks whether there is a
- * {@link TornadoAtomicIntegerNode} associated for each {@link IncAtomicNode}.
+ * This phase scans the IR and checks whether there is a {@link TornadoAtomicIntegerNode} associated
+ * for each {@link IncAtomicNode}.
  *
- * <p>
- * If it is not the case, this would mean that the atomic is passed as a
- * parameter to the lambda expression. Therefore, this phase introduces the
- * {@link TornadoAtomicIntegerNode} at the beginning of the Control-Flow-Graph.
- * </p>
+ * <p>If it is not the case, this would mean that the atomic is passed as a parameter to the lambda
+ * expression. Therefore, this phase introduces the {@link TornadoAtomicIntegerNode} at the
+ * beginning of the Control-Flow-Graph.
  */
 public class TornadoAtomicsParametersPhase extends Phase {
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph) {
-        NodeIterable<NodeAtomic> filter = graph.getNodes().filter(NodeAtomic.class);
+  @Override
+  protected void run(StructuredGraph graph) {
+    NodeIterable<NodeAtomic> filter = graph.getNodes().filter(NodeAtomic.class);
 
-        if (!filter.isEmpty()) {
-            for (NodeAtomic atomic : filter) {
-                if (atomic.getAtomicNode() instanceof ParameterNode) {
+    if (!filter.isEmpty()) {
+      for (NodeAtomic atomic : filter) {
+        if (atomic.getAtomicNode() instanceof ParameterNode) {
 
-                    ParameterNode atomicArgument = (ParameterNode) atomic.getAtomicNode();
-                    int indexNode = atomicArgument.index();
+          ParameterNode atomicArgument = (ParameterNode) atomic.getAtomicNode();
+          int indexNode = atomicArgument.index();
 
-                    TornadoAtomicIntegerNode newNode = new TornadoAtomicIntegerNode(OCLKind.INTEGER_ATOMIC_JAVA);
-                    graph.addOrUnique(newNode);
-                    newNode.assignIndexFromParameter(indexNode);
+          TornadoAtomicIntegerNode newNode =
+              new TornadoAtomicIntegerNode(OCLKind.INTEGER_ATOMIC_JAVA);
+          graph.addOrUnique(newNode);
+          newNode.assignIndexFromParameter(indexNode);
 
-                    final ConstantNode index = graph.addOrUnique(ConstantNode.forInt(0));
-                    newNode.setInitialValue(index);
+          final ConstantNode index = graph.addOrUnique(ConstantNode.forInt(0));
+          newNode.setInitialValue(index);
 
-                    // Add the new control flow node
-                    StartNode startNode = graph.start();
-                    FixedNode first = (FixedNode) startNode.successors().first();
-                    startNode.setNext(newNode);
-                    newNode.setNext(first);
+          // Add the new control flow node
+          StartNode startNode = graph.start();
+          FixedNode first = (FixedNode) startNode.successors().first();
+          startNode.setNext(newNode);
+          newNode.setNext(first);
 
-                    // Replace usages for this new node
-                    ParameterNode parameter = (ParameterNode) atomic.getAtomicNode();
-                    newNode.replaceAtMatchingUsages(atomic, node -> !node.equals(atomic));
-                    parameter.replaceAtMatchingUsages(newNode, node -> node.equals(atomic));
+          // Replace usages for this new node
+          ParameterNode parameter = (ParameterNode) atomic.getAtomicNode();
+          newNode.replaceAtMatchingUsages(atomic, node -> !node.equals(atomic));
+          parameter.replaceAtMatchingUsages(newNode, node -> node.equals(atomic));
 
-                    assert graph.verify();
-                }
-            }
+          assert graph.verify();
         }
-
+      }
     }
-
+  }
 }

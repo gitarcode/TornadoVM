@@ -24,41 +24,39 @@ import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 public class JuliaSetJava extends BenchmarkDriver {
 
-    private final int size;
-    private final int iterations;
+  private final int size;
+  private final int iterations;
 
-    private static FloatArray hue;
-    private static FloatArray brightness;
+  private static FloatArray hue;
+  private static FloatArray brightness;
 
-    /**
-     * It generates a square image with the fractal.
-     */
-    public JuliaSetJava(int iterations, int size) {
-        super(iterations);
-        this.iterations = iterations;
-        this.size = size;
-    }
+  /** It generates a square image with the fractal. */
+  public JuliaSetJava(int iterations, int size) {
+    super(iterations);
+    this.iterations = iterations;
+    this.size = size;
+  }
 
-    @Override
-    public void setUp() {
-        hue = new FloatArray(size * size);
-        brightness = new FloatArray(size * size);
-    }
+  @Override
+  public void setUp() {
+    hue = new FloatArray(size * size);
+    brightness = new FloatArray(size * size);
+  }
 
-    @Override
-    public void tearDown() {
-        hue = null;
-        brightness = null;
-        super.tearDown();
-    }
+  @Override
+  public void tearDown() {
+    hue = null;
+    brightness = null;
+    super.tearDown();
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        GraphicsKernels.juliaSetTornado(size, hue, brightness);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    GraphicsKernels.juliaSetTornado(size, hue, brightness);
+  }
 }

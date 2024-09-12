@@ -25,33 +25,49 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
  */
 public class Stencil {
 
-    public static final void stencil3d(int n, int sz, FloatArray a0, FloatArray a1, float fac) {
-        for (@Parallel int i = 1; i < n + 1; i++) {
-            for (@Parallel int j = 1; j < n + 1; j++) {
-                for (int k = 1; k < n + 1; k++) {
-                    // @formatter:off
-                    a1.set(i * sz * sz + j * sz + k, (a0.get(i * sz * sz + (j - 1) * sz + k) + a0.get(i * sz * sz + (j + 1) * sz + k)
-                            + a0.get((i - 1) * sz * sz + j * sz + k) + a0.get((i + 1) * sz * sz + j * sz + k)
-                            + a0.get((i - 1) * sz * sz + (j - 1) * sz + k) + a0.get((i - 1) * sz * sz + (j + 1) * sz + k)
-                            + a0.get((i + 1) * sz * sz + (j - 1) * sz + k) + a0.get((i + 1) * sz * sz + (j + 1) * sz + k)
-                            + a0.get(i * sz * sz + (j - 1) * sz + (k - 1)) + a0.get(i * sz * sz + (j + 1) * sz + (k - 1))
-                            + a0.get((i - 1) * sz * sz + j * sz + (k - 1)) + a0.get((i + 1) * sz * sz + j * sz + (k - 1))
-                            + a0.get((i - 1) * sz * sz + (j - 1) * sz + (k - 1)) + a0.get((i - 1) * sz * sz + (j + 1) * sz + (k - 1))
-                            + a0.get((i + 1) * sz * sz + (j - 1) * sz + (k - 1)) + a0.get((i + 1) * sz * sz + (j + 1) * sz + (k - 1))
-                            + a0.get(i * sz * sz + (j - 1) * sz + (k + 1)) + a0.get(i * sz * sz + (j + 1) * sz + (k + 1))
-                            + a0.get((i - 1) * sz * sz + j * sz + (k + 1)) + a0.get((i + 1) * sz * sz + j * sz + (k + 1))
-                            + a0.get((i - 1) * sz * sz + (j - 1) * sz + (k + 1)) + a0.get((i - 1) * sz * sz + (j + 1) * sz + (k + 1))
-                            + a0.get((i + 1) * sz * sz + (j - 1) * sz + (k + 1)) + a0.get((i + 1) * sz * sz + (j + 1) * sz + (k + 1))
-                            + a0.get(i * sz * sz + j * sz + (k - 1)) + a0.get(i * sz * sz + j * sz + (k + 1))) * fac);
-                    // @formatter:on
-                }
-            }
+  public static final void stencil3d(int n, int sz, FloatArray a0, FloatArray a1, float fac) {
+    for (@Parallel int i = 1; i < n + 1; i++) {
+      for (@Parallel int j = 1; j < n + 1; j++) {
+        for (int k = 1; k < n + 1; k++) {
+          // @formatter:off
+          a1.set(
+              i * sz * sz + j * sz + k,
+              (a0.get(i * sz * sz + (j - 1) * sz + k)
+                      + a0.get(i * sz * sz + (j + 1) * sz + k)
+                      + a0.get((i - 1) * sz * sz + j * sz + k)
+                      + a0.get((i + 1) * sz * sz + j * sz + k)
+                      + a0.get((i - 1) * sz * sz + (j - 1) * sz + k)
+                      + a0.get((i - 1) * sz * sz + (j + 1) * sz + k)
+                      + a0.get((i + 1) * sz * sz + (j - 1) * sz + k)
+                      + a0.get((i + 1) * sz * sz + (j + 1) * sz + k)
+                      + a0.get(i * sz * sz + (j - 1) * sz + (k - 1))
+                      + a0.get(i * sz * sz + (j + 1) * sz + (k - 1))
+                      + a0.get((i - 1) * sz * sz + j * sz + (k - 1))
+                      + a0.get((i + 1) * sz * sz + j * sz + (k - 1))
+                      + a0.get((i - 1) * sz * sz + (j - 1) * sz + (k - 1))
+                      + a0.get((i - 1) * sz * sz + (j + 1) * sz + (k - 1))
+                      + a0.get((i + 1) * sz * sz + (j - 1) * sz + (k - 1))
+                      + a0.get((i + 1) * sz * sz + (j + 1) * sz + (k - 1))
+                      + a0.get(i * sz * sz + (j - 1) * sz + (k + 1))
+                      + a0.get(i * sz * sz + (j + 1) * sz + (k + 1))
+                      + a0.get((i - 1) * sz * sz + j * sz + (k + 1))
+                      + a0.get((i + 1) * sz * sz + j * sz + (k + 1))
+                      + a0.get((i - 1) * sz * sz + (j - 1) * sz + (k + 1))
+                      + a0.get((i - 1) * sz * sz + (j + 1) * sz + (k + 1))
+                      + a0.get((i + 1) * sz * sz + (j - 1) * sz + (k + 1))
+                      + a0.get((i + 1) * sz * sz + (j + 1) * sz + (k + 1))
+                      + a0.get(i * sz * sz + j * sz + (k - 1))
+                      + a0.get(i * sz * sz + j * sz + (k + 1)))
+                  * fac);
+          // @formatter:on
         }
+      }
     }
+  }
 
-    public static final void copy(int sz, FloatArray a0, FloatArray a1) {
-        for (@Parallel int i = 0; i < a0.getSize(); i++) {
-            a1.set(i, a0.get(i));
-        }
+  public static final void copy(int sz, FloatArray a0, FloatArray a1) {
+    for (@Parallel int i = 0; i < a0.getSize(); i++) {
+      a1.set(i, a0.get(i));
     }
+  }
 }

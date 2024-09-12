@@ -19,7 +19,6 @@ package uk.ac.manchester.tornado.api.common;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.api.TornadoTargetDevice;
 import uk.ac.manchester.tornado.api.enums.TornadoDeviceType;
@@ -29,175 +28,162 @@ import uk.ac.manchester.tornado.api.memory.TornadoMemoryProvider;
 
 public interface TornadoDevice {
 
-    /**
-     * It allocates an object in the pre-defined heap of the target device. It also
-     * ensures that there is enough space for the input object.
-     *
-     * @param object
-     *     to be allocated
-     * @param batchSize
-     *     size of the object to be allocated. If this value is <= 0, then it
-     *     allocates the sizeof(object).
-     * @param state
-     *     state of the object in the target device
-     *     {@link DeviceBufferState}
-     * @return an event ID
-     */
-    long allocate(Object object, long batchSize, DeviceBufferState state);
+  /**
+   * It allocates an object in the pre-defined heap of the target device. It also ensures that there
+   * is enough space for the input object.
+   *
+   * @param object to be allocated
+   * @param batchSize size of the object to be allocated. If this value is <= 0, then it allocates
+   *     the sizeof(object).
+   * @param state state of the object in the target device {@link DeviceBufferState}
+   * @return an event ID
+   */
+  long allocate(Object object, long batchSize, DeviceBufferState state);
 
-    long allocateObjects(Object[] objects, long batchSize, DeviceBufferState[] states);
+  long allocateObjects(Object[] objects, long batchSize, DeviceBufferState[] states);
 
-    long deallocate(DeviceBufferState state);
+  long deallocate(DeviceBufferState state);
 
-    /**
-     * It allocates and copy in the content of the object to the target device.
-     *
-     * @param object
-     *     to be allocated
-     * @param objectState
-     *     state of the object in the target device
-     *     {@link DeviceBufferState}
-     * @param events
-     *     list of pending events (dependencies)
-     * @param batchSize
-     *     size of the object to be allocated. If this value is <= 0, then it
-     *     allocates the sizeof(object).
-     * @param hostOffset
-     *     offset in bytes for the copy within the host input array (or
-     *     object)
-     * @return an event ID
-     */
-    List<Integer> ensurePresent(long executionPlanId, Object object, DeviceBufferState objectState, int[] events, long batchSize, long hostOffset);
+  /**
+   * It allocates and copy in the content of the object to the target device.
+   *
+   * @param object to be allocated
+   * @param objectState state of the object in the target device {@link DeviceBufferState}
+   * @param events list of pending events (dependencies)
+   * @param batchSize size of the object to be allocated. If this value is <= 0, then it allocates
+   *     the sizeof(object).
+   * @param hostOffset offset in bytes for the copy within the host input array (or object)
+   * @return an event ID
+   */
+  List<Integer> ensurePresent(
+      long executionPlanId,
+      Object object,
+      DeviceBufferState objectState,
+      int[] events,
+      long batchSize,
+      long hostOffset);
 
-    /**
-     * It always copies in the input data (object) from the host to the target
-     * device.
-     *
-     * @param object
-     *     to be copied
-     * @param batchSize
-     *     size of the object to be allocated. If this value is <= 0, then it
-     *     allocates the sizeof(object).
-     * @param hostOffset
-     *     offset in bytes for the copy within the host input array (or
-     *     object)
-     * @param objectState
-     *     state of the object in the target device
-     *     {@link DeviceBufferState}
-     * @param events
-     *     list of previous events
-     * @return and event ID
-     */
-    List<Integer> streamIn(long executionPlanId, Object object, long batchSize, long hostOffset, DeviceBufferState objectState, int[] events);
+  /**
+   * It always copies in the input data (object) from the host to the target device.
+   *
+   * @param object to be copied
+   * @param batchSize size of the object to be allocated. If this value is <= 0, then it allocates
+   *     the sizeof(object).
+   * @param hostOffset offset in bytes for the copy within the host input array (or object)
+   * @param objectState state of the object in the target device {@link DeviceBufferState}
+   * @param events list of previous events
+   * @return and event ID
+   */
+  List<Integer> streamIn(
+      long executionPlanId,
+      Object object,
+      long batchSize,
+      long hostOffset,
+      DeviceBufferState objectState,
+      int[] events);
 
-    /**
-     * It copies a device buffer from the target device to the host. Copies are
-     * non-blocking
-     *
-     * @param object
-     *     to be copied.
-     * @param hostOffset
-     *     offset in bytes for the copy within the host input array (or
-     *     object)
-     * @param objectState
-     *     state of the object in the target device
-     *     {@link DeviceBufferState}
-     * @param events
-     *     of pending events
-     * @return and event ID
-     */
-    int streamOut(long executionPlanId, Object object, long hostOffset, DeviceBufferState objectState, int[] events);
+  /**
+   * It copies a device buffer from the target device to the host. Copies are non-blocking
+   *
+   * @param object to be copied.
+   * @param hostOffset offset in bytes for the copy within the host input array (or object)
+   * @param objectState state of the object in the target device {@link DeviceBufferState}
+   * @param events of pending events
+   * @return and event ID
+   */
+  int streamOut(
+      long executionPlanId,
+      Object object,
+      long hostOffset,
+      DeviceBufferState objectState,
+      int[] events);
 
-    /**
-     * It copies a device buffer from the target device to the host. Copies are
-     * blocking between the device and the host.
-     *
-     * @param object
-     *     to be copied.
-     * @param hostOffset
-     *     offset in bytes for the copy within the host input array (or
-     *     object)
-     * @param objectState
-     *     state of the object in the target device
-     *     {@link DeviceBufferState}
-     * @param events
-     *     of pending events
-     * @return and event ID
-     */
-    int streamOutBlocking(long executionPlanId, Object object, long hostOffset, DeviceBufferState objectState, int[] events);
+  /**
+   * It copies a device buffer from the target device to the host. Copies are blocking between the
+   * device and the host.
+   *
+   * @param object to be copied.
+   * @param hostOffset offset in bytes for the copy within the host input array (or object)
+   * @param objectState state of the object in the target device {@link DeviceBufferState}
+   * @param events of pending events
+   * @return and event ID
+   */
+  int streamOutBlocking(
+      long executionPlanId,
+      Object object,
+      long hostOffset,
+      DeviceBufferState objectState,
+      int[] events);
 
-    /**
-     * It resolves a pending event.
-     *
-     * @param event
-     *     ID
-     * @return an object of type {@link Event}
-     */
-    Event resolveEvent(long executionPlanId, int event);
+  /**
+   * It resolves a pending event.
+   *
+   * @param event ID
+   * @return an object of type {@link Event}
+   */
+  Event resolveEvent(long executionPlanId, int event);
 
-    void ensureLoaded(long executionPlanId);
+  void ensureLoaded(long executionPlanId);
 
-    void flushEvents(long executionPlanId);
+  void flushEvents(long executionPlanId);
 
-    int enqueueBarrier(long executionPlanId);
+  int enqueueBarrier(long executionPlanId);
 
-    int enqueueBarrier(long executionPlanId, int[] events);
+  int enqueueBarrier(long executionPlanId, int[] events);
 
-    int enqueueMarker(long executionPlanId);
+  int enqueueMarker(long executionPlanId);
 
-    int enqueueMarker(long executionPlanId, int[] events);
+  int enqueueMarker(long executionPlanId, int[] events);
 
-    void sync(long executionPlanId);
+  void sync(long executionPlanId);
 
-    void flush(long executionPlanId);
+  void flush(long executionPlanId);
 
-    void clean();
+  void clean();
 
-    void dumpEvents(long executionPlanId);
+  void dumpEvents(long executionPlanId);
 
-    String getDeviceName();
+  String getDeviceName();
 
-    String getDescription();
+  String getDescription();
 
-    String getPlatformName();
+  String getPlatformName();
 
-    TornadoDeviceContext getDeviceContext();
+  TornadoDeviceContext getDeviceContext();
 
-    TornadoTargetDevice getPhysicalDevice();
+  TornadoTargetDevice getPhysicalDevice();
 
-    TornadoMemoryProvider getMemoryProvider();
+  TornadoMemoryProvider getMemoryProvider();
 
-    TornadoDeviceType getDeviceType();
+  TornadoDeviceType getDeviceType();
 
-    long getMaxAllocMemory();
+  long getMaxAllocMemory();
 
-    long getMaxGlobalMemory();
+  long getMaxGlobalMemory();
 
-    long getDeviceLocalMemorySize();
+  long getDeviceLocalMemorySize();
 
-    long[] getDeviceMaxWorkgroupDimensions();
+  long[] getDeviceMaxWorkgroupDimensions();
 
-    String getDeviceOpenCLCVersion();
+  String getDeviceOpenCLCVersion();
 
-    Object getDeviceInfo();
+  Object getDeviceInfo();
 
-    int getBackendIndex();
+  int getBackendIndex();
 
-    /**
-     * Returns the number of processors available to the JVM. We need to overwrite
-     * this function only for Virtual Devices, where we read the value from the
-     * descriptor file.
-     */
-    default int getAvailableProcessors() {
-        return Runtime.getRuntime().availableProcessors();
-    }
+  /**
+   * Returns the number of processors available to the JVM. We need to overwrite this function only
+   * for Virtual Devices, where we read the value from the descriptor file.
+   */
+  default int getAvailableProcessors() {
+    return Runtime.getRuntime().availableProcessors();
+  }
 
-    Object getAtomic();
+  Object getAtomic();
 
-    void setAtomicsMapping(ConcurrentHashMap<Object, Integer> mappingAtomics);
+  void setAtomicsMapping(ConcurrentHashMap<Object, Integer> mappingAtomics);
 
-    TornadoVMBackendType getTornadoVMBackend();
+  TornadoVMBackendType getTornadoVMBackend();
 
-    boolean isSPIRVSupported();
-
+  boolean isSPIRVSupported();
 }

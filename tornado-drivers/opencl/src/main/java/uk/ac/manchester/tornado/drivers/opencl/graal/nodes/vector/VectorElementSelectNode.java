@@ -23,6 +23,7 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.nodes.vector;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.guarantee;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.nodeinfo.InputType;
@@ -31,57 +32,56 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLBinaryOp;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLBinary;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 
-/**
- * The {@code LoadIndexedNode} represents a read from an element of an array.
- */
+/** The {@code LoadIndexedNode} represents a read from an element of an array. */
 @NodeInfo(nameTemplate = ".{p#selection}")
 public class VectorElementSelectNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<VectorElementSelectNode> TYPE = NodeClass.create(VectorElementSelectNode.class);
+  public static final NodeClass<VectorElementSelectNode> TYPE =
+      NodeClass.create(VectorElementSelectNode.class);
 
-    @Input(InputType.Extension)
-    ValueNode vector;
+  @Input(InputType.Extension)
+  ValueNode vector;
 
-    @Input
-    ValueNode selection;
+  @Input ValueNode selection;
 
-    public VectorElementSelectNode(OCLKind kind, ValueNode vector, ValueNode selection) {
-        super(TYPE, StampFactory.forKind(kind.asJavaKind()));
-        this.vector = vector;
-        this.selection = selection;
-    }
+  public VectorElementSelectNode(OCLKind kind, ValueNode vector, ValueNode selection) {
+    super(TYPE, StampFactory.forKind(kind.asJavaKind()));
+    this.vector = vector;
+    this.selection = selection;
+  }
 
-    @Override
-    public boolean inferStamp() {
-        return true;
-        // return updateStamp(createStamp(vector, kind.getElementKind()));
-    }
+  @Override
+  public boolean inferStamp() {
+    return true;
+    // return updateStamp(createStamp(vector, kind.getElementKind()));
+  }
 
-    public ValueNode getSelection() {
-        return selection;
-    }
+  public ValueNode getSelection() {
+    return selection;
+  }
 
-    public ValueNode getVector() {
-        return vector;
-    }
+  public ValueNode getVector() {
+    return vector;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        guarantee(vector != null, "vector operand is null");
-        Value targetVector = gen.operand(getVector());
-        Value selectValue = gen.operand(getSelection());
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    guarantee(vector != null, "vector operand is null");
+    Value targetVector = gen.operand(getVector());
+    Value selectValue = gen.operand(getSelection());
 
-        guarantee(targetVector != null, "vector value is null 2");
-        guarantee(selectValue != null, "select value is null");
-        final OCLBinary.Selector expr = new OCLBinary.Selector(OCLBinaryOp.VECTOR_SELECT, gen.getLIRGeneratorTool().getLIRKind(stamp), targetVector, selectValue);
-        gen.setResult(this, expr);
-
-    }
-
+    guarantee(targetVector != null, "vector value is null 2");
+    guarantee(selectValue != null, "select value is null");
+    final OCLBinary.Selector expr =
+        new OCLBinary.Selector(
+            OCLBinaryOp.VECTOR_SELECT,
+            gen.getLIRGeneratorTool().getLIRKind(stamp),
+            targetVector,
+            selectValue);
+    gen.setResult(this, expr);
+  }
 }

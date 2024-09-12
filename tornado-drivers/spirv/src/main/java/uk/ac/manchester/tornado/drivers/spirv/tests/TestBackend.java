@@ -31,44 +31,41 @@ import uk.ac.manchester.tornado.drivers.spirv.SPIRVPlatform;
 import uk.ac.manchester.tornado.runtime.TornadoCoreRuntime;
 
 /**
- * How to run?
- *
- * <code>
+ * How to run? <code>
  * tornado uk.ac.manchester.tornado.drivers.spirv.tests.TestBackend
  * </code>
  */
 public class TestBackend {
 
-    public void invokeSPIRVBackend() {
+  public void invokeSPIRVBackend() {
 
-        // Get Tornado Runtime
-        TornadoCoreRuntime tornadoRuntime = TornadoCoreRuntime.getTornadoRuntime();
-        SPIRVBackendImpl backend = tornadoRuntime.getBackend(SPIRVBackendImpl.class);
+    // Get Tornado Runtime
+    TornadoCoreRuntime tornadoRuntime = TornadoCoreRuntime.getTornadoRuntime();
+    SPIRVBackendImpl backend = tornadoRuntime.getBackend(SPIRVBackendImpl.class);
 
-        System.out.println("Querying all device  ............................. ");
-        for (SPIRVPlatform platform : tornadoRuntime.getBackend(SPIRVBackendImpl.class).getPlatforms()) {
-            System.out.println("--> Runtime: " + platform.getRuntime().name());
-            for (SPIRVDevice spirvDevice : platform.getDevices()) {
-                System.out.println("\t-> SPIR-V Device: " + spirvDevice.getDeviceName());
-            }
-        }
-
-        // Get the default backend from TornadoVM
-        System.out.println("\nDefault  ............................. ");
-        SPIRVBackend spirvBackend = backend.getDefaultBackend();
-        TornadoDevice device = tornadoRuntime.getBackend(SPIRVBackendImpl.class).getDefaultDevice();
-        System.out.println("Selecting Device: --> " + device.getPhysicalDevice().getDeviceName());
-        System.out.println("\tFrom backend: --> " + spirvBackend);
-
+    System.out.println("Querying all device  ............................. ");
+    for (SPIRVPlatform platform :
+        tornadoRuntime.getBackend(SPIRVBackendImpl.class).getPlatforms()) {
+      System.out.println("--> Runtime: " + platform.getRuntime().name());
+      for (SPIRVDevice spirvDevice : platform.getDevices()) {
+        System.out.println("\t-> SPIR-V Device: " + spirvDevice.getDeviceName());
+      }
     }
 
-    public void test() {
-        invokeSPIRVBackend();
-    }
+    // Get the default backend from TornadoVM
+    System.out.println("\nDefault  ............................. ");
+    SPIRVBackend spirvBackend = backend.getDefaultBackend();
+    TornadoDevice device = tornadoRuntime.getBackend(SPIRVBackendImpl.class).getDefaultDevice();
+    System.out.println("Selecting Device: --> " + device.getPhysicalDevice().getDeviceName());
+    System.out.println("\tFrom backend: --> " + spirvBackend);
+  }
 
-    public static void main(String[] args) {
-        System.out.println("Running Native: uk.ac.manchester.tornado.drivers.spirv.tests.TestBackend");
-        new TestBackend().test();
-    }
+  public void test() {
+    invokeSPIRVBackend();
+  }
 
+  public static void main(String[] args) {
+    System.out.println("Running Native: uk.ac.manchester.tornado.drivers.spirv.tests.TestBackend");
+    new TestBackend().test();
+  }
 }

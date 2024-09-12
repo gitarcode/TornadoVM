@@ -27,32 +27,34 @@ import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLConstantValue;
 
 @NodeInfo(nameTemplate = "{p#selection}")
 public class VectorSelectionNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<VectorSelectionNode> TYPE = NodeClass.create(VectorSelectionNode.class);
+  public static final NodeClass<VectorSelectionNode> TYPE =
+      NodeClass.create(VectorSelectionNode.class);
 
-    @Override
-    public void generate(NodeLIRBuilderTool tool) {
-        tool.setResult(this, new OCLConstantValue(selection.name().toLowerCase()));
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool tool) {
+    tool.setResult(this, new OCLConstantValue(selection.name().toLowerCase()));
+  }
 
-    public static enum VectorSelection {
-        LO, Hi, ODD, EVEN;
-    }
+  public static enum VectorSelection {
+    LO,
+    Hi,
+    ODD,
+    EVEN;
+  }
 
-    private VectorSelection selection;
+  private VectorSelection selection;
 
-    public VectorSelectionNode(VectorSelection selection) {
-        super(TYPE, StampFactory.forVoid());
-        this.selection = selection;
-    }
+  public VectorSelectionNode(VectorSelection selection) {
+    super(TYPE, StampFactory.forVoid());
+    this.selection = selection;
+  }
 
-    public VectorSelection getSelection() {
-        return selection;
-    }
-
+  public VectorSelection getSelection() {
+    return selection;
+  }
 }

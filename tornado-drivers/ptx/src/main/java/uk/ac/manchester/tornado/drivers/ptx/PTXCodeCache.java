@@ -24,54 +24,54 @@
 package uk.ac.manchester.tornado.drivers.ptx;
 
 import java.util.concurrent.ConcurrentHashMap;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoBailoutRuntimeException;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXInstalledCode;
 import uk.ac.manchester.tornado.runtime.common.RuntimeUtilities;
 
 public class PTXCodeCache {
 
-    private final PTXDeviceContext deviceContext;
-    private final ConcurrentHashMap<String, PTXInstalledCode> cache;
+  private final PTXDeviceContext deviceContext;
+  private final ConcurrentHashMap<String, PTXInstalledCode> cache;
 
-    public PTXCodeCache(PTXDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
-        cache = new ConcurrentHashMap<>();
+  public PTXCodeCache(PTXDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+    cache = new ConcurrentHashMap<>();
+  }
+
+  public PTXInstalledCode installSource(
+      String name, byte[] targetCode, String resolvedMethodName, boolean debugKernel) {
+
+    if (!cache.containsKey(name)) {
+      if (debugKernel) {
+        RuntimeUtilities.dumpKernel(targetCode);
+      }
+
+      PTXModule module = new PTXModule(resolvedMethodName, targetCode, name);
+
+      if (module.isPTXJITSuccess()) {
+        PTXInstalledCode code = new PTXInstalledCode(name, module, deviceContext);
+        cache.put(name, code);
+        return code;
+      } else {
+        throw new TornadoBailoutRuntimeException("PTX JIT compilation failed!");
+      }
     }
 
-    public PTXInstalledCode installSource(String name, byte[] targetCode, String resolvedMethodName, boolean debugKernel) {
+    return cache.get(name);
+  }
 
-        if (!cache.containsKey(name)) {
-            if (debugKernel) {
-                RuntimeUtilities.dumpKernel(targetCode);
-            }
+  public PTXInstalledCode getCachedCode(String name) {
+    return cache.get(name);
+  }
 
-            PTXModule module = new PTXModule(resolvedMethodName, targetCode, name);
+  public boolean isCached(String name) {
+    return cache.containsKey(name);
+  }
 
-            if (module.isPTXJITSuccess()) {
-                PTXInstalledCode code = new PTXInstalledCode(name, module, deviceContext);
-                cache.put(name, code);
-                return code;
-            } else {
-                throw new TornadoBailoutRuntimeException("PTX JIT compilation failed!");
-            }
-        }
-
-        return cache.get(name);
+  public void reset() {
+    for (PTXInstalledCode code : cache.values()) {
+      code.invalidate();
     }
-
-    public PTXInstalledCode getCachedCode(String name) {
-        return cache.get(name);
-    }
-
-    public boolean isCached(String name) {
-        return cache.containsKey(name);
-    }
-
-    public void reset() {
-        for (PTXInstalledCode code : cache.values()) {
-            code.invalidate();
-        }
-        cache.clear();
-    }
+    cache.clear();
+  }
 }

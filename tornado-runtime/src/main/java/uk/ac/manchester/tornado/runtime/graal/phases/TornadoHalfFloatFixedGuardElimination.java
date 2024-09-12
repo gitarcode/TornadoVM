@@ -23,7 +23,6 @@ package uk.ac.manchester.tornado.runtime.graal.phases;
 
 import java.util.ArrayList;
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.FixedGuardNode;
 import org.graalvm.compiler.nodes.GraphState;
@@ -32,51 +31,51 @@ import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.IsNullNode;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.runtime.graal.nodes.HalfFloatPlaceholder;
 
 public class TornadoHalfFloatFixedGuardElimination extends BasePhase<TornadoSketchTierContext> {
 
-    private static void deleteFixed(Node node) {
-        if (!node.isDeleted()) {
-            Node predecessor = node.predecessor();
-            Node successor = node.successors().first();
+  private static void deleteFixed(Node node) {
+    if (!node.isDeleted()) {
+      Node predecessor = node.predecessor();
+      Node successor = node.successors().first();
 
-            node.replaceFirstSuccessor(successor, null);
-            node.replaceAtPredecessor(successor);
-            predecessor.replaceFirstSuccessor(node, successor);
+      node.replaceFirstSuccessor(successor, null);
+      node.replaceAtPredecessor(successor);
+      predecessor.replaceFirstSuccessor(node, successor);
 
-            for (Node us : node.usages()) {
-                node.removeUsage(us);
-            }
-            node.clearInputs();
-            node.safeDelete();
+      for (Node us : node.usages()) {
+        node.removeUsage(us);
+      }
+      node.clearInputs();
+      node.safeDelete();
+    }
+  }
+
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
+
+  protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
+    ArrayList<ValueNode> nodesToBeDeleted = new ArrayList<ValueNode>();
+    for (HalfFloatPlaceholder placeholderNode :
+        graph.getNodes().filter(HalfFloatPlaceholder.class)) {
+      if (placeholderNode.getInput() instanceof PiNode placeholderInput) {
+        ValueNode halfFloatValue = placeholderInput.object();
+        FixedGuardNode placeholderGuard = (FixedGuardNode) placeholderInput.getGuard();
+        if (placeholderGuard.inputs().filter(IsNullNode.class).isNotEmpty()) {
+          IsNullNode isNullNode = placeholderGuard.inputs().filter(IsNullNode.class).first();
+          nodesToBeDeleted.add(isNullNode);
         }
+        deleteFixed(placeholderGuard);
+        placeholderNode.setInput(halfFloatValue);
+        nodesToBeDeleted.add(placeholderInput);
+      }
     }
 
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
+    for (ValueNode node : nodesToBeDeleted) {
+      node.safeDelete();
     }
-
-    protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
-        ArrayList<ValueNode> nodesToBeDeleted = new ArrayList<ValueNode>();
-        for (HalfFloatPlaceholder placeholderNode : graph.getNodes().filter(HalfFloatPlaceholder.class)) {
-            if (placeholderNode.getInput() instanceof PiNode placeholderInput) {
-                ValueNode halfFloatValue = placeholderInput.object();
-                FixedGuardNode placeholderGuard = (FixedGuardNode) placeholderInput.getGuard();
-                if (placeholderGuard.inputs().filter(IsNullNode.class).isNotEmpty()) {
-                    IsNullNode isNullNode = placeholderGuard.inputs().filter(IsNullNode.class).first();
-                    nodesToBeDeleted.add(isNullNode);
-                }
-                deleteFixed(placeholderGuard);
-                placeholderNode.setInput(halfFloatValue);
-                nodesToBeDeleted.add(placeholderInput);
-            }
-        }
-
-        for (ValueNode node : nodesToBeDeleted) {
-            node.safeDelete();
-        }
-    }
+  }
 }

@@ -26,54 +26,54 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class NBodyJava extends BenchmarkDriver {
 
-    private float delT;
-    private float espSqr;
-    private FloatArray posSeq;
-    private FloatArray velSeq;
-    private int numBodies;
+  private float delT;
+  private float espSqr;
+  private FloatArray posSeq;
+  private FloatArray velSeq;
+  private int numBodies;
 
-    public NBodyJava(int numBodies, int iterations) {
-        super(iterations);
-        this.numBodies = numBodies;
+  public NBodyJava(int numBodies, int iterations) {
+    super(iterations);
+    this.numBodies = numBodies;
+  }
+
+  @Override
+  public void setUp() {
+    delT = 0.005f;
+    espSqr = 500.0f;
+
+    FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
+    FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
+
+    for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+      auxPositionRandom.set(i, (float) Math.random());
     }
 
-    @Override
-    public void setUp() {
-        delT = 0.005f;
-        espSqr = 500.0f;
+    auxVelocityZero.init(0.0f);
 
-        FloatArray auxPositionRandom = new FloatArray(numBodies * 4);
-        FloatArray auxVelocityZero = new FloatArray(numBodies * 3);
+    posSeq = new FloatArray(numBodies * 4);
+    velSeq = new FloatArray(numBodies * 4);
 
-        for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-            auxPositionRandom.set(i, (float) Math.random());
-        }
-
-        auxVelocityZero.init(0.0f);
-
-        posSeq = new FloatArray(numBodies * 4);
-        velSeq = new FloatArray(numBodies * 4);
-
-        if (auxPositionRandom.getSize() >= 0) {
-            for (int i = 0; i < auxPositionRandom.getSize(); i++) {
-                posSeq.set(i, auxPositionRandom.get(i));
-            }
-        }
-
-        if (auxVelocityZero.getSize() >= 0) {
-            for (int i = 0; i < auxVelocityZero.getSize(); i++) {
-                velSeq.set(i, auxVelocityZero.get(i));
-            }
-        }
+    if (auxPositionRandom.getSize() >= 0) {
+      for (int i = 0; i < auxPositionRandom.getSize(); i++) {
+        posSeq.set(i, auxPositionRandom.get(i));
+      }
     }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
+    if (auxVelocityZero.getSize() >= 0) {
+      for (int i = 0; i < auxVelocityZero.getSize(); i++) {
+        velSeq.set(i, auxVelocityZero.get(i));
+      }
     }
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        nBody(numBodies, posSeq, velSeq, delT, espSqr);
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
+
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    nBody(numBodies, posSeq, velSeq, delT, espSqr);
+  }
 }

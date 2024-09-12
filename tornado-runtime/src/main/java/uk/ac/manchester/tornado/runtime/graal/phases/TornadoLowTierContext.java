@@ -24,20 +24,18 @@ package uk.ac.manchester.tornado.runtime.graal.phases;
 import org.graalvm.compiler.phases.tiers.LowTierContext;
 import org.graalvm.compiler.phases.tiers.TargetProvider;
 import org.graalvm.compiler.phases.util.Providers;
-
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class TornadoLowTierContext extends LowTierContext {
 
-    protected final TaskDataContext meta;
+  protected final TaskDataContext meta;
 
-    public TornadoLowTierContext(Providers copyFrom, TargetProvider target, TaskDataContext meta) {
-        super(copyFrom, target);
-        this.meta = meta;
-    }
+  public TornadoLowTierContext(Providers copyFrom, TargetProvider target, TaskDataContext meta) {
+    super(copyFrom, target);
+    this.meta = meta;
+  }
 
-    public TaskDataContext getMeta() {
-        return meta;
-    }
-
+  public TaskDataContext getMeta() {
+    return meta;
+  }
 }

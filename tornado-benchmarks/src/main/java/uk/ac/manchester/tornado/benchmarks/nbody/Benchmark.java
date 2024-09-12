@@ -22,44 +22,43 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkRunner;
 
 public class Benchmark extends BenchmarkRunner {
 
-    private int numBodies;
+  private int numBodies;
 
-    @Override
-    public void parseArgs(String[] args) {
-        if (args.length == 2) {
-            iterations = Integer.parseInt(args[0]);
-            numBodies = Integer.parseInt(args[1]);
-        } else if (args.length == 1) {
-            System.out.printf("Two arguments are needed: iterations size");
-        } else {
-            iterations = 51;
-            numBodies = 16384;
-        }
+  @Override
+  public void parseArgs(String[] args) {
+    if (args.length == 2) {
+      iterations = Integer.parseInt(args[0]);
+      numBodies = Integer.parseInt(args[1]);
+    } else if (args.length == 1) {
+      System.out.printf("Two arguments are needed: iterations size");
+    } else {
+      iterations = 51;
+      numBodies = 16384;
     }
+  }
 
-    @Override
-    protected String getName() {
-        return "nbody";
-    }
+  @Override
+  protected String getName() {
+    return "nbody";
+  }
 
-    @Override
-    protected String getIdString() {
-        return String.format("%s-%d-%d", getName(), iterations, numBodies);
-    }
+  @Override
+  protected String getIdString() {
+    return String.format("%s-%d-%d", getName(), iterations, numBodies);
+  }
 
-    @Override
-    protected String getConfigString() {
-        return String.format("size=%d", numBodies);
-    }
+  @Override
+  protected String getConfigString() {
+    return String.format("size=%d", numBodies);
+  }
 
-    @Override
-    protected BenchmarkDriver getJavaDriver() {
-        return new NBodyJava(numBodies, iterations);
-    }
+  @Override
+  protected BenchmarkDriver getJavaDriver() {
+    return new NBodyJava(numBodies, iterations);
+  }
 
-    @Override
-    protected BenchmarkDriver getTornadoDriver() {
-        return new NBodyTornado(numBodies, iterations);
-    }
-
+  @Override
+  protected BenchmarkDriver getTornadoDriver() {
+    return new NBodyTornado(numBodies, iterations);
+  }
 }

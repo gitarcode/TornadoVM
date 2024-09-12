@@ -25,7 +25,6 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.Opcode;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLNullaryIntrinsic;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLNullaryOp;
@@ -34,62 +33,56 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResu
 
 public class OCLNullary {
 
-    /**
-     * Abstract operation which consumes no inputs
-     */
-    protected static class NullaryConsumer extends OCLLIROp {
+  /** Abstract operation which consumes no inputs */
+  protected static class NullaryConsumer extends OCLLIROp {
 
-        @Opcode
-        protected final OCLNullaryOp opcode;
+    @Opcode protected final OCLNullaryOp opcode;
 
-        protected NullaryConsumer(OCLNullaryOp opcode, LIRKind lirKind) {
-            super(lirKind);
-            this.opcode = opcode;
-        }
-
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            opcode.emit(crb);
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%s", opcode.toString());
-        }
+    protected NullaryConsumer(OCLNullaryOp opcode, LIRKind lirKind) {
+      super(lirKind);
+      this.opcode = opcode;
     }
 
-    public static class Expr extends NullaryConsumer {
-
-        public Expr(OCLNullaryOp opcode, LIRKind lirKind) {
-            super(opcode, lirKind);
-        }
-
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      opcode.emit(crb);
     }
 
-    public static class Parameter extends NullaryConsumer {
+    @Override
+    public String toString() {
+      return String.format("%s", opcode.toString());
+    }
+  }
 
-        public Parameter(String name, LIRKind lirKind) {
-            super(new OCLNullaryTemplate(name), lirKind);
-        }
+  public static class Expr extends NullaryConsumer {
 
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            asm.emit(opcode.toString());
-        }
+    public Expr(OCLNullaryOp opcode, LIRKind lirKind) {
+      super(opcode, lirKind);
+    }
+  }
+
+  public static class Parameter extends NullaryConsumer {
+
+    public Parameter(String name, LIRKind lirKind) {
+      super(new OCLNullaryTemplate(name), lirKind);
     }
 
-    public static class Intrinsic extends NullaryConsumer {
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      asm.emit(opcode.toString());
+    }
+  }
 
-        public Intrinsic(OCLNullaryIntrinsic opcode, LIRKind lirKind) {
-            super(opcode, lirKind);
-        }
+  public static class Intrinsic extends NullaryConsumer {
 
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            opcode.emit(crb);
-            asm.emit("()");
-        }
-
+    public Intrinsic(OCLNullaryIntrinsic opcode, LIRKind lirKind) {
+      super(opcode, lirKind);
     }
 
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      opcode.emit(crb);
+      asm.emit("()");
+    }
+  }
 }

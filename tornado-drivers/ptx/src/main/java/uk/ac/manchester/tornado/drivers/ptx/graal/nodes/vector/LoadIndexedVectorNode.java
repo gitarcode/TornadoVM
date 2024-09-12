@@ -32,20 +32,22 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 @NodeInfo
 public class LoadIndexedVectorNode extends LoadIndexedNode {
 
-    public static final NodeClass<LoadIndexedVectorNode> TYPE = NodeClass.create(LoadIndexedVectorNode.class);
-    private final PTXKind ptxKind;
+  public static final NodeClass<LoadIndexedVectorNode> TYPE =
+      NodeClass.create(LoadIndexedVectorNode.class);
+  private final PTXKind ptxKind;
 
-    public LoadIndexedVectorNode(PTXKind ptxKind, ValueNode array, ValueNode index, JavaKind elementKind) {
-        super(TYPE, PTXStampFactory.getStampFor(ptxKind), array, index, null, elementKind);
-        this.ptxKind = ptxKind;
-    }
+  public LoadIndexedVectorNode(
+      PTXKind ptxKind, ValueNode array, ValueNode index, JavaKind elementKind) {
+    super(TYPE, PTXStampFactory.getStampFor(ptxKind), array, index, null, elementKind);
+    this.ptxKind = ptxKind;
+  }
 
-    @Override
-    public boolean inferStamp() {
-        return updateStamp(PTXStampFactory.getStampFor(ptxKind));
-    }
+  @Override
+  public boolean inferStamp() {
+    return updateStamp(PTXStampFactory.getStampFor(ptxKind));
+  }
 
-    public PTXKind getPtxKind() {
-        return ptxKind;
-    }
+  public PTXKind getPtxKind() {
+    return ptxKind;
+  }
 }

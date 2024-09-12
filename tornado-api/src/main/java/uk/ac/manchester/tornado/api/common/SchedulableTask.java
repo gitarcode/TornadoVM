@@ -23,50 +23,49 @@ import uk.ac.manchester.tornado.api.runtime.TaskContextInterface;
 
 public interface SchedulableTask {
 
-    Object[] getArguments();
+  Object[] getArguments();
 
-    Access[] getArgumentsAccess();
+  Access[] getArgumentsAccess();
 
-    TaskContextInterface meta();
+  TaskContextInterface meta();
 
-    void setDevice(TornadoDevice device);
+  void setDevice(TornadoDevice device);
 
-    TornadoDevice getDevice();
+  TornadoDevice getDevice();
 
-    String getFullName();
+  String getFullName();
 
-    String getNormalizedName();
+  String getNormalizedName();
 
-    String getTaskName();
+  String getTaskName();
 
-    String getId();
+  String getId();
 
-    void setBatchThreads(long batchThreads);
+  void setBatchThreads(long batchThreads);
 
-    long getBatchThreads();
+  long getBatchThreads();
 
-    void setBatchNumber(int batchNumber);
+  void setBatchNumber(int batchNumber);
 
-    int getBatchNumber();
+  int getBatchNumber();
 
-    void setBatchSize(long batchSize);
+  void setBatchSize(long batchSize);
 
-    long getBatchSize();
+  long getBatchSize();
 
-    void attachProfiler(TornadoProfiler tornadoProfiler);
+  void attachProfiler(TornadoProfiler tornadoProfiler);
 
-    TornadoProfiler getProfiler();
+  TornadoProfiler getProfiler();
 
-    void forceCompilation();
+  void forceCompilation();
 
-    boolean shouldCompile();
+  boolean shouldCompile();
 
-    void enableDefaultThreadScheduler(boolean useDefaultScheduler);
+  void enableDefaultThreadScheduler(boolean useDefaultScheduler);
 
-    void setUseGridScheduler(boolean use);
+  void setUseGridScheduler(boolean use);
 
-    void setGridScheduler(GridScheduler gridScheduler);
+  void setGridScheduler(GridScheduler gridScheduler);
 
-    boolean isGridSchedulerEnabled();
-
+  boolean isGridSchedulerEnabled();
 }

@@ -23,32 +23,33 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes.vector;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.java.LoadIndexedNode;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLStampFactory;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 
 @NodeInfo
 public class LoadIndexedVectorNode extends LoadIndexedNode {
 
-    public static final NodeClass<LoadIndexedVectorNode> TYPE = NodeClass.create(LoadIndexedVectorNode.class);
-    private final OCLKind oclKind;
+  public static final NodeClass<LoadIndexedVectorNode> TYPE =
+      NodeClass.create(LoadIndexedVectorNode.class);
+  private final OCLKind oclKind;
 
-    public LoadIndexedVectorNode(OCLKind oclKind, ValueNode array, ValueNode index, JavaKind elementKind) {
-        super(TYPE, OCLStampFactory.getStampFor(oclKind), array, index, null, elementKind);
-        this.oclKind = oclKind;
-    }
+  public LoadIndexedVectorNode(
+      OCLKind oclKind, ValueNode array, ValueNode index, JavaKind elementKind) {
+    super(TYPE, OCLStampFactory.getStampFor(oclKind), array, index, null, elementKind);
+    this.oclKind = oclKind;
+  }
 
-    @Override
-    public boolean inferStamp() {
-        return updateStamp(OCLStampFactory.getStampFor(oclKind));
-    }
+  @Override
+  public boolean inferStamp() {
+    return updateStamp(OCLStampFactory.getStampFor(oclKind));
+  }
 
-    public OCLKind getOCLKind() {
-        return oclKind;
-    }
+  public OCLKind getOCLKind() {
+    return oclKind;
+  }
 }

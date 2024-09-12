@@ -20,56 +20,61 @@ package uk.ac.manchester.tornado.api.profiler;
 import java.io.File;
 
 public class ChromeEventJSonWriter extends JSonWriter<ChromeEventJSonWriter> {
-    ContentWriter NO_ARGS = null;
+  ContentWriter NO_ARGS = null;
 
-    ChromeEventJSonWriter() {
-        super();
-        objectStart();
-        arrayStart("traceEvents");
-        object(() -> {
-            object("args", () -> kv("name", "Tornado"));
-            kv("ph", "M");
-            pidAndTid();
-            kv("name", "tornadovm");
-            kv("sort_index", 1);
+  ChromeEventJSonWriter() {
+    super();
+    objectStart();
+    arrayStart("traceEvents");
+    object(
+        () -> {
+          object("args", () -> kv("name", "Tornado"));
+          kv("ph", "M");
+          pidAndTid();
+          kv("name", "tornadovm");
+          kv("sort_index", 1);
         });
-    }
+  }
 
-    JSonWriter pidAndTid() {
-        return kv("pid", 0).kv("tid", Thread.currentThread().getId());
-    }
+  JSonWriter pidAndTid() {
+    return kv("pid", 0).kv("tid", Thread.currentThread().getId());
+  }
 
-    JSonWriter common(String phase, String name, String category) {
-        return kv("ph", phase).kv("name", name).kv("cat", category).pidAndTid();
-    }
+  JSonWriter common(String phase, String name, String category) {
+    return kv("ph", phase).kv("name", name).kv("cat", category).pidAndTid();
+  }
 
-    public JSonWriter x(String name, String category, long startNs, long endNs, ContentWriter cw) {
-        return compact().object(() -> {
-            common("X", name, category);
-            ns("ts", startNs);
-            nsd("dur", endNs - startNs);
-            if (cw != NO_ARGS) {
-                object("args", () -> {
-                    nonCompact();
-                    cw.write();
-                });
-            } else {
+  public JSonWriter x(String name, String category, long startNs, long endNs, ContentWriter cw) {
+    return compact()
+        .object(
+            () -> {
+              common("X", name, category);
+              ns("ts", startNs);
+              nsd("dur", endNs - startNs);
+              if (cw != NO_ARGS) {
+                object(
+                    "args",
+                    () -> {
+                      nonCompact();
+                      cw.write();
+                    });
+              } else {
                 nonCompact();
-            }
-        });
-    }
+              }
+            });
+  }
 
-    JSonWriter b(String name, String category, long startNs) {
-        return common("B", name, category).ns("ts", startNs);
-    }
+  JSonWriter b(String name, String category, long startNs) {
+    return common("B", name, category).ns("ts", startNs);
+  }
 
-    JSonWriter e(String name, long durationNs) {
-        return kv("ph", "E").kv("name", name).pidAndTid().ns("ts", durationNs);
-    }
+  JSonWriter e(String name, long durationNs) {
+    return kv("ph", "E").kv("name", name).pidAndTid().ns("ts", durationNs);
+  }
 
-    @Override
-    void write(File file) {
-        arrayEnd().objectEnd();
-        super.write(file);
-    }
+  @Override
+  void write(File file) {
+    arrayEnd().objectEnd();
+    super.write(file);
+  }
 }

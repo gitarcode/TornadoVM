@@ -25,49 +25,47 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.compiler;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimplemented;
 
-import org.graalvm.compiler.lir.LIRInstruction;
-import org.graalvm.compiler.lir.gen.MoveFactory;
-
 import jdk.vm.ci.meta.AllocatableValue;
 import jdk.vm.ci.meta.Constant;
 import jdk.vm.ci.meta.Value;
+import org.graalvm.compiler.lir.LIRInstruction;
+import org.graalvm.compiler.lir.gen.MoveFactory;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 
 public class OCLMoveFactory extends MoveFactory {
 
-    @Override
-    public boolean canInlineConstant(Constant jc) {
-        return true;
-    }
+  @Override
+  public boolean canInlineConstant(Constant jc) {
+    return true;
+  }
 
-    @Override
-    public boolean allowConstantToStackMove(Constant cnstnt) {
-        unimplemented();
-        return false;
-    }
+  @Override
+  public boolean allowConstantToStackMove(Constant cnstnt) {
+    unimplemented();
+    return false;
+  }
 
-    @Override
-    public LIRInstruction createMove(AllocatableValue av, Value value) {
-        AssignStmt assignStmt = new AssignStmt(av, value);
-        return assignStmt;
-    }
+  @Override
+  public LIRInstruction createMove(AllocatableValue av, Value value) {
+    AssignStmt assignStmt = new AssignStmt(av, value);
+    return assignStmt;
+  }
 
-    @Override
-    public LIRInstruction createStackMove(AllocatableValue av, AllocatableValue av1) {
-        unimplemented();
-        return null;
-    }
+  @Override
+  public LIRInstruction createStackMove(AllocatableValue av, AllocatableValue av1) {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public LIRInstruction createLoad(AllocatableValue result, Constant input) {
-        unimplemented();
-        return null;
-    }
+  @Override
+  public LIRInstruction createLoad(AllocatableValue result, Constant input) {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public LIRInstruction createStackLoad(AllocatableValue result, Constant input) {
-        unimplemented();
-        return null;
-    }
-
+  @Override
+  public LIRInstruction createStackLoad(AllocatableValue result, Constant input) {
+    unimplemented();
+    return null;
+  }
 }

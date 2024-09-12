@@ -24,6 +24,7 @@
 
 package uk.ac.manchester.tornado.drivers.ptx.graal.compiler;
 
+import jdk.vm.ci.meta.MetaAccessProvider;
 import org.graalvm.compiler.lir.phases.LIRPhaseSuite;
 import org.graalvm.compiler.lir.phases.PostAllocationOptimizationPhase;
 import org.graalvm.compiler.lir.phases.PostAllocationOptimizationStage;
@@ -32,8 +33,6 @@ import org.graalvm.compiler.lir.phases.PreAllocationOptimizationStage;
 import org.graalvm.compiler.options.OptionValues;
 import org.graalvm.compiler.phases.common.AddressLoweringByNodePhase;
 import org.graalvm.compiler.phases.common.CanonicalizerPhase;
-
-import jdk.vm.ci.meta.MetaAccessProvider;
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoCompilerConfiguration;
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoHighTier;
@@ -44,39 +43,48 @@ import uk.ac.manchester.tornado.runtime.graal.phases.TornadoAllocationStage;
 
 public class PTXCompilerConfiguration implements TornadoCompilerConfiguration {
 
-    @Override
-    public TornadoAllocationStage createAllocationStage(OptionValues options) {
-        return new TornadoAllocationStage();
-    }
+  @Override
+  public TornadoAllocationStage createAllocationStage(OptionValues options) {
+    return new TornadoAllocationStage();
+  }
 
-    @Override
-    public TornadoSketchTier createSketchTier(OptionValues options, CanonicalizerPhase.CustomSimplification canonicalizer) {
-        return new TornadoSketchTier(options, canonicalizer);
-    }
+  @Override
+  public TornadoSketchTier createSketchTier(
+      OptionValues options, CanonicalizerPhase.CustomSimplification canonicalizer) {
+    return new TornadoSketchTier(options, canonicalizer);
+  }
 
-    @Override
-    public TornadoHighTier createHighTier(OptionValues options, TornadoDeviceContext deviceContext, CanonicalizerPhase.CustomSimplification canonicalizer, MetaAccessProvider metaAccessProvider) {
-        return new PTXHighTier(options, canonicalizer, metaAccessProvider);
-    }
+  @Override
+  public TornadoHighTier createHighTier(
+      OptionValues options,
+      TornadoDeviceContext deviceContext,
+      CanonicalizerPhase.CustomSimplification canonicalizer,
+      MetaAccessProvider metaAccessProvider) {
+    return new PTXHighTier(options, canonicalizer, metaAccessProvider);
+  }
 
-    @Override
-    public TornadoMidTier createMidTier(OptionValues options) {
-        return new PTXMidTier(options);
-    }
+  @Override
+  public TornadoMidTier createMidTier(OptionValues options) {
+    return new PTXMidTier(options);
+  }
 
-    @Override
-    public TornadoLowTier createLowTier(OptionValues options, TornadoDeviceContext deviceContext, AddressLoweringByNodePhase.AddressLowering addressLowering) {
-        return new PTXLowTier(options, deviceContext, addressLowering);
-    }
+  @Override
+  public TornadoLowTier createLowTier(
+      OptionValues options,
+      TornadoDeviceContext deviceContext,
+      AddressLoweringByNodePhase.AddressLowering addressLowering) {
+    return new PTXLowTier(options, deviceContext, addressLowering);
+  }
 
-    @Override
-    public LIRPhaseSuite<PostAllocationOptimizationPhase.PostAllocationOptimizationContext> createPostAllocationOptimizationStage(OptionValues options) {
-        return new PostAllocationOptimizationStage(options);
-    }
+  @Override
+  public LIRPhaseSuite<PostAllocationOptimizationPhase.PostAllocationOptimizationContext>
+      createPostAllocationOptimizationStage(OptionValues options) {
+    return new PostAllocationOptimizationStage(options);
+  }
 
-    @Override
-    public LIRPhaseSuite<PreAllocationOptimizationPhase.PreAllocationOptimizationContext> createPreAllocationOptimizationStage(OptionValues options) {
-        return new PreAllocationOptimizationStage(options);
-    }
-
+  @Override
+  public LIRPhaseSuite<PreAllocationOptimizationPhase.PreAllocationOptimizationContext>
+      createPreAllocationOptimizationStage(OptionValues options) {
+    return new PreAllocationOptimizationStage(options);
+  }
 }

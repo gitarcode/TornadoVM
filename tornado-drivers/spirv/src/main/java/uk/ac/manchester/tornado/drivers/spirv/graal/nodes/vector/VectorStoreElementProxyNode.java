@@ -33,73 +33,78 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.Canonicalizable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
-
 import uk.ac.manchester.tornado.drivers.spirv.graal.SPIRVStampFactory;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 
-/**
- * The {@code StoreIndexedNode} represents a write to an array element.
- */
+/** The {@code StoreIndexedNode} represents a write to an array element. */
 @NodeInfo(nameTemplate = "Store .s{p#lane}")
 public class VectorStoreElementProxyNode extends FixedWithNextNode implements Canonicalizable {
 
-    public static final NodeClass<VectorStoreElementProxyNode> TYPE = NodeClass.create(VectorStoreElementProxyNode.class);
+  public static final NodeClass<VectorStoreElementProxyNode> TYPE =
+      NodeClass.create(VectorStoreElementProxyNode.class);
 
-    @Input
-    ValueNode value;
+  @Input ValueNode value;
 
-    @OptionalInput(InputType.Association)
-    ValueNode origin;
-    @OptionalInput(InputType.Association)
-    ValueNode laneOrigin;
+  @OptionalInput(InputType.Association)
+  ValueNode origin;
 
-    protected VectorStoreElementProxyNode(NodeClass<? extends VectorStoreElementProxyNode> c, SPIRVKind kind, ValueNode origin, ValueNode lane) {
-        super(c, SPIRVStampFactory.getStampFor(kind));
-        this.origin = origin;
-        this.laneOrigin = lane;
+  @OptionalInput(InputType.Association)
+  ValueNode laneOrigin;
+
+  protected VectorStoreElementProxyNode(
+      NodeClass<? extends VectorStoreElementProxyNode> c,
+      SPIRVKind kind,
+      ValueNode origin,
+      ValueNode lane) {
+    super(c, SPIRVStampFactory.getStampFor(kind));
+    this.origin = origin;
+    this.laneOrigin = lane;
+  }
+
+  public VectorStoreElementProxyNode(
+      SPIRVKind kind, ValueNode origin, ValueNode lane, ValueNode value) {
+    this(TYPE, kind, origin, lane);
+    this.value = value;
+  }
+
+  public ValueNode value() {
+    return value;
+  }
+
+  public boolean canResolve() {
+    return ((origin != null && laneOrigin != null)
+        && origin instanceof SPIRVVectorValueNode
+        && laneOrigin instanceof ConstantNode
+        && ((SPIRVVectorValueNode) origin).getSPIRVKind().getVectorLength()
+            > laneOrigin.asJavaConstant().asInt());
+  }
+
+  public boolean tryResolve() {
+    if (canResolve()) {
+      /*
+       * If we can resolve this node properly, this operation should be applied to the
+       * vector node and this node should be discarded.
+       */
+      final SPIRVVectorValueNode vector = (SPIRVVectorValueNode) origin;
+      vector.setElement(laneOrigin.asJavaConstant().asInt(), value);
+      clearInputs();
+      return true;
+    } else {
+      return false;
     }
+  }
 
-    public VectorStoreElementProxyNode(SPIRVKind kind, ValueNode origin, ValueNode lane, ValueNode value) {
-        this(TYPE, kind, origin, lane);
-        this.value = value;
+  @Override
+  public boolean inferStamp() {
+    return true;
+  }
+
+  @Override
+  public Node canonical(CanonicalizerTool tool) {
+    if (tryResolve()) {
+      return null;
+    } else {
+      return this;
     }
-
-    public ValueNode value() {
-        return value;
-    }
-
-    public boolean canResolve() {
-        return ((origin != null && laneOrigin != null) && origin instanceof SPIRVVectorValueNode && laneOrigin instanceof ConstantNode
-                && ((SPIRVVectorValueNode) origin).getSPIRVKind().getVectorLength() > laneOrigin.asJavaConstant().asInt());
-    }
-
-    public boolean tryResolve() {
-        if (canResolve()) {
-            /*
-             * If we can resolve this node properly, this operation should be applied to the
-             * vector node and this node should be discarded.
-             */
-            final SPIRVVectorValueNode vector = (SPIRVVectorValueNode) origin;
-            vector.setElement(laneOrigin.asJavaConstant().asInt(), value);
-            clearInputs();
-            return true;
-        } else {
-            return false;
-        }
-
-    }
-
-    @Override
-    public boolean inferStamp() {
-        return true;
-    }
-
-    @Override
-    public Node canonical(CanonicalizerTool tool) {
-        if (tryResolve()) {
-            return null;
-        } else {
-            return this;
-        }
-    }
+  }
 }

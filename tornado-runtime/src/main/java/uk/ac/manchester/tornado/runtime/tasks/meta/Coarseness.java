@@ -27,30 +27,30 @@ import java.util.Arrays;
 
 public class Coarseness {
 
-    private final int[] values;
+  private final int[] values;
 
-    public Coarseness(int depth) {
-        values = new int[depth];
-        Arrays.fill(values, 1);
-    }
+  public Coarseness(int depth) {
+    values = new int[depth];
+    Arrays.fill(values, 1);
+  }
 
-    public void applyConfig(String config) {
-        String[] str = config.split(",");
-        for (int i = 0; i < values.length; i++) {
-            values[i] = Integer.parseInt(str[i]);
-        }
+  public void applyConfig(String config) {
+    String[] str = config.split(",");
+    for (int i = 0; i < values.length; i++) {
+      values[i] = Integer.parseInt(str[i]);
     }
+  }
 
-    public int getCoarseness(int index) {
-        return values[index];
-    }
+  public int getCoarseness(int index) {
+    return values[index];
+  }
 
-    public void setCoarseness(int index, int value) {
-        values[index] = value;
-    }
+  public void setCoarseness(int index, int value) {
+    values[index] = value;
+  }
 
-    @Override
-    public String toString() {
-        return Arrays.toString(values);
-    }
+  @Override
+  public String toString() {
+    return Arrays.toString(values);
+  }
 }

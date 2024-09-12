@@ -1,2 +1,1 @@
-module tornado.drivers.ptx.jni {
-}
+module tornado.drivers.ptx.jni {}

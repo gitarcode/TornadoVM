@@ -1,5 +1,5 @@
 /*
- * This file is part of Tornado: A heterogeneous programming framework: 
+ * This file is part of Tornado: A heterogeneous programming framework:
  * https://github.com/beehive-lab/tornadovm
  *
  * Copyright (c) 2013-2020, APT Group, Department of Computer Science,
@@ -25,6 +25,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
@@ -34,8 +35,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLUnaryIntrinsic;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
@@ -43,25 +42,30 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
 @NodeInfo
 public class LocalThreadIDFixedNode extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<LocalThreadIDFixedNode> TYPE = NodeClass.create(LocalThreadIDFixedNode.class);
+  public static final NodeClass<LocalThreadIDFixedNode> TYPE =
+      NodeClass.create(LocalThreadIDFixedNode.class);
 
-    @Input protected ConstantNode index;
+  @Input protected ConstantNode index;
 
-    public LocalThreadIDFixedNode(ConstantNode value) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        assert stamp != null;
-        index = value;
-    }
+  public LocalThreadIDFixedNode(ConstantNode value) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    assert stamp != null;
+    index = value;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        tool.append(new OCLLIRStmt.AssignStmt(result, new OCLUnary.Intrinsic(OCLUnaryIntrinsic.LOCAL_ID, tool.getLIRKind(stamp), gen.operand(index))));
-        gen.setResult(this, result);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    tool.append(
+        new OCLLIRStmt.AssignStmt(
+            result,
+            new OCLUnary.Intrinsic(
+                OCLUnaryIntrinsic.LOCAL_ID, tool.getLIRKind(stamp), gen.operand(index))));
+    gen.setResult(this, result);
+  }
 
-    public ConstantNode getIndex() {
-        return index;
-    }
+  public ConstantNode getIndex() {
+    return index;
+  }
 }

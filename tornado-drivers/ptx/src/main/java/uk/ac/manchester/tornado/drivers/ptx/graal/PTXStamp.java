@@ -24,148 +24,147 @@ package uk.ac.manchester.tornado.drivers.ptx.graal;
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimplemented;
 
-import org.graalvm.compiler.core.common.LIRKind;
-import org.graalvm.compiler.core.common.spi.LIRKindTool;
-import org.graalvm.compiler.core.common.type.ObjectStamp;
-import org.graalvm.compiler.core.common.type.Stamp;
-
 import jdk.vm.ci.meta.Constant;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.MemoryAccessProvider;
 import jdk.vm.ci.meta.MetaAccessProvider;
 import jdk.vm.ci.meta.ResolvedJavaType;
+import org.graalvm.compiler.core.common.LIRKind;
+import org.graalvm.compiler.core.common.spi.LIRKindTool;
+import org.graalvm.compiler.core.common.type.ObjectStamp;
+import org.graalvm.compiler.core.common.type.Stamp;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 
 public class PTXStamp extends ObjectStamp {
 
-    private static final ResolvedJavaType STAMP_TYPE = null;
-    private static final boolean EXACT_TYPE = true;
-    private static final boolean NON_NULL = true;
-    private static final boolean ALWAYS_NULL = false;
-    private static final boolean ALWAYS_ARRAY = false;
+  private static final ResolvedJavaType STAMP_TYPE = null;
+  private static final boolean EXACT_TYPE = true;
+  private static final boolean NON_NULL = true;
+  private static final boolean ALWAYS_NULL = false;
+  private static final boolean ALWAYS_ARRAY = false;
 
-    private PTXKind kind;
+  private PTXKind kind;
 
-    public PTXStamp(PTXKind kind) {
-        super(STAMP_TYPE, EXACT_TYPE, NON_NULL, ALWAYS_NULL, ALWAYS_ARRAY);
-        this.kind = kind;
+  public PTXStamp(PTXKind kind) {
+    super(STAMP_TYPE, EXACT_TYPE, NON_NULL, ALWAYS_NULL, ALWAYS_ARRAY);
+    this.kind = kind;
+  }
+
+  @Override
+  public Stamp constant(Constant cnstnt, MetaAccessProvider map) {
+    shouldNotReachHere();
+    return this;
+  }
+
+  @Override
+  public Stamp empty() {
+    return this;
+  }
+
+  @Override
+  public LIRKind getLIRKind(LIRKindTool lirKindTool) {
+    return LIRKind.value(kind);
+  }
+
+  public PTXKind getPTXKind() {
+    return kind;
+  }
+
+  @Override
+  public JavaKind getStackKind() {
+    if (kind.isPrimitive()) {
+      switch (kind) {
+        case PRED:
+          return JavaKind.Boolean;
+        case S8:
+        case U8:
+          return JavaKind.Byte;
+        case S16:
+        case U16:
+        case F16:
+        case B16:
+          return JavaKind.Short;
+        case S32:
+        case U32:
+          return JavaKind.Int;
+        case S64:
+        case U64:
+          return JavaKind.Long;
+        case F32:
+          return JavaKind.Float;
+        case F64:
+          return JavaKind.Double;
+        default:
+          return JavaKind.Illegal;
+      }
+    } else if (kind.isVector()) {
+      return JavaKind.Object;
+    }
+    return JavaKind.Illegal;
+  }
+
+  @Override
+  public boolean hasValues() {
+    // shouldNotReachHere();
+    return true;
+  }
+
+  @Override
+  public Stamp improveWith(Stamp stamp) {
+    return this;
+  }
+
+  @Override
+  public boolean isCompatible(Constant constant) {
+
+    shouldNotReachHere();
+    return false;
+  }
+
+  @Override
+  public boolean isCompatible(Stamp stamp) {
+    if (stamp instanceof PTXStamp && ((PTXStamp) stamp).kind == kind) {
+      return true;
     }
 
-    @Override
-    public Stamp constant(Constant cnstnt, MetaAccessProvider map) {
-        shouldNotReachHere();
-        return this;
+    unimplemented("stamp is compat: %s + %s", this, stamp);
+    return false;
+  }
+
+  @Override
+  public ResolvedJavaType javaType(MetaAccessProvider metaAccess) {
+    if (kind.getJavaClass() != null) {
+      return metaAccess.lookupJavaType(kind.getJavaClass());
     }
+    shouldNotReachHere();
 
-    @Override
-    public Stamp empty() {
-        return this;
-    }
+    return null;
+  }
 
-    @Override
-    public LIRKind getLIRKind(LIRKindTool lirKindTool) {
-        return LIRKind.value(kind);
-    }
+  @Override
+  public Stamp join(Stamp stamp) {
+    return this;
+  }
 
-    public PTXKind getPTXKind() {
-        return kind;
-    }
+  @Override
+  public Stamp meet(Stamp stamp) {
+    return this;
+  }
 
-    @Override
-    public JavaKind getStackKind() {
-        if (kind.isPrimitive()) {
-            switch (kind) {
-                case PRED:
-                    return JavaKind.Boolean;
-                case S8:
-                case U8:
-                    return JavaKind.Byte;
-                case S16:
-                case U16:
-                case F16:
-                case B16:
-                    return JavaKind.Short;
-                case S32:
-                case U32:
-                    return JavaKind.Int;
-                case S64:
-                case U64:
-                    return JavaKind.Long;
-                case F32:
-                    return JavaKind.Float;
-                case F64:
-                    return JavaKind.Double;
-                default:
-                    return JavaKind.Illegal;
-            }
-        } else if (kind.isVector()) {
-            return JavaKind.Object;
-        }
-        return JavaKind.Illegal;
-    }
+  @Override
+  public Constant readConstant(
+      MemoryAccessProvider metaAccess, Constant constant, long displacment) {
+    shouldNotReachHere();
+    return null;
+  }
 
-    @Override
-    public boolean hasValues() {
-        // shouldNotReachHere();
-        return true;
-    }
+  @Override
+  public String toString() {
+    return "ptx: " + kind.name();
+  }
 
-    @Override
-    public Stamp improveWith(Stamp stamp) {
-        return this;
-    }
-
-    @Override
-    public boolean isCompatible(Constant constant) {
-
-        shouldNotReachHere();
-        return false;
-    }
-
-    @Override
-    public boolean isCompatible(Stamp stamp) {
-        if (stamp instanceof PTXStamp && ((PTXStamp) stamp).kind == kind) {
-            return true;
-        }
-
-        unimplemented("stamp is compat: %s + %s", this, stamp);
-        return false;
-    }
-
-    @Override
-    public ResolvedJavaType javaType(MetaAccessProvider metaAccess) {
-        if (kind.getJavaClass() != null) {
-            return metaAccess.lookupJavaType(kind.getJavaClass());
-        }
-        shouldNotReachHere();
-
-        return null;
-    }
-
-    @Override
-    public Stamp join(Stamp stamp) {
-        return this;
-    }
-
-    @Override
-    public Stamp meet(Stamp stamp) {
-        return this;
-    }
-
-    @Override
-    public Constant readConstant(MemoryAccessProvider metaAccess, Constant constant, long displacment) {
-        shouldNotReachHere();
-        return null;
-    }
-
-    @Override
-    public String toString() {
-        return "ptx: " + kind.name();
-    }
-
-    @Override
-    public Stamp unrestricted() {
-        return this;
-    }
-
+  @Override
+  public Stamp unrestricted() {
+    return this;
+  }
 }

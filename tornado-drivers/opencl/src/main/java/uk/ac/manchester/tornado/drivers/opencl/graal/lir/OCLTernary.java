@@ -28,11 +28,10 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 import static uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssemblerConstants.CLOSE_PARENTHESIS;
 import static uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssemblerConstants.OPEN_PARENTHESIS;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.LIRInstruction.Use;
 import org.graalvm.compiler.lir.Opcode;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLTernaryOp;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLTernaryTemplate;
@@ -40,82 +39,72 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResu
 
 public class OCLTernary {
 
-    /**
-     * Abstract operation which consumes two inputs
-     */
-    protected static class TernaryConsumer extends OCLLIROp {
+  /** Abstract operation which consumes two inputs */
+  protected static class TernaryConsumer extends OCLLIROp {
 
-        @Opcode
-        protected final OCLTernaryOp opcode;
+    @Opcode protected final OCLTernaryOp opcode;
 
-        @Use
-        protected Value x;
-        @Use
-        protected Value y;
-        @Use
-        protected Value z;
+    @Use protected Value x;
+    @Use protected Value y;
+    @Use protected Value z;
 
-        protected TernaryConsumer(OCLTernaryOp opcode, LIRKind lirKind, Value x, Value y, Value z) {
-            super(lirKind);
-            this.opcode = opcode;
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            opcode.emit(crb, x, y, z);
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%s %s %s %s", opcode.toString(), x, y, z);
-        }
-
+    protected TernaryConsumer(OCLTernaryOp opcode, LIRKind lirKind, Value x, Value y, Value z) {
+      super(lirKind);
+      this.opcode = opcode;
+      this.x = x;
+      this.y = y;
+      this.z = z;
     }
 
-    public static class Expr extends TernaryConsumer {
-
-        public Expr(OCLTernaryOp opcode, LIRKind lirKind, Value x, Value y, Value z) {
-            super(opcode, lirKind, x, y, z);
-        }
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      opcode.emit(crb, x, y, z);
     }
 
-    public static class Select extends TernaryConsumer {
+    @Override
+    public String toString() {
+      return String.format("%s %s %s %s", opcode.toString(), x, y, z);
+    }
+  }
 
-        protected OCLLIROp condition;
+  public static class Expr extends TernaryConsumer {
 
-        public Select(LIRKind lirKind, OCLLIROp condition, Value y, Value z) {
-            super(OCLTernaryTemplate.SELECT, lirKind, null, y, z);
-            this.condition = condition;
-        }
+    public Expr(OCLTernaryOp opcode, LIRKind lirKind, Value x, Value y, Value z) {
+      super(opcode, lirKind, x, y, z);
+    }
+  }
 
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            asm.emit(OPEN_PARENTHESIS);
-            condition.emit(crb, asm);
-            asm.emit(CLOSE_PARENTHESIS);
-            asm.emit(" ? ");
-            asm.emitValue(crb, y);
-            asm.emit(" : ");
-            asm.emitValue(crb, z);
-        }
+  public static class Select extends TernaryConsumer {
+
+    protected OCLLIROp condition;
+
+    public Select(LIRKind lirKind, OCLLIROp condition, Value y, Value z) {
+      super(OCLTernaryTemplate.SELECT, lirKind, null, y, z);
+      this.condition = condition;
     }
 
-    /**
-     * OpenCL intrinsic call which consumes three inputs
-     */
-    public static class Intrinsic extends TernaryConsumer {
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      asm.emit(OPEN_PARENTHESIS);
+      condition.emit(crb, asm);
+      asm.emit(CLOSE_PARENTHESIS);
+      asm.emit(" ? ");
+      asm.emitValue(crb, y);
+      asm.emit(" : ");
+      asm.emitValue(crb, z);
+    }
+  }
 
-        public Intrinsic(OCLTernaryOp opcode, LIRKind lirKind, Value x, Value y, Value z) {
-            super(opcode, lirKind, x, y, z);
-        }
+  /** OpenCL intrinsic call which consumes three inputs */
+  public static class Intrinsic extends TernaryConsumer {
 
-        @Override
-        public String toString() {
-            return String.format("%s(%s, %s, %s)", opcode.toString(), x, y, z);
-        }
+    public Intrinsic(OCLTernaryOp opcode, LIRKind lirKind, Value x, Value y, Value z) {
+      super(opcode, lirKind, x, y, z);
     }
 
+    @Override
+    public String toString() {
+      return String.format("%s(%s, %s, %s)", opcode.toString(), x, y, z);
+    }
+  }
 }

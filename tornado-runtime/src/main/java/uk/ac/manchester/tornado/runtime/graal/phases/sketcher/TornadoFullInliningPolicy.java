@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- * 
+ *
  */
 package uk.ac.manchester.tornado.runtime.graal.phases.sketcher;
 
@@ -25,21 +25,24 @@ import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.spi.Replacements;
 import org.graalvm.compiler.phases.common.inlining.info.InlineInfo;
 import org.graalvm.compiler.phases.common.inlining.walker.MethodInvocation;
-
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoInliningPolicy;
 
 public class TornadoFullInliningPolicy implements TornadoInliningPolicy {
 
-    public TornadoFullInliningPolicy() {
-    }
+  public TornadoFullInliningPolicy() {}
 
-    @Override
-    public boolean continueInlining(StructuredGraph graph) {
-        return true;
-    }
+  @Override
+  public boolean continueInlining(StructuredGraph graph) {
+    return true;
+  }
 
-    @Override
-    public Decision isWorthInlining(Replacements replacements, MethodInvocation invocation, InlineInfo calleeInfo, int inliningDepth, boolean fullyProcessed) {
-        return Decision.YES;
-    }
+  @Override
+  public Decision isWorthInlining(
+      Replacements replacements,
+      MethodInvocation invocation,
+      InlineInfo calleeInfo,
+      int inliningDepth,
+      boolean fullyProcessed) {
+    return Decision.YES;
+  }
 }

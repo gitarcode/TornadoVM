@@ -27,70 +27,69 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner hilbert
  * </code>
  */
 public class HilbertTornado extends BenchmarkDriver {
 
-    private int size;
-    private FloatArray hilbertMatrix;
+  private int size;
+  private FloatArray hilbertMatrix;
 
-    public HilbertTornado(int size, int iterations) {
-        super(iterations);
-        this.size = size;
-    }
+  public HilbertTornado(int size, int iterations) {
+    super(iterations);
+    this.size = size;
+  }
 
-    @Override
-    public void setUp() {
-        hilbertMatrix = new FloatArray(size * size);
-        taskGraph = new TaskGraph("benchmark") //
-                .task("t0", ComputeKernels::hilbertComputation, hilbertMatrix, size, size) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, hilbertMatrix);
+  @Override
+  public void setUp() {
+    hilbertMatrix = new FloatArray(size * size);
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .task("t0", ComputeKernels::hilbertComputation, hilbertMatrix, size, size) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, hilbertMatrix);
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        hilbertMatrix = null;
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    hilbertMatrix = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        boolean val = true;
-        FloatArray testData = new FloatArray(size * size);
-        TaskGraph taskGraph1 = new TaskGraph("s0") //
-                .task("t0", ComputeKernels::hilbertComputation, testData, size, size) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, testData); //
+  @Override
+  public boolean validate(TornadoDevice device) {
+    boolean val = true;
+    FloatArray testData = new FloatArray(size * size);
+    TaskGraph taskGraph1 =
+        new TaskGraph("s0") //
+            .task("t0", ComputeKernels::hilbertComputation, testData, size, size) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, testData); //
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph1.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
-        executor.withDevice(device).execute();
+    ImmutableTaskGraph immutableTaskGraph = taskGraph1.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    executor.withDevice(device).execute();
 
-        FloatArray seq = new FloatArray(size * size);
-        ComputeKernels.hilbertComputation(seq, size, size);
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (Math.abs(testData.get(i * size + j) - seq.get(i * size + j)) > 0.01f) {
-                    val = false;
-                    break;
-                }
-            }
+    FloatArray seq = new FloatArray(size * size);
+    ComputeKernels.hilbertComputation(seq, size, size);
+    for (int i = 0; i < size; i++) {
+      for (int j = 0; j < size; j++) {
+        if (Math.abs(testData.get(i * size + j) - seq.get(i * size + j)) > 0.01f) {
+          val = false;
+          break;
         }
-        return val;
+      }
     }
+    return val;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 }

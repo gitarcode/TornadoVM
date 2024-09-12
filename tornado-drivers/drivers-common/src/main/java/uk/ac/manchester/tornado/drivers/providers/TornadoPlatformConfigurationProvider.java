@@ -25,13 +25,13 @@ import org.graalvm.compiler.nodes.spi.PlatformConfigurationProvider;
 
 public class TornadoPlatformConfigurationProvider implements PlatformConfigurationProvider {
 
-    @Override
-    public BarrierSet getBarrierSet() {
-        return null;
-    }
+  @Override
+  public BarrierSet getBarrierSet() {
+    return null;
+  }
 
-    @Override
-    public boolean canVirtualizeLargeByteArrayAccess() {
-        return false;
-    }
+  @Override
+  public boolean canVirtualizeLargeByteArrayAccess() {
+    return false;
+  }
 }

@@ -35,19 +35,18 @@ import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 @NodeInfo
 public class PragmaUnrollNode extends FixedWithNextNode implements LIRLowerable {
 
-    @Successor
-    LoopBeginNode loopBgNd;
-    public static final NodeClass<PragmaUnrollNode> TYPE = NodeClass.create(PragmaUnrollNode.class);
+  @Successor LoopBeginNode loopBgNd;
+  public static final NodeClass<PragmaUnrollNode> TYPE = NodeClass.create(PragmaUnrollNode.class);
 
-    private int unroll;
+  private int unroll;
 
-    public PragmaUnrollNode(int unroll) {
-        super(TYPE, StampFactory.forVoid());
-        this.unroll = unroll;
-    }
+  public PragmaUnrollNode(int unroll) {
+    super(TYPE, StampFactory.forVoid());
+    this.unroll = unroll;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
-        throw new RuntimeException("PRAGMA UNROLL NOT SUPPORTED YET");
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
+    throw new RuntimeException("PRAGMA UNROLL NOT SUPPORTED YET");
+  }
 }

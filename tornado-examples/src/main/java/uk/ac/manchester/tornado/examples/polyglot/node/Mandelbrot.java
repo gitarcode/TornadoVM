@@ -23,9 +23,7 @@ package uk.ac.manchester.tornado.examples.polyglot.node;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
-
 import javax.imageio.ImageIO;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -33,86 +31,86 @@ import uk.ac.manchester.tornado.api.annotations.Parallel;
 import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 
 public class Mandelbrot {
-    // CHECKSTYLE:OFF
-    private static final int SIZE = 1024;
+  // CHECKSTYLE:OFF
+  private static final int SIZE = 1024;
 
-    private static void mandelbrot(int size, short[] output) {
-        final int iterations = 10000;
-        float space = 2.0f / size;
+  private static void mandelbrot(int size, short[] output) {
+    final int iterations = 10000;
+    float space = 2.0f / size;
 
-        for (@Parallel int i = 0; i < size; i++) {
-            int indexIDX = i;
-            for (@Parallel int j = 0; j < size; j++) {
-                int indexJDX = j;
-                float Zr = 0.0f;
-                float Zi = 0.0f;
-                float Cr = (1 * indexJDX * space - 1.5f);
-                float Ci = (1 * indexIDX * space - 1.0f);
-                float ZrN = 0;
-                float ZiN = 0;
-                int y = 0;
-                for (int ii = 0; ii < iterations; ii++) {
-                    if (ZiN + ZrN <= 4.0f) {
-                        Zi = 2.0f * Zr * Zi + Ci;
-                        Zr = 1 * ZrN - ZiN + Cr;
-                        ZiN = Zi * Zi;
-                        ZrN = Zr * Zr;
-                        y++;
-                    } else {
-                        ii = iterations;
-                    }
-
-                }
-                short r = (short) ((y * 255) / iterations);
-                output[i * size + j] = r;
-            }
+    for (@Parallel int i = 0; i < size; i++) {
+      int indexIDX = i;
+      for (@Parallel int j = 0; j < size; j++) {
+        int indexJDX = j;
+        float Zr = 0.0f;
+        float Zi = 0.0f;
+        float Cr = (1 * indexJDX * space - 1.5f);
+        float Ci = (1 * indexIDX * space - 1.0f);
+        float ZrN = 0;
+        float ZiN = 0;
+        int y = 0;
+        for (int ii = 0; ii < iterations; ii++) {
+          if (ZiN + ZrN <= 4.0f) {
+            Zi = 2.0f * Zr * Zi + Ci;
+            Zr = 1 * ZrN - ZiN + Cr;
+            ZiN = Zi * Zi;
+            ZrN = Zr * Zr;
+            y++;
+          } else {
+            ii = iterations;
+          }
         }
+        short r = (short) ((y * 255) / iterations);
+        output[i * size + j] = r;
+      }
     }
+  }
 
-    private static BufferedImage writeFile(short[] output, int size) {
-        BufferedImage img = null;
-        try {
-            img = new BufferedImage(size, size, BufferedImage.TYPE_INT_BGR);
-            WritableRaster write = img.getRaster();
-            File outputFile = new File("./mandelbrot.png");
-            for (int i = 0; i < size; i++) {
-                for (int j = 0; j < size; j++) {
-                    int colour = output[(i * size + j)];
-                    write.setSample(i, j, 0, colour);
-                }
-            }
-            ImageIO.write(img, "PNG", outputFile);
-        } catch (Exception e) {
-            e.printStackTrace();
+  private static BufferedImage writeFile(short[] output, int size) {
+    BufferedImage img = null;
+    try {
+      img = new BufferedImage(size, size, BufferedImage.TYPE_INT_BGR);
+      WritableRaster write = img.getRaster();
+      File outputFile = new File("./mandelbrot.png");
+      for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+          int colour = output[(i * size + j)];
+          write.setSample(i, j, 0, colour);
         }
-        return img;
+      }
+      ImageIO.write(img, "PNG", outputFile);
+    } catch (Exception e) {
+      e.printStackTrace();
     }
+    return img;
+  }
 
-    public static short[] sequential() {
-        short[] result = new short[SIZE * SIZE];
-        mandelbrot(SIZE, result);
-        writeFile(result, SIZE);
-        return result;
-    }
+  public static short[] sequential() {
+    short[] result = new short[SIZE * SIZE];
+    mandelbrot(SIZE, result);
+    writeFile(result, SIZE);
+    return result;
+  }
 
-    public static String getString() {
-        return "Hello from Java - TornadoVM - Computing Mandelbrot";
-    }
+  public static String getString() {
+    return "Hello from Java - TornadoVM - Computing Mandelbrot";
+  }
 
-    public static short[] compute() {
-        short[] result = new short[SIZE * SIZE];
+  public static short[] compute() {
+    short[] result = new short[SIZE * SIZE];
 
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .task("t0", Mandelbrot::mandelbrot, SIZE, result) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, result);
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .task("t0", Mandelbrot::mandelbrot, SIZE, result) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, result);
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
-        executor.execute();
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    executor.execute();
 
-        writeFile(result, SIZE);
+    writeFile(result, SIZE);
 
-        return result;
-    }
+    return result;
+  }
 }
 // CHECKSTYLE:OFF

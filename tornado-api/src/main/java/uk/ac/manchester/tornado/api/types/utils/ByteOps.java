@@ -19,9 +19,8 @@ package uk.ac.manchester.tornado.api.types.utils;
 
 public class ByteOps {
 
-    public static final String FMT = "%3d";
-    public static final String FMT_2 = "{%3d,%3d}";
-    public static final String FMT_3 = "{%3d,%3d,%3d}";
-    public static final String FMT_4 = "{%3d,%3d,%3d,%3d}";
-
+  public static final String FMT = "%3d";
+  public static final String FMT_2 = "{%3d,%3d}";
+  public static final String FMT_3 = "{%3d,%3d,%3d}";
+  public static final String FMT_4 = "{%3d,%3d,%3d,%3d}";
 }

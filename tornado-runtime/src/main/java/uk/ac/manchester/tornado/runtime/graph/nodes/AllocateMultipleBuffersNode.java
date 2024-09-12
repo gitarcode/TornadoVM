@@ -28,33 +28,33 @@ import java.util.List;
 
 public class AllocateMultipleBuffersNode extends ContextOpNode {
 
-    public AllocateMultipleBuffersNode(ContextNode context) {
-        super(context);
-        this.values = new ArrayList<>();
-    }
+  public AllocateMultipleBuffersNode(ContextNode context) {
+    super(context);
+    this.values = new ArrayList<>();
+  }
 
-    private final ArrayList<AbstractNode> values;
+  private final ArrayList<AbstractNode> values;
 
-    public void addValue(ObjectNode object) {
-        values.add(object);
-    }
+  public void addValue(ObjectNode object) {
+    values.add(object);
+  }
 
-    public List<AbstractNode> getValues() {
-        return values;
-    }
+  public List<AbstractNode> getValues() {
+    return values;
+  }
 
-    @Override
-    public String toString() {
-        return String.format("[%d]: persist node", id);
-    }
+  @Override
+  public String toString() {
+    return String.format("[%d]: persist node", id);
+  }
 
-    @Override
-    public boolean hasInputs() {
-        return !values.isEmpty();
-    }
+  @Override
+  public boolean hasInputs() {
+    return !values.isEmpty();
+  }
 
-    @Override
-    public List<AbstractNode> getInputs() {
-        return values;
-    }
+  @Override
+  public List<AbstractNode> getInputs() {
+    return values;
+  }
 }

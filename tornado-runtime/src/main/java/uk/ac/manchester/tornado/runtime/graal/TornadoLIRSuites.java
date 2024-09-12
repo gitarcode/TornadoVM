@@ -26,31 +26,32 @@ package uk.ac.manchester.tornado.runtime.graal;
 import org.graalvm.compiler.lir.phases.LIRPhaseSuite;
 import org.graalvm.compiler.lir.phases.PostAllocationOptimizationPhase.PostAllocationOptimizationContext;
 import org.graalvm.compiler.lir.phases.PreAllocationOptimizationPhase.PreAllocationOptimizationContext;
-
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoAllocationStage;
 
 public class TornadoLIRSuites {
 
-    private final LIRPhaseSuite<PreAllocationOptimizationContext> preAllocStage;
-    private final TornadoAllocationStage allocStage;
-    private final LIRPhaseSuite<PostAllocationOptimizationContext> postAllocStage;
+  private final LIRPhaseSuite<PreAllocationOptimizationContext> preAllocStage;
+  private final TornadoAllocationStage allocStage;
+  private final LIRPhaseSuite<PostAllocationOptimizationContext> postAllocStage;
 
-    public TornadoLIRSuites(LIRPhaseSuite<PreAllocationOptimizationContext> preAllocStage, TornadoAllocationStage allocStage, LIRPhaseSuite<PostAllocationOptimizationContext> postAllocStage) {
-        this.preAllocStage = preAllocStage;
-        this.allocStage = allocStage;
-        this.postAllocStage = postAllocStage;
-    }
+  public TornadoLIRSuites(
+      LIRPhaseSuite<PreAllocationOptimizationContext> preAllocStage,
+      TornadoAllocationStage allocStage,
+      LIRPhaseSuite<PostAllocationOptimizationContext> postAllocStage) {
+    this.preAllocStage = preAllocStage;
+    this.allocStage = allocStage;
+    this.postAllocStage = postAllocStage;
+  }
 
-    public LIRPhaseSuite<PreAllocationOptimizationContext> getPreAllocationStage() {
-        return preAllocStage;
-    }
+  public LIRPhaseSuite<PreAllocationOptimizationContext> getPreAllocationStage() {
+    return preAllocStage;
+  }
 
-    public TornadoAllocationStage getAllocationStage() {
-        return allocStage;
-    }
+  public TornadoAllocationStage getAllocationStage() {
+    return allocStage;
+  }
 
-    public LIRPhaseSuite<PostAllocationOptimizationContext> getPostAllocationStage() {
-        return postAllocStage;
-    }
-
+  public LIRPhaseSuite<PostAllocationOptimizationContext> getPostAllocationStage() {
+    return postAllocStage;
+  }
 }

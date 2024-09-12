@@ -27,7 +27,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
-
+import jdk.vm.ci.meta.JavaConstant;
 import org.graalvm.compiler.core.common.cfg.Loop;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.NodeMap;
@@ -45,479 +45,517 @@ import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.cfg.ControlFlowGraph;
 import org.graalvm.compiler.nodes.cfg.HIRBlock;
 import org.graalvm.compiler.nodes.extended.IntegerSwitchNode;
-
-import jdk.vm.ci.meta.JavaConstant;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssemblerConstants;
 
 public class OCLBlockVisitor implements ControlFlowGraph.RecursiveVisitor<HIRBlock> {
 
-    OCLCompilationResultBuilder openclBuilder;
-    OCLAssembler asm;
-    Set<HIRBlock> merges;
-    Map<HIRBlock, Integer> closedLoops;
-    Set<HIRBlock> switches;
-    Set<Node> switchClosed;
-    HashMap<HIRBlock, Integer> pending;
-    Set<HIRBlock> rmvEndBracket;
-    private int loopCount;
-    private int loopEnds;
+  OCLCompilationResultBuilder openclBuilder;
+  OCLAssembler asm;
+  Set<HIRBlock> merges;
+  Map<HIRBlock, Integer> closedLoops;
+  Set<HIRBlock> switches;
+  Set<Node> switchClosed;
+  HashMap<HIRBlock, Integer> pending;
+  Set<HIRBlock> rmvEndBracket;
+  private int loopCount;
+  private int loopEnds;
 
-    public OCLBlockVisitor(OCLCompilationResultBuilder resBuilder) {
-        this.openclBuilder = resBuilder;
-        this.asm = resBuilder.getAssembler();
-        merges = new HashSet<>();
-        switches = new HashSet<>();
-        switchClosed = new HashSet<>();
-        closedLoops = new HashMap<>();
-        pending = new HashMap<>();
-        rmvEndBracket = new HashSet<>();
+  public OCLBlockVisitor(OCLCompilationResultBuilder resBuilder) {
+    this.openclBuilder = resBuilder;
+    this.asm = resBuilder.getAssembler();
+    merges = new HashSet<>();
+    switches = new HashSet<>();
+    switchClosed = new HashSet<>();
+    closedLoops = new HashMap<>();
+    pending = new HashMap<>();
+    rmvEndBracket = new HashSet<>();
+  }
+
+  private static boolean isMergeBlock(HIRBlock block) {
+    return block.getBeginNode() instanceof MergeNode;
+  }
+
+  private static boolean isIfBlock(HIRBlock block) {
+    return block.getEndNode() instanceof IfNode;
+  }
+
+  private static boolean isSwitchBlock(HIRBlock block) {
+    return block.getEndNode() instanceof IntegerSwitchNode;
+  }
+
+  private void emitBeginBlockForElseStatement(HIRBlock dom, HIRBlock block) {
+    final IfNode ifNode = (IfNode) dom.getEndNode();
+    if (ifNode.falseSuccessor() == block.getBeginNode()) {
+      asm.indent();
+      asm.elseStmt();
+      asm.eol();
     }
+    asm.beginScope();
+    asm.eolOn();
+  }
 
-    private static boolean isMergeBlock(HIRBlock block) {
-        return block.getBeginNode() instanceof MergeNode;
-    }
-
-    private static boolean isIfBlock(HIRBlock block) {
-        return block.getEndNode() instanceof IfNode;
-    }
-
-    private static boolean isSwitchBlock(HIRBlock block) {
-        return block.getEndNode() instanceof IntegerSwitchNode;
-    }
-
-    private void emitBeginBlockForElseStatement(HIRBlock dom, HIRBlock block) {
-        final IfNode ifNode = (IfNode) dom.getEndNode();
-        if (ifNode.falseSuccessor() == block.getBeginNode()) {
-            asm.indent();
-            asm.elseStmt();
-            asm.eol();
+  // Update a list of basic blocks to close. We add a block into the rvmEndBracket
+  // list if the current block starts with a lookExitNode and the false successor
+  // of the dominator points to the loopExitNode followed by an end-node.
+  private void updateListEndBracketsForLoopExitNodes(HIRBlock block) {
+    HIRBlock dom = block.getDominator();
+    if (dom != null) {
+      if (dom.getPredecessorCount() == 2) { // Dom is a merge block on enter
+        boolean mergeA = false;
+        boolean mergeB = false;
+        HIRBlock[] predecessors = new HIRBlock[dom.getPredecessorCount()];
+        for (int i = 0; i < dom.getPredecessorCount(); i++) {
+          predecessors[i] = dom.getPredecessorAt(i);
         }
-        asm.beginScope();
-        asm.eolOn();
-    }
-
-    // Update a list of basic blocks to close. We add a block into the rvmEndBracket
-    // list if the current block starts with a lookExitNode and the false successor
-    // of the dominator points to the loopExitNode followed by an end-node.
-    private void updateListEndBracketsForLoopExitNodes(HIRBlock block) {
-        HIRBlock dom = block.getDominator();
-        if (dom != null) {
-            if (dom.getPredecessorCount() == 2) { // Dom is a merge block on enter
-                boolean mergeA = false;
-                boolean mergeB = false;
-                HIRBlock[] predecessors = new HIRBlock[dom.getPredecessorCount()];
-                for (int i = 0; i < dom.getPredecessorCount(); i++) {
-                    predecessors[i] = dom.getPredecessorAt(i);
-                }
-                for (HIRBlock p : predecessors) {
-                    // Node Pi closes Loop
-                    if ((p.getBeginNode() instanceof LoopExitNode) && (p.getEndNode() instanceof LoopEndNode) && (block.getBeginNode() instanceof LoopExitNode)) {
-                        mergeA = true;
-                    }
-                    // Node Pi+1 close the if statement
-                    if ((p.getBeginNode() instanceof BeginNode) && (p.getEndNode() instanceof EndNode) && (block.getEndNode() instanceof EndNode)) {
-                        mergeB = true;
-                    }
-                    // falseSuccessor's endScope is redundant, can be removed.
-                    if (mergeA && mergeB) {
-                        if (((IfNode) dom.getEndNode()).falseSuccessor().equals(block.getBeginNode()) && (((IfNode) dom.getEndNode()).falseSuccessor().next().equals(block.getEndNode())) && block
-                                .getBeginNode() instanceof LoopExitNode)
-                            rmvEndBracket.add(block);
-                    }
-                }
-            }
+        for (HIRBlock p : predecessors) {
+          // Node Pi closes Loop
+          if ((p.getBeginNode() instanceof LoopExitNode)
+              && (p.getEndNode() instanceof LoopEndNode)
+              && (block.getBeginNode() instanceof LoopExitNode)) {
+            mergeA = true;
+          }
+          // Node Pi+1 close the if statement
+          if ((p.getBeginNode() instanceof BeginNode)
+              && (p.getEndNode() instanceof EndNode)
+              && (block.getEndNode() instanceof EndNode)) {
+            mergeB = true;
+          }
+          // falseSuccessor's endScope is redundant, can be removed.
+          if (mergeA && mergeB) {
+            if (((IfNode) dom.getEndNode()).falseSuccessor().equals(block.getBeginNode())
+                && (((IfNode) dom.getEndNode()).falseSuccessor().next().equals(block.getEndNode()))
+                && block.getBeginNode() instanceof LoopExitNode) rmvEndBracket.add(block);
+          }
         }
+      }
+    }
+  }
+
+  private void emitBeginBlockForSwitchStatements(HIRBlock dom, HIRBlock beginBlockNode) {
+    final IntegerSwitchNode switchNode = (IntegerSwitchNode) dom.getEndNode();
+    asm.indent();
+    Node beginNode = beginBlockNode.getBeginNode();
+    switches.add(beginBlockNode);
+
+    NodeIterable<Node> successors = switchNode.successors();
+
+    int defaultSuccessorIndex = switchNode.defaultSuccessorIndex();
+    Iterator<Node> iterator = successors.iterator();
+
+    int caseIndex = -1;
+    while (iterator.hasNext()) {
+      Node n = iterator.next();
+      caseIndex++;
+      if (n.equals(beginNode)) {
+        break;
+      }
     }
 
-    private void emitBeginBlockForSwitchStatements(HIRBlock dom, HIRBlock beginBlockNode) {
-        final IntegerSwitchNode switchNode = (IntegerSwitchNode) dom.getEndNode();
+    // Add all cases that go to the same block
+    ArrayList<Integer> commonCases = new ArrayList<>();
+    for (int i = 0; i <= defaultSuccessorIndex; i++) {
+      if (caseIndex == switchNode.keySuccessorIndex(i)) {
+        commonCases.add(i);
+      }
+    }
+
+    if (defaultSuccessorIndex == caseIndex) {
+      asm.emit(OCLAssemblerConstants.DEFAULT_CASE + OCLAssemblerConstants.COLON);
+    } else {
+      for (Integer idx : commonCases) {
+        asm.emit(OCLAssemblerConstants.CASE + " ");
+        JavaConstant keyAt = switchNode.keyAt(idx);
+        asm.emit(keyAt.toValueString());
+        asm.emit(OCLAssemblerConstants.COLON);
+        asm.emitLine("");
         asm.indent();
-        Node beginNode = beginBlockNode.getBeginNode();
-        switches.add(beginBlockNode);
+      }
+    }
+  }
 
-        NodeIterable<Node> successors = switchNode.successors();
-
-        int defaultSuccessorIndex = switchNode.defaultSuccessorIndex();
-        Iterator<Node> iterator = successors.iterator();
-
-        int caseIndex = -1;
-        while (iterator.hasNext()) {
-            Node n = iterator.next();
-            caseIndex++;
-            if (n.equals(beginNode)) {
-                break;
-            }
-        }
-
-        // Add all cases that go to the same block
-        ArrayList<Integer> commonCases = new ArrayList<>();
-        for (int i = 0; i <= defaultSuccessorIndex; i++) {
-            if (caseIndex == switchNode.keySuccessorIndex(i)) {
-                commonCases.add(i);
-            }
-        }
-
-        if (defaultSuccessorIndex == caseIndex) {
-            asm.emit(OCLAssemblerConstants.DEFAULT_CASE + OCLAssemblerConstants.COLON);
-        } else {
-            for (Integer idx : commonCases) {
-                asm.emit(OCLAssemblerConstants.CASE + " ");
-                JavaConstant keyAt = switchNode.keyAt(idx);
-                asm.emit(keyAt.toValueString());
-                asm.emit(OCLAssemblerConstants.COLON);
-                asm.emitLine("");
-                asm.indent();
-            }
-        }
+  @Override
+  public HIRBlock enter(HIRBlock block) {
+    boolean isMerge = block.getBeginNode() instanceof MergeNode;
+    if (isMerge) {
+      asm.eolOn();
+      merges.add(block);
     }
 
-    @Override
-    public HIRBlock enter(HIRBlock block) {
-        boolean isMerge = block.getBeginNode() instanceof MergeNode;
-        if (isMerge) {
-            asm.eolOn();
-            merges.add(block);
+    if (block.isLoopHeader()) {
+      loopCount++;
+      openclBuilder.emitLoopBlock(block);
+    } else {
+      // We emit either an ELSE statement or a SWITCH statement
+      final HIRBlock dom = block.getDominator();
+      if (dom != null && !isMerge && !dom.isLoopHeader() && isIfBlock(dom)) {
+        emitBeginBlockForElseStatement(dom, block);
+      } else if (dom != null && !isMerge && !dom.isLoopHeader() && isSwitchBlock(dom)) {
+        emitBeginBlockForSwitchStatements(dom, block);
+      }
+      openclBuilder.emitBlock(block);
+    }
+    return null;
+  }
+
+  private boolean isLoopExitNode(HIRBlock block) {
+    return block.getBeginNode() instanceof LoopExitNode && block.getEndNode() instanceof EndNode;
+  }
+
+  private void closeBlock(HIRBlock block) {
+    asm.endScope(block.toString());
+  }
+
+  private void checkClosingBlockInsideIf(HIRBlock block, HIRBlock pdom) {
+    if (pdom.isLoopHeader() && block.getDominator() != null && isIfBlock(block.getDominator())) {
+
+      /*
+       * If the post-dominator is a loop Header and the dominator of the current block
+       * is an if-condition, then we generate the end-scope if we are also inside
+       * another if-condition, and the remaining condition is not a LoopEndNode
+       * (because the block was already closed)
+       */
+      if ((block.getDominator().getDominator() != null)
+          && (isIfBlock(block.getDominator().getDominator()))) {
+
+        HIRBlock[] successors =
+            IntStream.range(0, block.getDominator().getSuccessorCount())
+                .mapToObj(i -> block.getDominator().getSuccessorAt(i))
+                .toArray(HIRBlock[]::new);
+
+        int index = 0;
+        if (successors[index] == block) {
+          index = 1;
         }
 
-        if (block.isLoopHeader()) {
-            loopCount++;
-            openclBuilder.emitLoopBlock(block);
-        } else {
-            // We emit either an ELSE statement or a SWITCH statement
-            final HIRBlock dom = block.getDominator();
-            if (dom != null && !isMerge && !dom.isLoopHeader() && isIfBlock(dom)) {
-                emitBeginBlockForElseStatement(dom, block);
-            } else if (dom != null && !isMerge && !dom.isLoopHeader() && isSwitchBlock(dom)) {
-                emitBeginBlockForSwitchStatements(dom, block);
-            }
-            openclBuilder.emitBlock(block);
-        }
-        return null;
-    }
-
-    private boolean isLoopExitNode(HIRBlock block) {
-        return block.getBeginNode() instanceof LoopExitNode && block.getEndNode() instanceof EndNode;
-    }
-
-    private void closeBlock(HIRBlock block) {
-        asm.endScope(block.toString());
-    }
-
-    private void checkClosingBlockInsideIf(HIRBlock block, HIRBlock pdom) {
-        if (pdom.isLoopHeader() && block.getDominator() != null && isIfBlock(block.getDominator())) {
-
-            /*
-             * If the post-dominator is a loop Header and the dominator of the current block
-             * is an if-condition, then we generate the end-scope if we are also inside
-             * another if-condition, and the remaining condition is not a LoopEndNode
-             * (because the block was already closed)
-             */
-            if ((block.getDominator().getDominator() != null) && (isIfBlock(block.getDominator().getDominator()))) {
-
-                HIRBlock[] successors = IntStream.range(0, block.getDominator().getSuccessorCount()).mapToObj(i -> block.getDominator().getSuccessorAt(i)).toArray(HIRBlock[]::new);
-
-                int index = 0;
-                if (successors[index] == block) {
-                    index = 1;
-                }
-
-                // If the current block is a merge-block, and the block does not correspond with
-                // any of the if-branches of the dominator, then we do not need the
-                // close-bracket.
-                if (successors[index] != block && block.getBeginNode() instanceof MergeNode) {
-                    return;
-                }
-
-                if (!(successors[index].getBeginNode() instanceof LoopExitNode)) {
-                    closeBlock(block);
-                }
-            }
-        } else if ((pdom.getBeginNode() instanceof MergeNode) && (block.getDominator() != null && isIfBlock(block.getDominator()))) {
-            /*
-             * If the post-dominator is a MergeNode and the dominator of the current block
-             * is an if-condition, then we generate the end-scope if we are also inside
-             * another if-condition.
-             */
-            HIRBlock dom2 = block.getDominator(2);
-            if (dom2 != null && isIfBlock(dom2)) {
-                /*
-                 * We check that the other else-if block contains the loop-exit -> loop-end
-                 * sequence. This means there was a break in the code.
-                 */
-                HIRBlock[] successors = IntStream.range(0, block.getDominator().getSuccessorCount()).mapToObj(i -> block.getDominator().getSuccessorAt(i)).toArray(HIRBlock[]::new);
-
-                int index = 0;
-                if (successors[index] == block) {
-                    index = 1;
-                }
-                if (successors[index].getBeginNode() instanceof LoopExitNode && successors[index].getEndNode() instanceof LoopEndNode) {
-                    closeBlock(block);
-                }
-            } else if (isIfBlock(block.getDominator())) {
-                IfNode ifNode = (IfNode) block.getDominator().getEndNode();
-
-                if (ifNode.trueSuccessor().equals(block.getBeginNode()) && isLoopExitNode(block)) {
-                    closeBlock(block);
-                }
-
-            }
-        }
-    }
-
-    private void closeSwitchStatement(HIRBlock block) {
-        asm.emitLine(OCLAssemblerConstants.BREAK + OCLAssemblerConstants.STMT_DELIMITER);
-
-        final IntegerSwitchNode switchNode = (IntegerSwitchNode) block.getDominator().getEndNode();
-        int blockNumber = getBlockIndexForSwitchStatement(block, switchNode);
-        int numCases = getNumberOfCasesForSwitch(switchNode);
-
-        if ((numCases - 1) == blockNumber) {
-            closeBlock(block);
-            switchClosed.add(switchNode);
-        }
-    }
-
-    private boolean wasBlockAlreadyClosed(HIRBlock block) {
-        HIRBlock dominator = block.getDominator();
-        if (dominator.getLoop() != null) {
-            int closeCount = closedLoops.getOrDefault(dominator.getLoop().getHeader(), 0);
-            return closeCount == dominator.getLoop().getLoopExits().size();
-        }
-        return false;
-    }
-
-    private void incrementClosedLoops(HIRBlock loopBeginBlock) {
-        int closedLoopCount = closedLoops.getOrDefault(loopBeginBlock, 0);
-        closedLoops.put(loopBeginBlock, closedLoopCount + 1);
-    }
-
-    private void closeScope(HIRBlock block, HIRBlock loopBeginBlock) {
-        if (block.getBeginNode() instanceof LoopExitNode) {
-            if (!(block.getDominator().getDominator() != null && block.getDominator().getDominator().getBeginNode() instanceof MergeNode)) {
-                /*
-                 * Only close scope if the loop-exit node does not depend on a merge node. In
-                 * such case, the merge will generate the correct close scope.
-                 */
-                closeBlock(block);
-                incrementClosedLoops(loopBeginBlock);
-            }
-        } else {
-            closeBlock(block);
-            incrementClosedLoops(loopBeginBlock);
-        }
-    }
-
-    private boolean isComplexLoopCondition(HIRBlock block) {
-        Loop<HIRBlock> loop = block.getLoop();
-        LoopExitNode exitNode = block.getBeginNode() instanceof LoopExitNode ? (LoopExitNode) block.getBeginNode() : null;
-
-        if (loop != null || exitNode != null) {
-            StructuredGraph graph = block.getBeginNode().graph();
-
-            HIRBlock loopHeaderBlock = exitNode != null ? graph.getLastSchedule().getNodeToBlockMap().get(exitNode.loopBegin()) : loop.getHeader();
-            for (int i = 0; i < loopHeaderBlock.getSuccessorCount(); i++) {
-                if (loopHeaderBlock.getSuccessorAt(i).getEndNode() instanceof IfNode) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean isBlockInABreak(HIRBlock block) {
-        if (block.getBeginNode() instanceof LoopExitNode) {
-            LoopExitNode loopExitNode = (LoopExitNode) block.getBeginNode();
-            LoopBeginNode loopBeginNode = loopExitNode.loopBegin();
-            HIRBlock loopBeginBlock = loopBeginNode.graph().getLastSchedule().getNodeToBlockMap().get(loopBeginNode);
-            for (int i = 0; i < block.getPredecessorCount(); i++) {
-                if (block.getPredecessorAt(i) == loopBeginBlock) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void exit(HIRBlock block, HIRBlock value) {
-        if (block.isLoopEnd()) {
-            LoopEndNode loopEndNode = (LoopEndNode) block.getEndNode();
-            LoopBeginNode loopBeginNode = loopEndNode.loopBegin();
-            HIRBlock loopBeginBlock = loopBeginNode.graph().getLastSchedule().getNodeToBlockMap().get(loopBeginNode);
-
-            // Temporary fix to remove the end scope of the most outer loop
-            // without changing the loop schematics in IR level.
-            loopEnds++;
-            if (openclBuilder.shouldRemoveLoop()) {
-                if (loopCount - loopEnds > 0) {
-                    closeBlock(block);
-                    incrementClosedLoops(loopBeginBlock);
-                }
-            } else {
-                closeScope(block, loopBeginBlock);
-            }
+        // If the current block is a merge-block, and the block does not correspond with
+        // any of the if-branches of the dominator, then we do not need the
+        // close-bracket.
+        if (successors[index] != block && block.getBeginNode() instanceof MergeNode) {
+          return;
         }
 
-        if (block.getPostdominator() != null) {
-            HIRBlock pdom = block.getPostdominator();
-
-            updateListEndBracketsForLoopExitNodes(block);
-
-            if (!merges.contains(pdom) && isMergeBlock(pdom) && !switches.contains(block)) {
-                // Check also if the current and next blocks are not merges block with more than
-                // 2 predecessors. In that case, we do not generate end scope.
-
-                if (!(pdom.getBeginNode() instanceof MergeNode && merges.contains(block) && block.getPredecessorCount() > 2)) {
-                    // We need to check that none of the blocks reachable from dominators has been
-                    // already closed.
-                    if (!wasBlockAlreadyClosed(block) && !(!isComplexLoopCondition(block) && isBlockInABreak(block))) {
-                        if (!(rmvEndBracket.contains(block))) {
-                            closeBlock(block);
-                        }
-                    }
-                }
-            } else if (!merges.contains(pdom) && isMergeBlock(pdom) && switches.contains(block) && isSwitchBlock(block.getDominator())) {
-                closeSwitchStatement(block);
-            } else {
-
-                checkClosingBlockInsideIf(block, pdom);
-            }
-        } else {
-            closeBranchBlock(block);
+        if (!(successors[index].getBeginNode() instanceof LoopExitNode)) {
+          closeBlock(block);
         }
-
+      }
+    } else if ((pdom.getBeginNode() instanceof MergeNode)
+        && (block.getDominator() != null && isIfBlock(block.getDominator()))) {
+      /*
+       * If the post-dominator is a MergeNode and the dominator of the current block
+       * is an if-condition, then we generate the end-scope if we are also inside
+       * another if-condition.
+       */
+      HIRBlock dom2 = block.getDominator(2);
+      if (dom2 != null && isIfBlock(dom2)) {
         /*
-         * It generates instructions that are relocated from within the for-loop to
-         * after the for-loop. https://github.com/beehive-lab/TornadoVM/pull/129
+         * We check that the other else-if block contains the loop-exit -> loop-end
+         * sequence. This means there was a break in the code.
          */
-        openclBuilder.emitRelocatedInstructions(block);
+        HIRBlock[] successors =
+            IntStream.range(0, block.getDominator().getSuccessorCount())
+                .mapToObj(i -> block.getDominator().getSuccessorAt(i))
+                .toArray(HIRBlock[]::new);
+
+        int index = 0;
+        if (successors[index] == block) {
+          index = 1;
+        }
+        if (successors[index].getBeginNode() instanceof LoopExitNode
+            && successors[index].getEndNode() instanceof LoopEndNode) {
+          closeBlock(block);
+        }
+      } else if (isIfBlock(block.getDominator())) {
+        IfNode ifNode = (IfNode) block.getDominator().getEndNode();
+
+        if (ifNode.trueSuccessor().equals(block.getBeginNode()) && isLoopExitNode(block)) {
+          closeBlock(block);
+        }
+      }
+    }
+  }
+
+  private void closeSwitchStatement(HIRBlock block) {
+    asm.emitLine(OCLAssemblerConstants.BREAK + OCLAssemblerConstants.STMT_DELIMITER);
+
+    final IntegerSwitchNode switchNode = (IntegerSwitchNode) block.getDominator().getEndNode();
+    int blockNumber = getBlockIndexForSwitchStatement(block, switchNode);
+    int numCases = getNumberOfCasesForSwitch(switchNode);
+
+    if ((numCases - 1) == blockNumber) {
+      closeBlock(block);
+      switchClosed.add(switchNode);
+    }
+  }
+
+  private boolean wasBlockAlreadyClosed(HIRBlock block) {
+    HIRBlock dominator = block.getDominator();
+    if (dominator.getLoop() != null) {
+      int closeCount = closedLoops.getOrDefault(dominator.getLoop().getHeader(), 0);
+      return closeCount == dominator.getLoop().getLoopExits().size();
+    }
+    return false;
+  }
+
+  private void incrementClosedLoops(HIRBlock loopBeginBlock) {
+    int closedLoopCount = closedLoops.getOrDefault(loopBeginBlock, 0);
+    closedLoops.put(loopBeginBlock, closedLoopCount + 1);
+  }
+
+  private void closeScope(HIRBlock block, HIRBlock loopBeginBlock) {
+    if (block.getBeginNode() instanceof LoopExitNode) {
+      if (!(block.getDominator().getDominator() != null
+          && block.getDominator().getDominator().getBeginNode() instanceof MergeNode)) {
+        /*
+         * Only close scope if the loop-exit node does not depend on a merge node. In
+         * such case, the merge will generate the correct close scope.
+         */
+        closeBlock(block);
+        incrementClosedLoops(loopBeginBlock);
+      }
+    } else {
+      closeBlock(block);
+      incrementClosedLoops(loopBeginBlock);
+    }
+  }
+
+  private boolean isComplexLoopCondition(HIRBlock block) {
+    Loop<HIRBlock> loop = block.getLoop();
+    LoopExitNode exitNode =
+        block.getBeginNode() instanceof LoopExitNode ? (LoopExitNode) block.getBeginNode() : null;
+
+    if (loop != null || exitNode != null) {
+      StructuredGraph graph = block.getBeginNode().graph();
+
+      HIRBlock loopHeaderBlock =
+          exitNode != null
+              ? graph.getLastSchedule().getNodeToBlockMap().get(exitNode.loopBegin())
+              : loop.getHeader();
+      for (int i = 0; i < loopHeaderBlock.getSuccessorCount(); i++) {
+        if (loopHeaderBlock.getSuccessorAt(i).getEndNode() instanceof IfNode) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private boolean isBlockInABreak(HIRBlock block) {
+    if (block.getBeginNode() instanceof LoopExitNode) {
+      LoopExitNode loopExitNode = (LoopExitNode) block.getBeginNode();
+      LoopBeginNode loopBeginNode = loopExitNode.loopBegin();
+      HIRBlock loopBeginBlock =
+          loopBeginNode.graph().getLastSchedule().getNodeToBlockMap().get(loopBeginNode);
+      for (int i = 0; i < block.getPredecessorCount(); i++) {
+        if (block.getPredecessorAt(i) == loopBeginBlock) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public void exit(HIRBlock block, HIRBlock value) {
+    if (block.isLoopEnd()) {
+      LoopEndNode loopEndNode = (LoopEndNode) block.getEndNode();
+      LoopBeginNode loopBeginNode = loopEndNode.loopBegin();
+      HIRBlock loopBeginBlock =
+          loopBeginNode.graph().getLastSchedule().getNodeToBlockMap().get(loopBeginNode);
+
+      // Temporary fix to remove the end scope of the most outer loop
+      // without changing the loop schematics in IR level.
+      loopEnds++;
+      if (openclBuilder.shouldRemoveLoop()) {
+        if (loopCount - loopEnds > 0) {
+          closeBlock(block);
+          incrementClosedLoops(loopBeginBlock);
+        }
+      } else {
+        closeScope(block, loopBeginBlock);
+      }
     }
 
-    private void closeIfBlock(HIRBlock block, HIRBlock dom) {
-        final IfNode ifNode = (IfNode) dom.getEndNode();
-        if ((ifNode.falseSuccessor() == block.getBeginNode()) || (ifNode.trueSuccessor() == block.getBeginNode())) {
-            // We cannot close a block that has a loopEnd (already close) that is in the
-            // true branch, until the false branch has been closed.
-            boolean isLoopEnd = block.getEndNode() instanceof LoopEndNode;
-            boolean isTrueBranch = ifNode.trueSuccessor() == block.getBeginNode();
-            if (!(isTrueBranch && isLoopEnd)) {
-                closeBlock(block);
-                if (block.getLoop() != null) {
-                    incrementClosedLoops(block.getLoop().getHeader());
-                }
+    if (block.getPostdominator() != null) {
+      HIRBlock pdom = block.getPostdominator();
+
+      updateListEndBracketsForLoopExitNodes(block);
+
+      if (!merges.contains(pdom) && isMergeBlock(pdom) && !switches.contains(block)) {
+        // Check also if the current and next blocks are not merges block with more than
+        // 2 predecessors. In that case, we do not generate end scope.
+
+        if (!(pdom.getBeginNode() instanceof MergeNode
+            && merges.contains(block)
+            && block.getPredecessorCount() > 2)) {
+          // We need to check that none of the blocks reachable from dominators has been
+          // already closed.
+          if (!wasBlockAlreadyClosed(block)
+              && !(!isComplexLoopCondition(block) && isBlockInABreak(block))) {
+            if (!(rmvEndBracket.contains(block))) {
+              closeBlock(block);
             }
+          }
         }
+      } else if (!merges.contains(pdom)
+          && isMergeBlock(pdom)
+          && switches.contains(block)
+          && isSwitchBlock(block.getDominator())) {
+        closeSwitchStatement(block);
+      } else {
+
+        checkClosingBlockInsideIf(block, pdom);
+      }
+    } else {
+      closeBranchBlock(block);
     }
 
-    private int getBlockIndexForSwitchStatement(HIRBlock block, IntegerSwitchNode switchNode) {
-        Node beginNode = block.getBeginNode();
+    /*
+     * It generates instructions that are relocated from within the for-loop to
+     * after the for-loop. https://github.com/beehive-lab/TornadoVM/pull/129
+     */
+    openclBuilder.emitRelocatedInstructions(block);
+  }
 
-        NodeIterable<Node> successors = switchNode.successors();
-        Iterator<Node> iterator = successors.iterator();
-        int blockIndex = 0;
-        while (iterator.hasNext()) {
-            Node n = iterator.next();
-            if (n.equals(beginNode)) {
-                break;
-            }
-            blockIndex++;
+  private void closeIfBlock(HIRBlock block, HIRBlock dom) {
+    final IfNode ifNode = (IfNode) dom.getEndNode();
+    if ((ifNode.falseSuccessor() == block.getBeginNode())
+        || (ifNode.trueSuccessor() == block.getBeginNode())) {
+      // We cannot close a block that has a loopEnd (already close) that is in the
+      // true branch, until the false branch has been closed.
+      boolean isLoopEnd = block.getEndNode() instanceof LoopEndNode;
+      boolean isTrueBranch = ifNode.trueSuccessor() == block.getBeginNode();
+      if (!(isTrueBranch && isLoopEnd)) {
+        closeBlock(block);
+        if (block.getLoop() != null) {
+          incrementClosedLoops(block.getLoop().getHeader());
         }
-        return blockIndex;
+      }
     }
+  }
 
-    private int getNumberOfCasesForSwitch(IntegerSwitchNode switchNode) {
-        return switchNode.successors().count();
+  private int getBlockIndexForSwitchStatement(HIRBlock block, IntegerSwitchNode switchNode) {
+    Node beginNode = block.getBeginNode();
+
+    NodeIterable<Node> successors = switchNode.successors();
+    Iterator<Node> iterator = successors.iterator();
+    int blockIndex = 0;
+    while (iterator.hasNext()) {
+      Node n = iterator.next();
+      if (n.equals(beginNode)) {
+        break;
+      }
+      blockIndex++;
     }
+    return blockIndex;
+  }
 
-    private void closeSwitchBlock(HIRBlock block, HIRBlock dom) {
-        final IntegerSwitchNode switchNode = (IntegerSwitchNode) dom.getEndNode();
-        int blockNumber = getBlockIndexForSwitchStatement(block, switchNode);
-        int numCases = getNumberOfCasesForSwitch(switchNode);
-        if ((numCases - 1) == blockNumber) {
-            if (!switchClosed.contains(switchNode)) {
-                closeBlock(block);
-                switchClosed.add(switchNode);
-            }
+  private int getNumberOfCasesForSwitch(IntegerSwitchNode switchNode) {
+    return switchNode.successors().count();
+  }
+
+  private void closeSwitchBlock(HIRBlock block, HIRBlock dom) {
+    final IntegerSwitchNode switchNode = (IntegerSwitchNode) dom.getEndNode();
+    int blockNumber = getBlockIndexForSwitchStatement(block, switchNode);
+    int numCases = getNumberOfCasesForSwitch(switchNode);
+    if ((numCases - 1) == blockNumber) {
+      if (!switchClosed.contains(switchNode)) {
+        closeBlock(block);
+        switchClosed.add(switchNode);
+      }
+    }
+  }
+
+  private boolean isNestedIfNode(HIRBlock block) {
+    final HIRBlock dominator = block.getDominator();
+    boolean isMerge = block.getBeginNode() instanceof MergeNode;
+
+    boolean sameDominator = isMerge;
+    if (isMerge) {
+      MergeNode mergeNode = (MergeNode) block.getBeginNode();
+      NodeMap<HIRBlock> nodeToBlockMap = mergeNode.graph().getLastSchedule().getNodeToBlockMap();
+      for (EndNode predecessor : mergeNode.cfgPredecessors()) {
+        if (nodeToBlockMap.get(predecessor).getDominator() != dominator) {
+          sameDominator = false;
+          break;
         }
+      }
     }
 
-    private boolean isNestedIfNode(HIRBlock block) {
-        final HIRBlock dominator = block.getDominator();
-        boolean isMerge = block.getBeginNode() instanceof MergeNode;
+    boolean isReturn = block.getEndNode() instanceof ReturnNode;
 
-        boolean sameDominator = isMerge;
-        if (isMerge) {
-            MergeNode mergeNode = (MergeNode) block.getBeginNode();
-            NodeMap<HIRBlock> nodeToBlockMap = mergeNode.graph().getLastSchedule().getNodeToBlockMap();
-            for (EndNode predecessor : mergeNode.cfgPredecessors()) {
-                if (nodeToBlockMap.get(predecessor).getDominator() != dominator) {
-                    sameDominator = false;
-                    break;
-                }
-            }
-        }
+    // if false, we still need to traverse more basic blocks before the end function
+    // scope.
+    boolean pendingBlocks = !(getEarliestPostDominated(block).equals(block.getDominator()));
 
-        boolean isReturn = block.getEndNode() instanceof ReturnNode;
+    return dominator != null
+        && isMerge
+        && pendingBlocks
+        && sameDominator
+        && isReturn
+        && !dominator.isLoopHeader()
+        && isIfBlock(dominator);
+  }
 
-        // if false, we still need to traverse more basic blocks before the end function
-        // scope.
-        boolean pendingBlocks = !(getEarliestPostDominated(block).equals(block.getDominator()));
-
-        return dominator != null && isMerge && pendingBlocks && sameDominator && isReturn && !dominator.isLoopHeader() && isIfBlock(dominator);
+  public HIRBlock getEarliestPostDominated(HIRBlock block) {
+    while (true) {
+      HIRBlock dom = block.getDominator();
+      if (dom != null && dom.getPostdominator() == block) {
+        block = dom;
+      } else {
+        break;
+      }
     }
+    return block;
+  }
 
-    public HIRBlock getEarliestPostDominated(HIRBlock block) {
-        while (true) {
-            HIRBlock dom = block.getDominator();
-            if (dom != null && dom.getPostdominator() == block) {
-                block = dom;
-            } else {
-                break;
-            }
-        }
-        return block;
-    }
+  private boolean isIfBlockNode(HIRBlock block) {
+    final HIRBlock dom = block.getDominator();
+    boolean isMerge = block.getBeginNode() instanceof MergeNode;
+    return dom != null && !isMerge && !dom.isLoopHeader() && isIfBlock(dom);
+  }
 
-    private boolean isIfBlockNode(HIRBlock block) {
-        final HIRBlock dom = block.getDominator();
-        boolean isMerge = block.getBeginNode() instanceof MergeNode;
-        return dom != null && !isMerge && !dom.isLoopHeader() && isIfBlock(dom);
-    }
+  private boolean isSwitchBlockNode(HIRBlock block) {
+    final HIRBlock dom = block.getDominator();
+    boolean isMerge = block.getBeginNode() instanceof MergeNode;
+    return dom != null && !isMerge && !dom.isLoopHeader() && isSwitchBlock(dom);
+  }
 
-    private boolean isSwitchBlockNode(HIRBlock block) {
-        final HIRBlock dom = block.getDominator();
-        boolean isMerge = block.getBeginNode() instanceof MergeNode;
-        return dom != null && !isMerge && !dom.isLoopHeader() && isSwitchBlock(dom);
-    }
+  private boolean isStartNode(HIRBlock block) {
+    return block.getDominator().getBeginNode() instanceof StartNode;
+  }
 
-    private boolean isStartNode(HIRBlock block) {
-        return block.getDominator().getBeginNode() instanceof StartNode;
-    }
+  private boolean isReturnBranchWithMerge(HIRBlock dom, HIRBlock block) {
+    return dom != null
+        && //
+        dom.getDominator() != null
+        && // We need to be inside another merge block
+        dom.getDominator().getBeginNode() instanceof MergeNode
+        && // We check for the nested merged block
+        dom.getBeginNode() instanceof LoopBeginNode
+        && // The dominator is a loop node
+        dom.getEndNode() instanceof IfNode
+        && //
+        block.getBeginNode() instanceof LoopExitNode
+        && // The current block exits the block with a return
+        block.getEndNode() instanceof ReturnNode
+        && //
+        !(dom.getFirstSuccessor().getEndNode() instanceof LoopEndNode
+            && //
+            dom.getFirstSuccessor().getBeginNode() instanceof BeginNode);
+  }
 
-    private boolean isReturnBranchWithMerge(HIRBlock dom, HIRBlock block) {
-        return dom != null && //
-                dom.getDominator() != null && // We need to be inside another merge block
-                dom.getDominator().getBeginNode() instanceof MergeNode && // We check for the nested merged block
-                dom.getBeginNode() instanceof LoopBeginNode && // The dominator is a loop node
-                dom.getEndNode() instanceof IfNode && //
-                block.getBeginNode() instanceof LoopExitNode && // The current block exits the block with a return
-                block.getEndNode() instanceof ReturnNode && //
-                !(dom.getFirstSuccessor().getEndNode() instanceof LoopEndNode && //
-                        dom.getFirstSuccessor().getBeginNode() instanceof BeginNode);
+  private void closeBranchBlock(HIRBlock block) {
+    final HIRBlock dom = block.getDominator();
+    if (isIfBlockNode(block)) {
+      closeIfBlock(block, dom);
+    } else if (isSwitchBlockNode(block)) {
+      closeSwitchBlock(block, dom);
+    } else if (isNestedIfNode(block) && (!isStartNode(block) && (!isMergeBlock(block)))) {
+      closeBlock(block);
+    } else if (isReturnBranchWithMerge(dom, block)) {
+      closeBlock(block);
     }
-
-    private void closeBranchBlock(HIRBlock block) {
-        final HIRBlock dom = block.getDominator();
-        if (isIfBlockNode(block)) {
-            closeIfBlock(block, dom);
-        } else if (isSwitchBlockNode(block)) {
-            closeSwitchBlock(block, dom);
-        } else if (isNestedIfNode(block) && (!isStartNode(block) && (!isMergeBlock(block)))) {
-            closeBlock(block);
-        } else if (isReturnBranchWithMerge(dom, block)) {
-            closeBlock(block);
-        }
-    }
+  }
 }

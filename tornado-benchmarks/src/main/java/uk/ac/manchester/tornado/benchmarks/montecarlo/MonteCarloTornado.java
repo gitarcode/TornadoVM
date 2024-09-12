@@ -28,66 +28,63 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner montecarlo
  * </code>
  */
 public class MonteCarloTornado extends BenchmarkDriver {
 
-    private FloatArray output;
-    private int size;
+  private FloatArray output;
+  private int size;
 
-    public MonteCarloTornado(int iterations, int size) {
-        super(iterations);
-        this.size = size;
+  public MonteCarloTornado(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
+
+  @Override
+  public void setUp() {
+    output = new FloatArray(size);
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .task("montecarlo", ComputeKernels::monteCarlo, output, size) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
+
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    output = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
+
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+    FloatArray result;
+    boolean isCorrect = true;
+
+    result = new FloatArray(size);
+
+    ComputeKernels.monteCarlo(result, size);
+    executionPlan.withDevice(device).execute();
+    executionPlan.clearProfiles();
+
+    for (int i = 0; i < size; i++) {
+      if (abs(output.get(i) - result.get(i)) > 0.01) {
+        isCorrect = false;
+        break;
+      }
     }
-
-    @Override
-    public void setUp() {
-        output = new FloatArray(size);
-        taskGraph = new TaskGraph("benchmark") //
-                .task("montecarlo", ComputeKernels::monteCarlo, output, size) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
-
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        output = null;
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        FloatArray result;
-        boolean isCorrect = true;
-
-        result = new FloatArray(size);
-
-        ComputeKernels.monteCarlo(result, size);
-        executionPlan.withDevice(device).execute();
-        executionPlan.clearProfiles();
-
-        for (int i = 0; i < size; i++) {
-            if (abs(output.get(i) - result.get(i)) > 0.01) {
-                isCorrect = false;
-                break;
-            }
-        }
-        System.out.printf("Number validation: " + isCorrect + "\n");
-        return isCorrect;
-    }
-
+    System.out.printf("Number validation: " + isCorrect + "\n");
+    return isCorrect;
+  }
 }

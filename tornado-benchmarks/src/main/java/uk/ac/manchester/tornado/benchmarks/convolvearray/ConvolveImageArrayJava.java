@@ -27,57 +27,54 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class ConvolveImageArrayJava extends BenchmarkDriver {
 
-    private final int imageSizeX;
-    private final int imageSizeY;
-    private final int filterSize;
+  private final int imageSizeX;
+  private final int imageSizeY;
+  private final int filterSize;
 
-    private FloatArray input;
-    private FloatArray output;
-    private FloatArray filter;
+  private FloatArray input;
+  private FloatArray output;
+  private FloatArray filter;
 
-    public ConvolveImageArrayJava(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
-        super(iterations);
-        this.imageSizeX = imageSizeX;
-        this.imageSizeY = imageSizeY;
-        this.filterSize = filterSize;
-    }
+  public ConvolveImageArrayJava(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
+    super(iterations);
+    this.imageSizeX = imageSizeX;
+    this.imageSizeY = imageSizeY;
+    this.filterSize = filterSize;
+  }
 
-    @Override
-    public void setUp() {
-        input = new FloatArray(imageSizeX * imageSizeY);
-        output = new FloatArray(imageSizeX * imageSizeY);
-        filter = new FloatArray(filterSize * filterSize);
+  @Override
+  public void setUp() {
+    input = new FloatArray(imageSizeX * imageSizeY);
+    output = new FloatArray(imageSizeX * imageSizeY);
+    filter = new FloatArray(filterSize * filterSize);
 
-        createImage(input, imageSizeX, imageSizeY);
-        createFilter(filter, filterSize, filterSize);
+    createImage(input, imageSizeX, imageSizeY);
+    createFilter(filter, filterSize, filterSize);
+  }
 
-    }
+  @Override
+  public void tearDown() {
+    input = null;
+    output = null;
+    filter = null;
+    super.tearDown();
+  }
 
-    @Override
-    public void tearDown() {
-        input = null;
-        output = null;
-        filter = null;
-        super.tearDown();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    convolveImageArray(input, filter, output, imageSizeX, imageSizeY, filterSize, filterSize);
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        convolveImageArray(input, filter, output, imageSizeX, imageSizeY, filterSize, filterSize);
-    }
+  @Override
+  public void barrier() {}
 
-    @Override
-    public void barrier() {
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

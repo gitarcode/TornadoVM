@@ -29,25 +29,26 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.LoopBeginNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 
 @NodeInfo
 public class XilinxPipeliningPragmaNode extends FixedWithNextNode implements LIRLowerable {
 
-    @Successor
-    LoopBeginNode loopBgNd;
-    public static final NodeClass<XilinxPipeliningPragmaNode> TYPE = NodeClass.create(XilinxPipeliningPragmaNode.class);
+  @Successor LoopBeginNode loopBgNd;
+  public static final NodeClass<XilinxPipeliningPragmaNode> TYPE =
+      NodeClass.create(XilinxPipeliningPragmaNode.class);
 
-    private int initiationIntervalValue;
+  private int initiationIntervalValue;
 
-    public XilinxPipeliningPragmaNode(int initiationIntervalValue) {
-        super(TYPE, StampFactory.forVoid());
-        this.initiationIntervalValue = initiationIntervalValue;
-    }
+  public XilinxPipeliningPragmaNode(int initiationIntervalValue) {
+    super(TYPE, StampFactory.forVoid());
+    this.initiationIntervalValue = initiationIntervalValue;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
-        nodeLIRBuilderTool.getLIRGeneratorTool().append(new OCLLIRStmt.PragmaExpr(new XclPipelineAttribute(initiationIntervalValue)));
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
+    nodeLIRBuilderTool
+        .getLIRGeneratorTool()
+        .append(new OCLLIRStmt.PragmaExpr(new XclPipelineAttribute(initiationIntervalValue)));
+  }
 }

@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.nodes;
 
+import jdk.vm.ci.meta.ResolvedJavaType;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.core.common.type.TypeReference;
 import org.graalvm.compiler.graph.Node;
@@ -30,34 +31,51 @@ import org.graalvm.compiler.nodes.FrameState;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.java.AbstractNewArrayNode;
 
-import jdk.vm.ci.meta.ResolvedJavaType;
-
 @NodeInfo
 public class NewArrayNonVirtualizableNode extends AbstractNewArrayNode {
-    public static final NodeClass<NewArrayNonVirtualizableNode> TYPE = NodeClass.create(NewArrayNonVirtualizableNode.class);
-    private final ResolvedJavaType elementType;
+  public static final NodeClass<NewArrayNonVirtualizableNode> TYPE =
+      NodeClass.create(NewArrayNonVirtualizableNode.class);
+  private final ResolvedJavaType elementType;
 
-    public NewArrayNonVirtualizableNode(ResolvedJavaType elementType, ValueNode length, boolean fillContents) {
-        this(elementType, length, fillContents, null);
-    }
+  public NewArrayNonVirtualizableNode(
+      ResolvedJavaType elementType, ValueNode length, boolean fillContents) {
+    this(elementType, length, fillContents, null);
+  }
 
-    public NewArrayNonVirtualizableNode(ResolvedJavaType elementType, ValueNode length, boolean fillContents, FrameState stateBefore) {
-        this(TYPE, elementType, length, fillContents, stateBefore);
-    }
+  public NewArrayNonVirtualizableNode(
+      ResolvedJavaType elementType,
+      ValueNode length,
+      boolean fillContents,
+      FrameState stateBefore) {
+    this(TYPE, elementType, length, fillContents, stateBefore);
+  }
 
-    protected NewArrayNonVirtualizableNode(NodeClass<? extends NewArrayNonVirtualizableNode> c, ResolvedJavaType elementType, ValueNode length, boolean fillContents, FrameState stateBefore) {
-        super(c, StampFactory.objectNonNull(TypeReference.createExactTrusted(elementType.getArrayClass())), length, fillContents, stateBefore);
-        this.elementType = elementType;
-    }
+  protected NewArrayNonVirtualizableNode(
+      NodeClass<? extends NewArrayNonVirtualizableNode> c,
+      ResolvedJavaType elementType,
+      ValueNode length,
+      boolean fillContents,
+      FrameState stateBefore) {
+    super(
+        c,
+        StampFactory.objectNonNull(TypeReference.createExactTrusted(elementType.getArrayClass())),
+        length,
+        fillContents,
+        stateBefore);
+    this.elementType = elementType;
+  }
 
-    @Node.NodeIntrinsic
-    private static native Object NewArrayNonVirtualNode(@Node.ConstantNodeParameter Class<?> elementType, int length, @Node.ConstantNodeParameter boolean fillContents);
+  @Node.NodeIntrinsic
+  private static native Object NewArrayNonVirtualNode(
+      @Node.ConstantNodeParameter Class<?> elementType,
+      int length,
+      @Node.ConstantNodeParameter boolean fillContents);
 
-    public static Object newUninitializedArray(Class<?> elementType, int length) {
-        return NewArrayNonVirtualNode(elementType, length, false);
-    }
+  public static Object newUninitializedArray(Class<?> elementType, int length) {
+    return NewArrayNonVirtualNode(elementType, length, false);
+  }
 
-    public ResolvedJavaType elementType() {
-        return elementType;
-    }
+  public ResolvedJavaType elementType() {
+    return elementType;
+  }
 }

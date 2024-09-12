@@ -23,8 +23,7 @@
 package uk.ac.manchester.tornado.runtime.graal.nodes.interfaces;
 
 /**
- * This interface is used for accessing the Vector Value node type outside the
- * scope of opencl-driver package.
+ * This interface is used for accessing the Vector Value node type outside the scope of
+ * opencl-driver package.
  */
-public interface MarkVectorValueNode {
-}
+public interface MarkVectorValueNode {}

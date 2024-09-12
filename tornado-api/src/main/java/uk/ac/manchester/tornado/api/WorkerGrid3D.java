@@ -19,15 +19,14 @@ package uk.ac.manchester.tornado.api;
 
 public class WorkerGrid3D extends AbstractWorkerGrid {
 
-    public static final int DIM = 3;
+  public static final int DIM = 3;
 
-    public WorkerGrid3D(int x, int y, int z) {
-        super(x, y, z);
-    }
+  public WorkerGrid3D(int x, int y, int z) {
+    super(x, y, z);
+  }
 
-    @Override
-    public int dimension() {
-        return DIM;
-    }
-
+  @Override
+  public int dimension() {
+    return DIM;
+  }
 }

@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.examples;
 
 import java.util.stream.IntStream;
-
 import uk.ac.manchester.tornado.api.DRMode;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.Policy;
@@ -30,70 +29,69 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.examples.common.Messages;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.examples/uk.ac.manchester.tornado.examples.Saxpy
  * </code>
- *
  */
 public class Saxpy {
 
-    public static void saxpy(float alpha, FloatArray x, FloatArray y) {
-        for (@Parallel int i = 0; i < y.getSize(); i++) {
-            y.set(i, alpha * x.get(i));
-        }
+  public static void saxpy(float alpha, FloatArray x, FloatArray y) {
+    for (@Parallel int i = 0; i < y.getSize(); i++) {
+      y.set(i, alpha * x.get(i));
+    }
+  }
+
+  public static void main(String[] args) {
+    int numElements = 512;
+
+    if (args.length > 0) {
+      numElements = Integer.parseInt(args[0]);
     }
 
-    public static void main(String[] args) {
-        int numElements = 512;
+    final float alpha = 2f;
 
-        if (args.length > 0) {
-            numElements = Integer.parseInt(args[0]);
-        }
+    final FloatArray x = new FloatArray(numElements);
+    final FloatArray y = new FloatArray(numElements);
 
-        final float alpha = 2f;
+    IntStream.range(0, numElements).parallel().forEach(i -> x.set(i, 450));
 
-        final FloatArray x = new FloatArray(numElements);
-        final FloatArray y = new FloatArray(numElements);
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.FIRST_EXECUTION, x) //
+            .task("t0", Saxpy::saxpy, alpha, x, y) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
 
-        IntStream.range(0, numElements).parallel().forEach(i -> x.set(i, 450));
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    executor.withDynamicReconfiguration(Policy.PERFORMANCE, DRMode.SERIAL).execute();
 
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.FIRST_EXECUTION, x) //
-                .task("t0", Saxpy::saxpy, alpha, x, y)//
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
+    numElements = 512 * 2;
 
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
-        executor.withDynamicReconfiguration(Policy.PERFORMANCE, DRMode.SERIAL).execute();
+    final FloatArray a = new FloatArray(numElements);
+    final FloatArray b = new FloatArray(numElements);
 
-        numElements = 512 * 2;
+    IntStream.range(0, numElements).parallel().forEach(i -> a.set(i, 450));
 
-        final FloatArray a = new FloatArray(numElements);
-        final FloatArray b = new FloatArray(numElements);
+    TaskGraph taskGraph1 =
+        new TaskGraph("s1")
+            .task("t0", Saxpy::saxpy, alpha, a, b)
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, a);
 
-        IntStream.range(0, numElements).parallel().forEach(i -> a.set(i, 450));
+    ImmutableTaskGraph immutableTaskGraph1 = taskGraph1.snapshot();
+    TornadoExecutionPlan executor1 = new TornadoExecutionPlan(immutableTaskGraph1);
+    executor1.withDynamicReconfiguration(Policy.PERFORMANCE, DRMode.PARALLEL).execute();
 
-        TaskGraph taskGraph1 = new TaskGraph("s1").task("t0", Saxpy::saxpy, alpha, a, b).transferToHost(DataTransferMode.EVERY_EXECUTION, a);
-
-        ImmutableTaskGraph immutableTaskGraph1 = taskGraph1.snapshot();
-        TornadoExecutionPlan executor1 = new TornadoExecutionPlan(immutableTaskGraph1);
-        executor1.withDynamicReconfiguration(Policy.PERFORMANCE, DRMode.PARALLEL).execute();
-
-        boolean wrongResult = false;
-        for (int i = 0; i < y.getSize(); i++) {
-            if (Math.abs(y.get(i) - (alpha * x.get(i))) > 0.01) {
-                wrongResult = true;
-                break;
-            }
-        }
-        if (!wrongResult) {
-            System.out.println(Messages.CORRECT);
-        } else {
-            System.out.println(Messages.WRONG);
-        }
+    boolean wrongResult = false;
+    for (int i = 0; i < y.getSize(); i++) {
+      if (Math.abs(y.get(i) - (alpha * x.get(i))) > 0.01) {
+        wrongResult = true;
+        break;
+      }
     }
-
+    if (!wrongResult) {
+      System.out.println(Messages.CORRECT);
+    } else {
+      System.out.println(Messages.WRONG);
+    }
+  }
 }

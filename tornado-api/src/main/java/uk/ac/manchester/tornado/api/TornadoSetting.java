@@ -19,12 +19,11 @@ package uk.ac.manchester.tornado.api;
 
 public interface TornadoSetting {
 
-    void setTornadoProperty(String key, String value);
+  void setTornadoProperty(String key, String value);
 
-    String getTornadoProperty(String key);
+  String getTornadoProperty(String key);
 
-    String getTornadoProperty(String key, String defaultValue);
+  String getTornadoProperty(String key, String defaultValue);
 
-    void loadTornadoProperty(String filename);
-
+  void loadTornadoProperty(String filename);
 }

@@ -27,8 +27,11 @@ import java.lang.annotation.Target;
  * Please check assembly/src/bin/tornado script
  */
 
-@Target({ ElementType.LOCAL_VARIABLE, ElementType.TYPE, ElementType.TYPE_USE, ElementType.TYPE_PARAMETER })
+@Target({
+  ElementType.LOCAL_VARIABLE,
+  ElementType.TYPE,
+  ElementType.TYPE_USE,
+  ElementType.TYPE_PARAMETER
+})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Parallel {
-
-}
+public @interface Parallel {}

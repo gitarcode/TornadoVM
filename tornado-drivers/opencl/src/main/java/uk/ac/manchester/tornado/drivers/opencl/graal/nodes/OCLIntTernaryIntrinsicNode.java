@@ -25,6 +25,8 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.core.common.type.StampFactory;
@@ -40,9 +42,6 @@ import org.graalvm.compiler.nodes.calc.TernaryNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.api.math.TornadoMath;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLArithmeticTool;
@@ -51,113 +50,130 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkIntIntrinsicNode;
 
 @NodeInfo(nameTemplate = "{p#operation/s}")
-public class OCLIntTernaryIntrinsicNode extends TernaryNode implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
+public class OCLIntTernaryIntrinsicNode extends TernaryNode
+    implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
 
-    public static final NodeClass<OCLIntTernaryIntrinsicNode> TYPE = NodeClass.create(OCLIntTernaryIntrinsicNode.class);
-    protected final Operation operation;
-    protected OCLIntTernaryIntrinsicNode(ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
-        super(TYPE, StampFactory.forKind(kind), x, y, z);
-        this.operation = op;
+  public static final NodeClass<OCLIntTernaryIntrinsicNode> TYPE =
+      NodeClass.create(OCLIntTernaryIntrinsicNode.class);
+  protected final Operation operation;
+
+  protected OCLIntTernaryIntrinsicNode(
+      ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
+    super(TYPE, StampFactory.forKind(kind), x, y, z);
+    this.operation = op;
+  }
+
+  public static ValueNode create(
+      ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
+    ValueNode c = tryConstantFold(x, y, z, op, kind);
+    if (c != null) {
+      return c;
     }
+    return new OCLIntTernaryIntrinsicNode(x, y, z, op, kind);
+  }
 
-    public static ValueNode create(ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
-        ValueNode c = tryConstantFold(x, y, z, op, kind);
-        if (c != null) {
-            return c;
-        }
-        return new OCLIntTernaryIntrinsicNode(x, y, z, op, kind);
+  protected static ValueNode tryConstantFold(
+      ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
+    ConstantNode result = null;
+
+    if (x.isConstant() && y.isConstant() && z.isConstant()) {
+      if (kind == JavaKind.Int) {
+        int ret =
+            doCompute(
+                x.asJavaConstant().asInt(),
+                y.asJavaConstant().asInt(),
+                z.asJavaConstant().asInt(),
+                op);
+        result = ConstantNode.forInt(ret);
+      } else if (kind == JavaKind.Long) {
+        long ret =
+            doCompute(
+                x.asJavaConstant().asLong(),
+                y.asJavaConstant().asLong(),
+                z.asJavaConstant().asInt(),
+                op);
+        result = ConstantNode.forLong(ret);
+      }
     }
+    return result;
+  }
 
-    protected static ValueNode tryConstantFold(ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
-        ConstantNode result = null;
-
-        if (x.isConstant() && y.isConstant() && z.isConstant()) {
-            if (kind == JavaKind.Int) {
-                int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), z.asJavaConstant().asInt(), op);
-                result = ConstantNode.forInt(ret);
-            } else if (kind == JavaKind.Long) {
-                long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), z.asJavaConstant().asInt(), op);
-                result = ConstantNode.forLong(ret);
-            }
-        }
-        return result;
+  private static long doCompute(long x, long y, long z, Operation op) {
+    switch (op) {
+      case CLAMP:
+        return TornadoMath.clamp(x, y, z);
+      default:
+        throw new TornadoInternalError("unknown op %s", op);
     }
+  }
 
-    private static long doCompute(long x, long y, long z, Operation op) {
-        switch (op) {
-            case CLAMP:
-                return TornadoMath.clamp(x, y, z);
-            default:
-                throw new TornadoInternalError("unknown op %s", op);
-        }
+  private static int doCompute(int x, int y, int z, Operation op) {
+    switch (op) {
+      case CLAMP:
+        return TornadoMath.clamp(x, y, z);
+
+      default:
+        throw new TornadoInternalError("unknown op %s", op);
     }
+  }
 
-    private static int doCompute(int x, int y, int z, Operation op) {
-        switch (op) {
-            case CLAMP:
-                return TornadoMath.clamp(x, y, z);
+  @Override
+  public Stamp foldStamp(Stamp stampX, Stamp stampY, Stamp stampZ) {
+    return stamp(NodeView.DEFAULT);
+  }
 
-            default:
-                throw new TornadoInternalError("unknown op %s", op);
-        }
+  @Override
+  public String getOperation() {
+    return operation.toString();
+  }
+
+  public Operation operation() {
+    return operation;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
+    OCLBuiltinTool gen = ((OCLArithmeticTool) lirGen).getGen().getOCLBuiltinTool();
+
+    Value x = builder.operand(getX());
+    Value y = builder.operand(getY());
+    Value z = builder.operand(getZ());
+    LIRKind lirKind = builder.getLIRGeneratorTool().getLIRKind(stamp);
+    Variable result = builder.getLIRGeneratorTool().newVariable(lirKind);
+    Value expr;
+    switch (operation()) {
+      case CLAMP:
+        expr = gen.genIntClamp(x, y, z);
+        break;
+      case MAD24:
+        expr = gen.genIntMad24(x, y, z);
+        break;
+      case MAD_HI:
+        expr = gen.genIntMadHi(x, y, z);
+        break;
+      case MAD_SAT:
+        expr = gen.genIntMadSat(x, y, z);
+        break;
+      default:
+        throw shouldNotReachHere();
     }
+    builder.getLIRGeneratorTool().append(new AssignStmt(result, expr));
+    builder.setResult(this, result);
+  }
 
-    @Override
-    public Stamp foldStamp(Stamp stampX, Stamp stampY, Stamp stampZ) {
-        return stamp(NodeView.DEFAULT);
+  @Override
+  public Node canonical(CanonicalizerTool tool, ValueNode x, ValueNode y, ValueNode z) {
+    ValueNode c = tryConstantFold(x, y, z, operation(), getStackKind());
+    if (c != null) {
+      return c;
     }
+    return this;
+  }
 
-    @Override
-    public String getOperation() {
-        return operation.toString();
-    }
-
-    public Operation operation() {
-        return operation;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
-        OCLBuiltinTool gen = ((OCLArithmeticTool) lirGen).getGen().getOCLBuiltinTool();
-
-        Value x = builder.operand(getX());
-        Value y = builder.operand(getY());
-        Value z = builder.operand(getZ());
-        LIRKind lirKind = builder.getLIRGeneratorTool().getLIRKind(stamp);
-        Variable result = builder.getLIRGeneratorTool().newVariable(lirKind);
-        Value expr;
-        switch (operation()) {
-            case CLAMP:
-                expr = gen.genIntClamp(x, y, z);
-                break;
-            case MAD24:
-                expr = gen.genIntMad24(x, y, z);
-                break;
-            case MAD_HI:
-                expr = gen.genIntMadHi(x, y, z);
-                break;
-            case MAD_SAT:
-                expr = gen.genIntMadSat(x, y, z);
-                break;
-            default:
-                throw shouldNotReachHere();
-        }
-        builder.getLIRGeneratorTool().append(new AssignStmt(result, expr));
-        builder.setResult(this, result);
-
-    }
-
-    @Override
-    public Node canonical(CanonicalizerTool tool, ValueNode x, ValueNode y, ValueNode z) {
-        ValueNode c = tryConstantFold(x, y, z, operation(), getStackKind());
-        if (c != null) {
-            return c;
-        }
-        return this;
-    }
-
-    public enum Operation {
-        CLAMP, MAD_HI, MAD_SAT, MAD24
-    }
-
+  public enum Operation {
+    CLAMP,
+    MAD_HI,
+    MAD_SAT,
+    MAD24
+  }
 }

@@ -29,45 +29,44 @@ import java.util.List;
 
 public class TaskNode extends ContextOpNode {
 
-    private final AbstractNode[] arguments;
-    private final int taskIndex;
+  private final AbstractNode[] arguments;
+  private final int taskIndex;
 
-    public TaskNode(ContextNode context, int index, AbstractNode[] arguments) {
-        super(context);
-        this.taskIndex = index;
-        this.arguments = arguments;
+  public TaskNode(ContextNode context, int index, AbstractNode[] arguments) {
+    super(context);
+    this.taskIndex = index;
+    this.arguments = arguments;
+  }
+
+  public AbstractNode getArg(int index) {
+    return arguments[index];
+  }
+
+  public int getTaskIndex() {
+    return taskIndex;
+  }
+
+  @Override
+  public List<AbstractNode> getInputs() {
+    final List<AbstractNode> inputs = new ArrayList<>();
+    Collections.addAll(inputs, arguments);
+    return inputs;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("[").append(id).append("]: ");
+    sb.append("task=").append(taskIndex);
+    sb.append(", args=[ ");
+    for (AbstractNode arg : arguments) {
+      sb.append("" + arg.getId() + " ");
     }
+    sb.append("]");
+    return sb.toString();
+  }
 
-    public AbstractNode getArg(int index) {
-        return arguments[index];
-    }
-
-    public int getTaskIndex() {
-        return taskIndex;
-    }
-
-    @Override
-    public List<AbstractNode> getInputs() {
-        final List<AbstractNode> inputs = new ArrayList<>();
-        Collections.addAll(inputs, arguments);
-        return inputs;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("[").append(id).append("]: ");
-        sb.append("task=").append(taskIndex);
-        sb.append(", args=[ ");
-        for (AbstractNode arg : arguments) {
-            sb.append("" + arg.getId() + " ");
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    public int getNumArgs() {
-        return arguments.length;
-    }
-
+  public int getNumArgs() {
+    return arguments.length;
+  }
 }

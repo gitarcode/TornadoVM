@@ -24,6 +24,9 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.AllocatableValue;
+import jdk.vm.ci.meta.ResolvedJavaType;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.core.common.type.TypeReference;
@@ -35,10 +38,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.FixedNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.AllocatableValue;
-import jdk.vm.ci.meta.ResolvedJavaType;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.spirv.graal.SPIRVArchitecture;
 import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.SPIRVLIRGenerator;
@@ -46,51 +45,58 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVBinary;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 
-/**
- * Fixed Node for private array allocation.
- */
+/** Fixed Node for private array allocation. */
 @NodeInfo
 public class FixedArrayNode extends FixedNode implements LIRLowerable {
 
-    public static final NodeClass<FixedArrayNode> TYPE = NodeClass.create(FixedArrayNode.class);
+  public static final NodeClass<FixedArrayNode> TYPE = NodeClass.create(FixedArrayNode.class);
 
-    @Input
-    protected ConstantNode length;
+  @Input protected ConstantNode length;
 
-    protected SPIRVKind elementKind;
-    protected SPIRVArchitecture.SPIRVMemoryBase memoryBase;
+  protected SPIRVKind elementKind;
+  protected SPIRVArchitecture.SPIRVMemoryBase memoryBase;
 
-    public FixedArrayNode(SPIRVArchitecture.SPIRVMemoryBase memoryBase, ResolvedJavaType elementType, ConstantNode length) {
-        super(TYPE, StampFactory.objectNonNull(TypeReference.createTrustedWithoutAssumptions(elementType.getArrayClass())));
-        this.memoryBase = memoryBase;
-        this.length = length;
-        this.elementKind = SPIRVKind.fromJavaKind(elementType.getJavaKind());
-    }
+  public FixedArrayNode(
+      SPIRVArchitecture.SPIRVMemoryBase memoryBase,
+      ResolvedJavaType elementType,
+      ConstantNode length) {
+    super(
+        TYPE,
+        StampFactory.objectNonNull(
+            TypeReference.createTrustedWithoutAssumptions(elementType.getArrayClass())));
+    this.memoryBase = memoryBase;
+    this.length = length;
+    this.elementKind = SPIRVKind.fromJavaKind(elementType.getJavaKind());
+  }
 
-    public SPIRVArchitecture.SPIRVMemoryBase getMemoryRegister() {
-        return memoryBase;
-    }
+  public SPIRVArchitecture.SPIRVMemoryBase getMemoryRegister() {
+    return memoryBase;
+  }
 
-    public ConstantNode getLength() {
-        return length;
-    }
+  public ConstantNode getLength() {
+    return length;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
 
-        final Value lengthValue = generator.operand(length);
-        LIRKind lirKind = LIRKind.value(elementKind);
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        final AllocatableValue graalVar = tool.newVariable(lirKind);
+    final Value lengthValue = generator.operand(length);
+    LIRKind lirKind = LIRKind.value(elementKind);
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    final AllocatableValue graalVar = tool.newVariable(lirKind);
 
-        SPIRVLIRGenerator spirvGenerator = (SPIRVLIRGenerator) tool;
-        final AllocatableValue resultArray = spirvGenerator.newArrayVariable((Variable) graalVar, lengthValue);
+    SPIRVLIRGenerator spirvGenerator = (SPIRVLIRGenerator) tool;
+    final AllocatableValue resultArray =
+        spirvGenerator.newArrayVariable((Variable) graalVar, lengthValue);
 
-        final SPIRVBinary.PrivateArrayAllocation privateAllocationExpr = new SPIRVBinary.PrivateArrayAllocation(lirKind, resultArray);
+    final SPIRVBinary.PrivateArrayAllocation privateAllocationExpr =
+        new SPIRVBinary.PrivateArrayAllocation(lirKind, resultArray);
 
-        Logger.traceBuildLIR(Logger.BACKEND.SPIRV, "Private Array Allocation: " + resultArray + " with type: " + lirKind);
-        generator.setResult(this, resultArray);
+    Logger.traceBuildLIR(
+        Logger.BACKEND.SPIRV,
+        "Private Array Allocation: " + resultArray + " with type: " + lirKind);
+    generator.setResult(this, resultArray);
 
-        tool.append(new SPIRVLIRStmt.PrivateArrayAllocation(resultArray, privateAllocationExpr));
-    }
+    tool.append(new SPIRVLIRStmt.PrivateArrayAllocation(resultArray, privateAllocationExpr));
+  }
 }

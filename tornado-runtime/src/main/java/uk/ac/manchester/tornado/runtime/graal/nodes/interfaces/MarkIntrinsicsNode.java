@@ -24,11 +24,11 @@ package uk.ac.manchester.tornado.runtime.graal.nodes.interfaces;
 
 public interface MarkIntrinsicsNode {
 
-    /**
-     * Method used to return the intrinsic operation from the driver to the runtime
-     * without breaking the dependencies.
-     *
-     * @return String
-     */
-    String getOperation();
+  /**
+   * Method used to return the intrinsic operation from the driver to the runtime without breaking
+   * the dependencies.
+   *
+   * @return String
+   */
+  String getOperation();
 }

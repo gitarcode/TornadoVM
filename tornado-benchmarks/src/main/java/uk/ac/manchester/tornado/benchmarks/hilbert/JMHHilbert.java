@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.benchmarks.hilbert;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -36,7 +35,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -45,66 +43,65 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.hilbert.JMHHilbert
  * </code>
  */
 public class JMHHilbert {
 
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
-        private int size = Integer.parseInt(System.getProperty("x", "4096"));
-        private FloatArray hilbertMatrix;
-        private TornadoExecutionPlan executionPlan;
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
+    private int size = Integer.parseInt(System.getProperty("x", "4096"));
+    private FloatArray hilbertMatrix;
+    private TornadoExecutionPlan executionPlan;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            hilbertMatrix = new FloatArray(size * size);
-            TaskGraph taskGraph = new TaskGraph("s0") //
-                    .task("t0", ComputeKernels::hilbertComputation, hilbertMatrix, size, size) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, hilbertMatrix); //
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-            executionPlan.withWarmUp();
-        }
+    @Setup(Level.Trial)
+    public void doSetup() {
+      hilbertMatrix = new FloatArray(size * size);
+      TaskGraph taskGraph =
+          new TaskGraph("s0") //
+              .task("t0", ComputeKernels::hilbertComputation, hilbertMatrix, size, size) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, hilbertMatrix); //
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+      executionPlan.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void hilbertJava(BenchmarkSetup state) {
-        ComputeKernels.hilbertComputation(state.hilbertMatrix, state.size, state.size);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void hilbertJava(BenchmarkSetup state) {
+    ComputeKernels.hilbertComputation(state.hilbertMatrix, state.size, state.size);
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void hilbertTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executionPlan;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void hilbertTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executionPlan;
+    executor.execute();
+    blackhole.consume(executor);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHHilbert.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.SECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHHilbert.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.SECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

@@ -23,6 +23,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
@@ -32,8 +33,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
@@ -41,25 +40,31 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
 @NodeInfo
 public class OCLKernelContextAccessNode extends FloatingNode implements LIRLowerable {
 
-    @Input
-    private ConstantNode index;
+  @Input private ConstantNode index;
 
-    public static final NodeClass<OCLKernelContextAccessNode> TYPE = NodeClass.create(OCLKernelContextAccessNode.class);
+  public static final NodeClass<OCLKernelContextAccessNode> TYPE =
+      NodeClass.create(OCLKernelContextAccessNode.class);
 
-    public OCLKernelContextAccessNode(ConstantNode index) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        this.index = index;
-    }
+  public OCLKernelContextAccessNode(ConstantNode index) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    this.index = index;
+  }
 
-    public ConstantNode getIndex() {
-        return this.index;
-    }
+  public ConstantNode getIndex() {
+    return this.index;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        tool.append(new OCLLIRStmt.AssignStmt(result, new OCLUnary.LoadOCLKernelContext(OCLAssembler.OCLUnaryIntrinsic.OCL_KERNEL_CONTEXT_ACCESS, tool.getLIRKind(stamp), gen.operand(index))));
-        gen.setResult(this, result);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    tool.append(
+        new OCLLIRStmt.AssignStmt(
+            result,
+            new OCLUnary.LoadOCLKernelContext(
+                OCLAssembler.OCLUnaryIntrinsic.OCL_KERNEL_CONTEXT_ACCESS,
+                tool.getLIRKind(stamp),
+                gen.operand(index))));
+    gen.setResult(this, result);
+  }
 }

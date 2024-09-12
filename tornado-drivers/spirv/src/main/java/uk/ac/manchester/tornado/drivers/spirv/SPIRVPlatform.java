@@ -25,13 +25,13 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 public interface SPIRVPlatform {
 
-    int getNumDevices();
+  int getNumDevices();
 
-    SPIRVDevice getDevice(int k);
+  SPIRVDevice getDevice(int k);
 
-    SPIRVContext createContext();
+  SPIRVContext createContext();
 
-    SPIRVDevice[] getDevices();
+  SPIRVDevice[] getDevices();
 
-    SPIRVRuntimeType getRuntime();
+  SPIRVRuntimeType getRuntime();
 }

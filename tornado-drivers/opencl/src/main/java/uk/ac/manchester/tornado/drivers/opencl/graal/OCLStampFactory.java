@@ -25,24 +25,23 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 
 public class OCLStampFactory {
 
-    private static final OCLStamp[] stamps = new OCLStamp[OCLKind.values().length];
+  private static final OCLStamp[] stamps = new OCLStamp[OCLKind.values().length];
 
-    public static OCLStamp getStampFor(OCLKind kind) {
-        int index = 0;
-        for (OCLKind oclKind : OCLKind.values()) {
-            if (oclKind == kind) {
-                break;
-            }
-            index++;
-        }
-
-        if (stamps[index] == null) {
-            stamps[index] = new OCLStamp(kind);
-        }
-
-        // System.out.printf("OCLStampFactory: kind=%s -> stamp=%s\n", kind,
-        // stamps[index]);
-        return stamps[index];
+  public static OCLStamp getStampFor(OCLKind kind) {
+    int index = 0;
+    for (OCLKind oclKind : OCLKind.values()) {
+      if (oclKind == kind) {
+        break;
+      }
+      index++;
     }
 
+    if (stamps[index] == null) {
+      stamps[index] = new OCLStamp(kind);
+    }
+
+    // System.out.printf("OCLStampFactory: kind=%s -> stamp=%s\n", kind,
+    // stamps[index]);
+    return stamps[index];
+  }
 }

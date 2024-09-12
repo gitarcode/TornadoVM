@@ -28,99 +28,90 @@ import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.runtime.common.XPUDeviceBufferState;
 
 /**
- * Data structure to keep the state for each parameter used by the TornadoVM runtime.
- * The Local Object states identifies if a parameter is used for stream-in, stream-out,
- * or it needs to be forced to stream-in (for example due to a device migration, or a
- * task-graph rewrite for reductions).
+ * Data structure to keep the state for each parameter used by the TornadoVM runtime. The Local
+ * Object states identifies if a parameter is used for stream-in, stream-out, or it needs to be
+ * forced to stream-in (for example due to a device migration, or a task-graph rewrite for
+ * reductions).
  */
 public class LocalObjectState {
 
-    /**
-     * Identifies a variable (or parameter) is used for
-     * stream-in (host -> device).
-     */
-    private boolean streamIn;
+  /** Identifies a variable (or parameter) is used for stream-in (host -> device). */
+  private boolean streamIn;
 
-    /**
-     * Identifies a variable (or parameter) must be copy-in again
-     * from the host to the device.
-     */
-    private boolean forceStreamIn;
+  /** Identifies a variable (or parameter) must be copy-in again from the host to the device. */
+  private boolean forceStreamIn;
 
-    /**
-     * Identifies a variable (or parameter) is used for
-     * stream-out (device -> host).
-     */
-    private boolean streamOut;
+  /** Identifies a variable (or parameter) is used for stream-out (device -> host). */
+  private boolean streamOut;
 
-    /**
-     * For each variable, we need to keep track of all devices in which there is a shadow
-     * copy. This is achieved by using the {@link DataObjectState} object.
-     */
-    private DataObjectState dataObjectState;
+  /**
+   * For each variable, we need to keep track of all devices in which there is a shadow copy. This
+   * is achieved by using the {@link DataObjectState} object.
+   */
+  private DataObjectState dataObjectState;
 
-    private Object object;
+  private Object object;
 
-    public LocalObjectState(Object object) {
-        this.object = object;
-        dataObjectState = new DataObjectState();
-        streamIn = false;
-        streamOut = false;
+  public LocalObjectState(Object object) {
+    this.object = object;
+    dataObjectState = new DataObjectState();
+    streamIn = false;
+    streamOut = false;
+  }
+
+  public Object getObject() {
+    return object;
+  }
+
+  public boolean isStreamIn() {
+    return streamIn;
+  }
+
+  public void setStreamIn(boolean streamIn) {
+    this.streamIn = streamIn;
+  }
+
+  public void setForceStreamIn(boolean streamIn) {
+    this.forceStreamIn = streamIn;
+  }
+
+  public boolean isForcedStreamIn() {
+    return this.forceStreamIn;
+  }
+
+  public boolean isStreamOut() {
+    return streamOut;
+  }
+
+  public void setStreamOut(boolean streamOut) {
+    this.streamOut = streamOut;
+  }
+
+  public DataObjectState getDataObjectState() {
+    return dataObjectState;
+  }
+
+  public Event sync(long executionPlanId, Object object, TornadoDevice device) {
+    XPUDeviceBufferState deviceState = dataObjectState.getDeviceBufferState(device);
+    if (deviceState.isLockedBuffer()) {
+      int eventId = device.streamOutBlocking(executionPlanId, object, 0, deviceState, null);
+      return device.resolveEvent(executionPlanId, eventId);
     }
+    return null;
+  }
 
-    public Object getObject() {
-        return object;
-    }
+  @Override
+  public LocalObjectState clone() {
+    LocalObjectState newLocalObjectState = new LocalObjectState(this.object);
+    newLocalObjectState.streamIn = this.streamIn;
+    newLocalObjectState.streamOut = this.streamOut;
+    newLocalObjectState.forceStreamIn = this.forceStreamIn;
+    newLocalObjectState.dataObjectState = dataObjectState.clone();
+    return newLocalObjectState;
+  }
 
-    public boolean isStreamIn() {
-        return streamIn;
-    }
-
-    public void setStreamIn(boolean streamIn) {
-        this.streamIn = streamIn;
-    }
-
-    public void setForceStreamIn(boolean streamIn) {
-        this.forceStreamIn = streamIn;
-    }
-
-    public boolean isForcedStreamIn() {
-        return this.forceStreamIn;
-    }
-
-    public boolean isStreamOut() {
-        return streamOut;
-    }
-
-    public void setStreamOut(boolean streamOut) {
-        this.streamOut = streamOut;
-    }
-
-    public DataObjectState getDataObjectState() {
-        return dataObjectState;
-    }
-
-    public Event sync(long executionPlanId, Object object, TornadoDevice device) {
-        XPUDeviceBufferState deviceState = dataObjectState.getDeviceBufferState(device);
-        if (deviceState.isLockedBuffer()) {
-            int eventId = device.streamOutBlocking(executionPlanId, object, 0, deviceState, null);
-            return device.resolveEvent(executionPlanId, eventId);
-        }
-        return null;
-    }
-
-    @Override
-    public LocalObjectState clone() {
-        LocalObjectState newLocalObjectState = new LocalObjectState(this.object);
-        newLocalObjectState.streamIn = this.streamIn;
-        newLocalObjectState.streamOut = this.streamOut;
-        newLocalObjectState.forceStreamIn = this.forceStreamIn;
-        newLocalObjectState.dataObjectState = dataObjectState.clone();
-        return newLocalObjectState;
-    }
-
-    @Override
-    public String toString() {
-        return (streamIn ? "SIN" : "--") + (streamOut ? "SOUT" : "--") + " " + dataObjectState;
-    }
+  @Override
+  public String toString() {
+    return (streamIn ? "SIN" : "--") + (streamOut ? "SOUT" : "--") + " " + dataObjectState;
+  }
 }

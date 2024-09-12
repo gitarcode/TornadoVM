@@ -23,62 +23,59 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.Opcode;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 
 @Opcode("VSEL")
 public class OCLVectorElementSelect extends OCLLIROp {
 
-    final Value vector;
-    private final Value selection;
+  final Value vector;
+  private final Value selection;
 
-    public OCLVectorElementSelect(LIRKind lirKind, Value vector, Value selection) {
-        super(lirKind);
-        this.vector = vector;
-        this.selection = selection;
+  public OCLVectorElementSelect(LIRKind lirKind, Value vector, Value selection) {
+    super(lirKind);
+    this.vector = vector;
+    this.selection = selection;
+  }
+
+  /**
+   * Converts a numeric index to comply with the specified rules for a 16-component vector.
+   *
+   * <p>The specification allows numeric indices in the range: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, A,
+   * b, B, c, C, d, D, e, E, f, F
+   *
+   * <p>For values between 10 and 15 (inclusive), this method returns the corresponding uppercase
+   * letter (A to F). Otherwise, it throws an {@code IllegalArgumentException} for invalid values.
+   *
+   * @param value The numeric index to be converted.
+   * @return The converted character complying with the specified rules.
+   * @throws IllegalArgumentException If the value is outside the allowed range.
+   */
+  public static char convertForWithOf16(int value) {
+    if (value >= 10 && value <= 15) {
+      // Convert values 10 to 15 to letters A to F
+      return (char) ('A' + value - 10);
+    } else {
+      throw new IllegalArgumentException("Invalid value: " + value);
     }
+  }
 
-    /**
-     * Converts a numeric index to comply with the specified rules for a 16-component vector.
-     * <p>
-     * The specification allows numeric indices in the range:
-     * 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, a, A, b, B, c, C, d, D, e, E, f, F
-     * <p>
-     * For values between 10 and 15 (inclusive), this method returns the corresponding uppercase letter (A to F).
-     * Otherwise, it throws an {@code IllegalArgumentException} for invalid values.
-     *
-     * @param value
-     *     The numeric index to be converted.
-     * @return The converted character complying with the specified rules.
-     * @throws IllegalArgumentException
-     *     If the value is outside the allowed range.
-     *
-     *
-     */
-    public static char convertForWithOf16(int value) {
-        if (value >= 10 && value <= 15) {
-            // Convert values 10 to 15 to letters A to F
-            return (char) ('A' + value - 10);
-        } else {
-            throw new IllegalArgumentException("Invalid value: " + value);
-        }
-    }
+  @Override
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+    asm.emitValueOrOp(crb, vector);
+    int idx = Integer.parseInt(OCLAssembler.getAbsoluteIndexFromValue(selection));
+    String vectorIndex =
+        idx > 9
+            ? String.valueOf(convertForWithOf16(idx))
+            : OCLAssembler.getAbsoluteIndexFromValue(selection);
+    asm.emitSymbol(".s" + vectorIndex);
+  }
 
-    @Override
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-        asm.emitValueOrOp(crb, vector);
-        int idx = Integer.parseInt(OCLAssembler.getAbsoluteIndexFromValue(selection));
-        String vectorIndex = idx > 9 ? String.valueOf(convertForWithOf16(idx)) : OCLAssembler.getAbsoluteIndexFromValue(selection);
-        asm.emitSymbol(".s" + vectorIndex);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("vselect(%s, %s)", vector, selection);
-    }
-
+  @Override
+  public String toString() {
+    return String.format("vselect(%s, %s)", vector, selection);
+  }
 }

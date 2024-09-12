@@ -24,6 +24,8 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -35,9 +37,6 @@ import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.memory.MemoryKill;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.spirv.SPIRVThreadBuiltIn;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
@@ -45,27 +44,30 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
 @NodeInfo
 public class GroupIdNode extends FloatingNode implements LIRLowerable, MemoryKill {
 
-    public static final NodeClass<GroupIdNode> TYPE = NodeClass.create(GroupIdNode.class);
+  public static final NodeClass<GroupIdNode> TYPE = NodeClass.create(GroupIdNode.class);
 
-    @Input
-    protected ConstantNode dimension;
+  @Input protected ConstantNode dimension;
 
-    public GroupIdNode(ConstantNode dimension) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        assert stamp != null;
+  public GroupIdNode(ConstantNode dimension) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    assert stamp != null;
 
-        this.dimension = dimension;
-    }
+    this.dimension = dimension;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
 
-        Value valueDimension = generator.operand(dimension);
-        LIRKind lirKind = tool.getLIRKind(stamp);
-        tool.append(new SPIRVLIRStmt.AssignStmt(result, new SPIRVUnary.ThreadBuiltinCallForSPIRV(SPIRVThreadBuiltIn.GROUP_ID, result, lirKind, valueDimension)));
+    Value valueDimension = generator.operand(dimension);
+    LIRKind lirKind = tool.getLIRKind(stamp);
+    tool.append(
+        new SPIRVLIRStmt.AssignStmt(
+            result,
+            new SPIRVUnary.ThreadBuiltinCallForSPIRV(
+                SPIRVThreadBuiltIn.GROUP_ID, result, lirKind, valueDimension)));
 
-        generator.setResult(this, result);
-    }
+    generator.setResult(this, result);
+  }
 }

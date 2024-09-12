@@ -25,16 +25,16 @@ package uk.ac.manchester.tornado.runtime.tasks.meta;
 
 public class ScheduleContext extends AbstractRTContext implements Cloneable {
 
-    public ScheduleContext(String id) {
-        super(id, null);
-    }
+  public ScheduleContext(String id) {
+    super(id, null);
+  }
 
-    @Override
-    public ScheduleContext clone() {
-        try {
-            return (ScheduleContext) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
-        }
+  @Override
+  public ScheduleContext clone() {
+    try {
+      return (ScheduleContext) super.clone();
+    } catch (CloneNotSupportedException e) {
+      throw new AssertionError();
     }
+  }
 }

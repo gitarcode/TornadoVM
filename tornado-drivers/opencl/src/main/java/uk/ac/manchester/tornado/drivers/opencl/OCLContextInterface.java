@@ -24,23 +24,21 @@
 package uk.ac.manchester.tornado.drivers.opencl;
 
 import java.util.List;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 
 public interface OCLContextInterface {
 
-    int getNumDevices();
+  int getNumDevices();
 
-    List<OCLTargetDevice> devices();
+  List<OCLTargetDevice> devices();
 
-    long getContextId();
+  long getContextId();
 
-    TornadoDeviceContext createDeviceContext(int deviceIndex);
+  TornadoDeviceContext createDeviceContext(int deviceIndex);
 
-    TornadoPlatformInterface getPlatform();
+  TornadoPlatformInterface getPlatform();
 
-    void createCommandQueue(int index);
+  void createCommandQueue(int index);
 
-    int getPlatformIndex();
-
+  int getPlatformIndex();
 }

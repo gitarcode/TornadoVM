@@ -24,7 +24,6 @@
 package uk.ac.manchester.tornado.drivers.spirv;
 
 import java.nio.ByteOrder;
-
 import uk.ac.manchester.tornado.api.enums.TornadoDeviceType;
 import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroDevice;
 import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroDriver;
@@ -41,224 +40,229 @@ import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 
 public class SPIRVLevelZeroDevice extends SPIRVDevice {
 
-    private final LevelZeroDevice device;
-    private final long totalMemorySize;
-    ZeAPIVersion apiVersion;
-    private String deviceName;
-    private ZeMemoryProperties[] memoryProperties;
-    private ZeDeviceProperties deviceProperties;
-    private ZeDeviceComputeProperties computeProperties;
-    private boolean queriedSupportFP64;
-    private ZeDeviceModuleProperties moduleProperties;
+  private final LevelZeroDevice device;
+  private final long totalMemorySize;
+  ZeAPIVersion apiVersion;
+  private String deviceName;
+  private ZeMemoryProperties[] memoryProperties;
+  private ZeDeviceProperties deviceProperties;
+  private ZeDeviceComputeProperties computeProperties;
+  private boolean queriedSupportFP64;
+  private ZeDeviceModuleProperties moduleProperties;
 
-    public SPIRVLevelZeroDevice(int platformIndex, int deviceIndex, LevelZeroDevice device) {
-        super(platformIndex, deviceIndex);
-        this.device = device;
-        this.totalMemorySize = getTotalGlobalMemorySize();
-        initDeviceProperties();
-        initDeviceComputeProperties();
-        initDriverVersion();
+  public SPIRVLevelZeroDevice(int platformIndex, int deviceIndex, LevelZeroDevice device) {
+    super(platformIndex, deviceIndex);
+    this.device = device;
+    this.totalMemorySize = getTotalGlobalMemorySize();
+    initDeviceProperties();
+    initDeviceComputeProperties();
+    initDriverVersion();
+  }
+
+  private static void errorLog(String methodName, int result) {
+    if (result != ZeResult.ZE_RESULT_SUCCESS) {
+      System.out.println("Error " + methodName);
     }
+  }
 
-    private static void errorLog(String methodName, int result) {
-        if (result != ZeResult.ZE_RESULT_SUCCESS) {
-            System.out.println("Error " + methodName);
-        }
+  private void initDeviceProperties() {
+    deviceProperties = new ZeDeviceProperties();
+    int result = device.zeDeviceGetProperties(device.getDeviceHandlerPtr(), deviceProperties);
+    errorLog("zeDeviceGetProperties", result);
+    deviceName = deviceProperties.getName();
+  }
+
+  private void initDeviceComputeProperties() {
+    computeProperties = new ZeDeviceComputeProperties();
+    int result =
+        device.zeDeviceGetComputeProperties(device.getDeviceHandlerPtr(), computeProperties);
+    errorLog("zeDeviceGetComputeProperties", result);
+  }
+
+  private long getTotalGlobalMemorySize() {
+    // A) Count memories
+    int[] memoryCount = new int[1];
+    int result =
+        device.zeDeviceGetMemoryProperties(device.getDeviceHandlerPtr(), memoryCount, null);
+    errorLog("zeDeviceGetMemoryProperties", result);
+
+    // B) Access the properties of each of the memories
+    memoryProperties = new ZeMemoryProperties[memoryCount[0]];
+    result =
+        device.zeDeviceGetMemoryProperties(
+            device.getDeviceHandlerPtr(), memoryCount, memoryProperties);
+    errorLog("zeDeviceGetMemoryProperties", result);
+
+    long memorySize = 0;
+    for (ZeMemoryProperties m : memoryProperties) {
+      memorySize += m.getTotalSize();
     }
+    return memorySize;
+  }
 
-    private void initDeviceProperties() {
-        deviceProperties = new ZeDeviceProperties();
-        int result = device.zeDeviceGetProperties(device.getDeviceHandlerPtr(), deviceProperties);
-        errorLog("zeDeviceGetProperties", result);
-        deviceName = deviceProperties.getName();
+  private void initDriverVersion() {
+    apiVersion = new ZeAPIVersion();
+    LevelZeroDriver driver = device.getDriver();
+    ZeDriverHandle driverHandler = device.getDriverHandler();
+    int result = driver.zeDriverGetApiVersion(driverHandler, 0, apiVersion);
+    errorLog("zeDriverGetApiVersion", result);
+  }
+
+  @Override
+  public ByteOrder getByteOrder() {
+    return ByteOrder.LITTLE_ENDIAN;
+  }
+
+  @Override
+  public String getName() {
+    return "SPIRV LevelZero - " + deviceName;
+  }
+
+  @Override
+  public boolean isDeviceDoubleFPSupported() {
+    if (!queriedSupportFP64) {
+      moduleProperties = new ZeDeviceModuleProperties();
+      int result =
+          device.zeDeviceGetModuleProperties(device.getDeviceHandlerPtr(), moduleProperties);
+      errorLog("zeDeviceGetModuleProperties", result);
+      queriedSupportFP64 = true;
     }
+    int flags = moduleProperties.getFlags();
+    return (ZeDeviceModuleFlags.ZE_DEVICE_MODULE_FLAG_FP64 & flags)
+        == ZeDeviceModuleFlags.ZE_DEVICE_MODULE_FLAG_FP64;
+  }
 
-    private void initDeviceComputeProperties() {
-        computeProperties = new ZeDeviceComputeProperties();
-        int result = device.zeDeviceGetComputeProperties(device.getDeviceHandlerPtr(), computeProperties);
-        errorLog("zeDeviceGetComputeProperties", result);
+  @Override
+  public String getDeviceExtensions() {
+    return device.getDeviceExtensions();
+  }
+
+  @Override
+  public LevelZeroDevice getDeviceRuntime() {
+    return device;
+  }
+
+  @Override
+  public String getDeviceName() {
+    return deviceProperties.getName();
+  }
+
+  @Override
+  public long getDeviceGlobalMemorySize() {
+    return totalMemorySize;
+  }
+
+  @Override
+  public long getDeviceLocalMemorySize() {
+    return computeProperties.getMaxSharedLocalMemory();
+  }
+
+  // FIXME - Not sure this is the max of compute UNITS
+  @Override
+  public int getDeviceMaxComputeUnits() {
+    return deviceProperties.getNumEUsPerSubslice() * deviceProperties.getNumSubslicesPerSlice();
+  }
+
+  /**
+   * Return max thread for each dimension
+   *
+   * @return
+   */
+  @Override
+  public long[] getDeviceMaxWorkItemSizes() {
+    return getDeviceMaxWorkgroupDimensions();
+  }
+
+  /**
+   * Return the maximum number of threads for all groups.
+   *
+   * @return long[]
+   */
+  @Override
+  public long[] getDeviceMaxWorkGroupSize() {
+    return new long[] {computeProperties.getMaxTotalGroupSize()};
+  }
+
+  @Override
+  public int getMaxThreadsPerBlock() {
+    return (int) getDeviceMaxWorkGroupSize()[0];
+  }
+
+  @Override
+  public int getDeviceMaxClockFrequency() {
+    return deviceProperties.getCoreClockRate();
+  }
+
+  // FIXME
+  @Override
+  public long getDeviceMaxConstantBufferSize() {
+    throw new RuntimeException("Not implemented");
+  }
+
+  @Override
+  public long getDeviceMaxAllocationSize() {
+    if (TornadoOptions.LEVEL_ZERO_EXTENDED_MEMORY_MODE) {
+      return totalMemorySize;
     }
+    return deviceProperties.getMaxMemAllocSize();
+  }
 
-    private long getTotalGlobalMemorySize() {
-        // A) Count memories
-        int[] memoryCount = new int[1];
-        int result = device.zeDeviceGetMemoryProperties(device.getDeviceHandlerPtr(), memoryCount, null);
-        errorLog("zeDeviceGetMemoryProperties", result);
+  @Override
+  public String getDeviceInfo() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(deviceProperties.toString() + "\n");
+    sb.append(computeProperties.toString() + "\n");
+    sb.append(memoryProperties.toString() + "\n");
+    return sb.toString();
+  }
 
-        // B) Access the properties of each of the memories
-        memoryProperties = new ZeMemoryProperties[memoryCount[0]];
-        result = device.zeDeviceGetMemoryProperties(device.getDeviceHandlerPtr(), memoryCount, memoryProperties);
-        errorLog("zeDeviceGetMemoryProperties", result);
+  @Override
+  public long[] getDeviceMaxWorkgroupDimensions() {
+    long[] maxWorkGroup = new long[3];
+    maxWorkGroup[0] = computeProperties.getMaxGroupSizeX();
+    maxWorkGroup[1] = computeProperties.getMaxGroupSizeY();
+    maxWorkGroup[2] = computeProperties.getMaxGroupSizeZ();
+    return maxWorkGroup;
+  }
 
-        long memorySize = 0;
-        for (ZeMemoryProperties m : memoryProperties) {
-            memorySize += m.getTotalSize();
-        }
-        return memorySize;
-    }
+  @Override
+  public String getDeviceOpenCLCVersion() {
+    return " (LEVEL ZERO) " + apiVersion.getAPIVersion();
+  }
 
-    private void initDriverVersion() {
-        apiVersion = new ZeAPIVersion();
-        LevelZeroDriver driver = device.getDriver();
-        ZeDriverHandle driverHandler = device.getDriverHandler();
-        int result = driver.zeDriverGetApiVersion(driverHandler, 0, apiVersion);
-        errorLog("zeDriverGetApiVersion", result);
-    }
+  @Override
+  public long getMaxAllocMemory() {
+    return deviceProperties.getMaxMemAllocSize();
+  }
 
-    @Override
-    public ByteOrder getByteOrder() {
-        return ByteOrder.LITTLE_ENDIAN;
-    }
+  @Override
+  public TornadoDeviceType getTornadoDeviceType() {
+    ZeDeviceType type = deviceProperties.getType();
+    return switch (type) {
+      case ZE_DEVICE_TYPE_GPU -> TornadoDeviceType.GPU;
+      case ZE_DEVICE_TYPE_FPGA -> TornadoDeviceType.FPGA;
+      case ZE_DEVICE_TYPE_CPU -> TornadoDeviceType.CPU;
+      // Memory Copy Accelerator
+      case ZE_DEVICE_TYPE_MCA -> TornadoDeviceType.ACCELERATOR;
+      // Vision Processing Unit
+      case ZE_DEVICE_TYPE_VPU -> TornadoDeviceType.CUSTOM;
+      default -> null;
+    };
+  }
 
-    @Override
-    public String getName() {
-        return "SPIRV LevelZero - " + deviceName;
-    }
+  @Override
+  public boolean isSPIRVSupported() {
+    // The Level-Zero backend supports SPIR-V
+    return true;
+  }
 
-    @Override
-    public boolean isDeviceDoubleFPSupported() {
-        if (!queriedSupportFP64) {
-            moduleProperties = new ZeDeviceModuleProperties();
-            int result = device.zeDeviceGetModuleProperties(device.getDeviceHandlerPtr(), moduleProperties);
-            errorLog("zeDeviceGetModuleProperties", result);
-            queriedSupportFP64 = true;
-        }
-        int flags = moduleProperties.getFlags();
-        return (ZeDeviceModuleFlags.ZE_DEVICE_MODULE_FLAG_FP64 & flags) == ZeDeviceModuleFlags.ZE_DEVICE_MODULE_FLAG_FP64;
-    }
+  @Override
+  public SPIRVRuntimeType getSPIRVRuntime() {
+    return SPIRVRuntimeType.LEVEL_ZERO;
+  }
 
-    @Override
-    public String getDeviceExtensions() {
-        return device.getDeviceExtensions();
-    }
-
-    @Override
-    public LevelZeroDevice getDeviceRuntime() {
-        return device;
-    }
-
-    @Override
-    public String getDeviceName() {
-        return deviceProperties.getName();
-    }
-
-    @Override
-    public long getDeviceGlobalMemorySize() {
-        return totalMemorySize;
-    }
-
-    @Override
-    public long getDeviceLocalMemorySize() {
-        return computeProperties.getMaxSharedLocalMemory();
-    }
-
-    // FIXME - Not sure this is the max of compute UNITS
-    @Override
-    public int getDeviceMaxComputeUnits() {
-        return deviceProperties.getNumEUsPerSubslice() * deviceProperties.getNumSubslicesPerSlice();
-    }
-
-    /**
-     * Return max thread for each dimension
-     *
-     * @return
-     */
-    @Override
-    public long[] getDeviceMaxWorkItemSizes() {
-        return getDeviceMaxWorkgroupDimensions();
-    }
-
-    /**
-     * Return the maximum number of threads for all groups.
-     *
-     * @return long[]
-     */
-    @Override
-    public long[] getDeviceMaxWorkGroupSize() {
-        return new long[] { computeProperties.getMaxTotalGroupSize() };
-    }
-
-    @Override
-    public int getMaxThreadsPerBlock() {
-        return (int) getDeviceMaxWorkGroupSize()[0];
-    }
-
-    @Override
-    public int getDeviceMaxClockFrequency() {
-        return deviceProperties.getCoreClockRate();
-    }
-
-    // FIXME
-    @Override
-    public long getDeviceMaxConstantBufferSize() {
-        throw new RuntimeException("Not implemented");
-    }
-
-    @Override
-    public long getDeviceMaxAllocationSize() {
-        if (TornadoOptions.LEVEL_ZERO_EXTENDED_MEMORY_MODE) {
-            return totalMemorySize;
-        }
-        return deviceProperties.getMaxMemAllocSize();
-    }
-
-    @Override
-    public String getDeviceInfo() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(deviceProperties.toString() + "\n");
-        sb.append(computeProperties.toString() + "\n");
-        sb.append(memoryProperties.toString() + "\n");
-        return sb.toString();
-    }
-
-    @Override
-    public long[] getDeviceMaxWorkgroupDimensions() {
-        long[] maxWorkGroup = new long[3];
-        maxWorkGroup[0] = computeProperties.getMaxGroupSizeX();
-        maxWorkGroup[1] = computeProperties.getMaxGroupSizeY();
-        maxWorkGroup[2] = computeProperties.getMaxGroupSizeZ();
-        return maxWorkGroup;
-    }
-
-    @Override
-    public String getDeviceOpenCLCVersion() {
-        return " (LEVEL ZERO) " + apiVersion.getAPIVersion();
-    }
-
-    @Override
-    public long getMaxAllocMemory() {
-        return deviceProperties.getMaxMemAllocSize();
-    }
-
-    @Override
-    public TornadoDeviceType getTornadoDeviceType() {
-        ZeDeviceType type = deviceProperties.getType();
-        return switch (type) {
-            case ZE_DEVICE_TYPE_GPU -> TornadoDeviceType.GPU;
-            case ZE_DEVICE_TYPE_FPGA -> TornadoDeviceType.FPGA;
-            case ZE_DEVICE_TYPE_CPU -> TornadoDeviceType.CPU;
-            // Memory Copy Accelerator
-            case ZE_DEVICE_TYPE_MCA -> TornadoDeviceType.ACCELERATOR;
-            // Vision Processing Unit
-            case ZE_DEVICE_TYPE_VPU -> TornadoDeviceType.CUSTOM;
-            default -> null;
-        };
-    }
-
-    @Override
-    public boolean isSPIRVSupported() {
-        // The Level-Zero backend supports SPIR-V
-        return true;
-    }
-
-    @Override
-    public SPIRVRuntimeType getSPIRVRuntime() {
-        return SPIRVRuntimeType.LEVEL_ZERO;
-    }
-
-    @Override
-    public String getPlatformName() {
-        return "LevelZero";
-    }
-
+  @Override
+  public String getPlatformName() {
+    return "LevelZero";
+  }
 }

@@ -26,34 +26,34 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class BlackScholesJava extends BenchmarkDriver {
 
-    private final int size;
-    private FloatArray randArray;
-    private FloatArray call;
-    private FloatArray put;
+  private final int size;
+  private FloatArray randArray;
+  private FloatArray call;
+  private FloatArray put;
 
-    public BlackScholesJava(int iterations, int size) {
-        super(iterations);
-        this.size = size;
+  public BlackScholesJava(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
+
+  @Override
+  public void setUp() {
+    randArray = new FloatArray(size);
+    call = new FloatArray(size);
+    put = new FloatArray(size);
+
+    for (int i = 0; i < size; i++) {
+      randArray.set(i, (i * 1.0f) / size);
     }
+  }
 
-    @Override
-    public void setUp() {
-        randArray = new FloatArray(size);
-        call = new FloatArray(size);
-        put = new FloatArray(size);
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-        for (int i = 0; i < size; i++) {
-            randArray.set(i, (i * 1.0f) / size);
-        }
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        blackscholes(randArray, call, put);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    blackscholes(randArray, call, put);
+  }
 }

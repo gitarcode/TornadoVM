@@ -23,6 +23,4 @@
  */
 package uk.ac.manchester.tornado.drivers.common;
 
-public class CommandQueue {
-
-}
+public class CommandQueue {}

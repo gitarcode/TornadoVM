@@ -41,89 +41,95 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXLIRGenerator;
 import uk.ac.manchester.tornado.drivers.ptx.graal.meta.PTXMemorySpace;
 
-import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimplemented;
-
 @NodeInfo
 public class PTXAddressNode extends AddressNode implements LIRLowerable {
-    public static final NodeClass<PTXAddressNode> TYPE = NodeClass.create(PTXAddressNode.class);
+  public static final NodeClass<PTXAddressNode> TYPE = NodeClass.create(PTXAddressNode.class);
 
-    @OptionalInput
-    private ValueNode base;
+  @OptionalInput private ValueNode base;
 
-    @OptionalInput
-    private ValueNode index;
+  @OptionalInput private ValueNode index;
 
-    private PTXMemoryBase memoryRegister;
+  private PTXMemoryBase memoryRegister;
 
-    public PTXAddressNode(ValueNode base, ValueNode index, PTXMemoryBase memoryRegister) {
-        super(TYPE);
-        this.base = base;
-        this.index = index;
-        this.memoryRegister = memoryRegister;
+  public PTXAddressNode(ValueNode base, ValueNode index, PTXMemoryBase memoryRegister) {
+    super(TYPE);
+    this.base = base;
+    this.index = index;
+    this.memoryRegister = memoryRegister;
+  }
+
+  public PTXAddressNode(ValueNode base, ValueNode index) {
+    super(TYPE);
+    this.base = base;
+    this.index = index;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    PTXLIRGenerator tool = (PTXLIRGenerator) gen.getLIRGeneratorTool();
+
+    Value baseValue = base == null ? Value.ILLEGAL : gen.operand(base);
+    if (base instanceof ParameterNode && base.stamp(NodeView.DEFAULT) instanceof PTXStamp) {
+      PTXStamp stamp = (PTXStamp) base.stamp(NodeView.DEFAULT);
+      PTXKind kind = stamp.getPTXKind();
+      if (kind.isVector()) {
+        baseValue = tool.getPTXGenTool().getParameterToVariable().get(base);
+      }
     }
 
-    public PTXAddressNode(ValueNode base, ValueNode index) {
-        super(TYPE);
-        this.base = base;
-        this.index = index;
+    Value indexValue = index == null ? Value.ILLEGAL : gen.operand(index);
+    if (index == null) {
+      gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, baseValue, null));
+    } else {
+      setMemoryAccess(gen, baseValue, indexValue, tool);
     }
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        PTXLIRGenerator tool = (PTXLIRGenerator) gen.getLIRGeneratorTool();
+  private boolean isLocalMemoryAccess() {
+    return memoryRegister.memorySpace.index() == PTXMemorySpace.LOCAL.index();
+  }
 
-        Value baseValue = base == null ? Value.ILLEGAL : gen.operand(base);
-        if (base instanceof ParameterNode && base.stamp(NodeView.DEFAULT) instanceof PTXStamp) {
-            PTXStamp stamp = (PTXStamp) base.stamp(NodeView.DEFAULT);
-            PTXKind kind = stamp.getPTXKind();
-            if (kind.isVector()) {
-                baseValue = tool.getPTXGenTool().getParameterToVariable().get(base);
-            }
-        }
+  private boolean isSharedMemoryAccess() {
+    return memoryRegister.memorySpace.index() == PTXMemorySpace.SHARED.index();
+  }
 
-        Value indexValue = index == null ? Value.ILLEGAL : gen.operand(index);
-        if (index == null) {
-            gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, baseValue, null));
-        } else {
-            setMemoryAccess(gen, baseValue, indexValue, tool);
-        }
+  @Override
+  public ValueNode getBase() {
+    return base;
+  }
+
+  @Override
+  public ValueNode getIndex() {
+    return index;
+  }
+
+  @Override
+  public long getMaxConstantDisplacement() {
+    return 0;
+  }
+
+  private void setMemoryAccess(
+      NodeLIRBuilderTool gen, Value baseValue, Value indexValue, PTXLIRGenerator tool) {
+    Variable addressValue;
+    if (isLocalMemoryAccess()) {
+      Variable basePointer =
+          tool.getArithmetic()
+              .emitUnaryAssign(PTXAssembler.PTXUnaryOp.MOV, LIRKind.value(PTXKind.U32), baseValue);
+      Value indexOffset =
+          tool.getArithmetic()
+              .emitMul(
+                  indexValue,
+                  new ConstantValue(
+                      LIRKind.value(PTXKind.U32),
+                      JavaConstant.forInt(baseValue.getPlatformKind().getSizeInBytes())),
+                  false);
+      addressValue = tool.getArithmetic().emitAdd(basePointer, indexOffset, false);
+      gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, addressValue, null));
+    } else if (isSharedMemoryAccess()) {
+      gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, baseValue, indexValue));
+    } else {
+      addressValue = tool.getArithmetic().emitAdd(baseValue, indexValue, false);
+      gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, addressValue, null));
     }
-
-    private boolean isLocalMemoryAccess() {
-        return memoryRegister.memorySpace.index() == PTXMemorySpace.LOCAL.index();
-    }
-
-    private boolean isSharedMemoryAccess() {
-        return memoryRegister.memorySpace.index() == PTXMemorySpace.SHARED.index();
-    }
-
-    @Override
-    public ValueNode getBase() {
-        return base;
-    }
-
-    @Override
-    public ValueNode getIndex() {
-        return index;
-    }
-
-    @Override
-    public long getMaxConstantDisplacement() {
-        return 0;
-    }
-
-    private void setMemoryAccess(NodeLIRBuilderTool gen, Value baseValue, Value indexValue, PTXLIRGenerator tool) {
-        Variable addressValue;
-        if (isLocalMemoryAccess()) {
-            Variable basePointer = tool.getArithmetic().emitUnaryAssign(PTXAssembler.PTXUnaryOp.MOV, LIRKind.value(PTXKind.U32), baseValue);
-            Value indexOffset = tool.getArithmetic().emitMul(indexValue, new ConstantValue(LIRKind.value(PTXKind.U32), JavaConstant.forInt(baseValue.getPlatformKind().getSizeInBytes())), false);
-            addressValue = tool.getArithmetic().emitAdd(basePointer, indexOffset, false);
-            gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, addressValue, null));
-        } else if (isSharedMemoryAccess()) {
-            gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, baseValue, indexValue));
-        } else {
-            addressValue = tool.getArithmetic().emitAdd(baseValue, indexValue, false);
-            gen.setResult(this, new PTXUnary.MemoryAccess(memoryRegister, addressValue, null));
-        }
-    }
+  }
 }

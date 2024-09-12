@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.benchmarks.blackscholes;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -36,7 +35,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -45,79 +43,78 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.blackscholes.JMHBlackScholes
  * </code>
  */
 public class JMHBlackScholes {
 
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        int size = Integer.parseInt(System.getProperty("x", "8192"));
-        FloatArray randArray;
-        FloatArray call;
-        FloatArray put;
-        TaskGraph taskGraph;
-        TornadoExecutionPlan executor;
+    int size = Integer.parseInt(System.getProperty("x", "8192"));
+    FloatArray randArray;
+    FloatArray call;
+    FloatArray put;
+    TaskGraph taskGraph;
+    TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            randArray = new FloatArray(size);
-            call = new FloatArray(size);
-            put = new FloatArray(size);
+    @Setup(Level.Trial)
+    public void doSetup() {
+      randArray = new FloatArray(size);
+      call = new FloatArray(size);
+      put = new FloatArray(size);
 
-            for (int i = 0; i < size; i++) {
-                randArray.set(i, (i * 1.0f) / size);
-            }
+      for (int i = 0; i < size; i++) {
+        randArray.set(i, (i * 1.0f) / size);
+      }
 
-            taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, randArray) //
-                    .task("t0", ComputeKernels::blackscholes, randArray, put, call) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, put, call);
+      taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, randArray) //
+              .task("t0", ComputeKernels::blackscholes, randArray, put, call) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, put, call);
 
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
-        }
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void blachcholesJava(BenchmarkSetup state) {
-        ComputeKernels.blackscholes(state.randArray, state.put, state.call);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void blachcholesJava(BenchmarkSetup state) {
+    ComputeKernels.blackscholes(state.randArray, state.put, state.call);
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void blachcholesTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void blachcholesTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHBlackScholes.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHBlackScholes.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

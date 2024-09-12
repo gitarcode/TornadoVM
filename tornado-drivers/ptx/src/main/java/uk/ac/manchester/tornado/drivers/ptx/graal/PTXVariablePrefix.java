@@ -23,48 +23,43 @@ package uk.ac.manchester.tornado.drivers.ptx.graal;
 
 public enum PTXVariablePrefix {
 
-    /**
-     * Enum representing the type-prefix mappings used for codegen of OpenCL
-     * variables.
-     */
-    // @formatter:off
-        B8("b8", "rub"),
-        B16("b16", "rbh"),
-        B32("b32", "rui"),
-        B64("b64", "rbd"),
-        S8("s8", "rsb"),
-        S16("s16", "rsh"),
-        S32("s32", "rsi"),
-        S64("s64", "rsd"),
-        U32("u32", "rui"),
-        U64("u64", "rud"),
-        F16("f16", "rfh"),
-        F32("f32", "rfi"),
-        F64("f64", "rfd"),
-        PRED("pred", "rpb");
-    // @formatter:on
+  /** Enum representing the type-prefix mappings used for codegen of OpenCL variables. */
+  // @formatter:off
+  B8("b8", "rub"),
+  B16("b16", "rbh"),
+  B32("b32", "rui"),
+  B64("b64", "rbd"),
+  S8("s8", "rsb"),
+  S16("s16", "rsh"),
+  S32("s32", "rsi"),
+  S64("s64", "rsd"),
+  U32("u32", "rui"),
+  U64("u64", "rud"),
+  F16("f16", "rfh"),
+  F32("f32", "rfi"),
+  F64("f64", "rfd"),
+  PRED("pred", "rpb");
+  // @formatter:on
 
-    private final String type;
-    private final String prefix;
+  private final String type;
+  private final String prefix;
 
-    /**
-     * It constructs a PTXVariablePrefix enum with the specified type and prefix.
-     *
-     * @param type
-     *     The type string.
-     * @param prefix
-     *     The prefix string.
-     */
-    PTXVariablePrefix(String type, String prefix) {
-        this.type = type;
-        this.prefix = prefix;
-    }
+  /**
+   * It constructs a PTXVariablePrefix enum with the specified type and prefix.
+   *
+   * @param type The type string.
+   * @param prefix The prefix string.
+   */
+  PTXVariablePrefix(String type, String prefix) {
+    this.type = type;
+    this.prefix = prefix;
+  }
 
-    public String getType() {
-        return type;
-    }
+  public String getType() {
+    return type;
+  }
 
-    public String getPrefix() {
-        return prefix;
-    }
+  public String getPrefix() {
+    return prefix;
+  }
 }

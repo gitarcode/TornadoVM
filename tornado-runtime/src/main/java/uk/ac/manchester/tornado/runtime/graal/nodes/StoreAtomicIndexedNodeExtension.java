@@ -38,37 +38,37 @@ import org.graalvm.compiler.nodes.calc.FloatingNode;
 @NodeInfo(nameTemplate = "AtomicIndexedStoreExtension")
 public class StoreAtomicIndexedNodeExtension extends FloatingNode {
 
-    public static final NodeClass<StoreAtomicIndexedNodeExtension> TYPE = NodeClass.create(StoreAtomicIndexedNodeExtension.class);
+  public static final NodeClass<StoreAtomicIndexedNodeExtension> TYPE =
+      NodeClass.create(StoreAtomicIndexedNodeExtension.class);
 
-    @OptionalInput(State)
-    FrameState stateAfter;
-    @OptionalInput
-    ValueNode extraOperation;
-    @OptionalInput
-    ValueNode startNode;
+  @OptionalInput(State)
+  FrameState stateAfter;
 
-    public StoreAtomicIndexedNodeExtension(ValueNode startNode) {
-        super(TYPE, StampFactory.forVoid());
-        this.startNode = startNode;
-    }
+  @OptionalInput ValueNode extraOperation;
+  @OptionalInput ValueNode startNode;
 
-    public FrameState getStateAfter() {
-        return stateAfter;
-    }
+  public StoreAtomicIndexedNodeExtension(ValueNode startNode) {
+    super(TYPE, StampFactory.forVoid());
+    this.startNode = startNode;
+  }
 
-    public void setStateAfter(FrameState stateAfter) {
-        this.stateAfter = stateAfter;
-    }
+  public FrameState getStateAfter() {
+    return stateAfter;
+  }
 
-    public ValueNode getExtraOperation() {
-        return extraOperation;
-    }
+  public void setStateAfter(FrameState stateAfter) {
+    this.stateAfter = stateAfter;
+  }
 
-    public ValueNode getStartNode() {
-        return startNode;
-    }
+  public ValueNode getExtraOperation() {
+    return extraOperation;
+  }
 
-    public void setExtraOperation(ValueNode extraOperation) {
-        this.extraOperation = extraOperation;
-    }
+  public ValueNode getStartNode() {
+    return startNode;
+  }
+
+  public void setExtraOperation(ValueNode extraOperation) {
+    this.extraOperation = extraOperation;
+  }
 }

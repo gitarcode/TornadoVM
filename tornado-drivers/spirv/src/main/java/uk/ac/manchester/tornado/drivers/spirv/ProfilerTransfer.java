@@ -27,19 +27,19 @@ import uk.ac.manchester.tornado.drivers.spirv.timestamps.LevelZeroTransferTimeSt
 
 public class ProfilerTransfer {
 
-    private LevelZeroTransferTimeStamp start;
-    private LevelZeroTransferTimeStamp stop;
+  private LevelZeroTransferTimeStamp start;
+  private LevelZeroTransferTimeStamp stop;
 
-    public ProfilerTransfer(LevelZeroTransferTimeStamp start, LevelZeroTransferTimeStamp stop) {
-        this.start = start;
-        this.stop = stop;
-    }
+  public ProfilerTransfer(LevelZeroTransferTimeStamp start, LevelZeroTransferTimeStamp stop) {
+    this.start = start;
+    this.stop = stop;
+  }
 
-    public LevelZeroTransferTimeStamp getStart() {
-        return start;
-    }
+  public LevelZeroTransferTimeStamp getStart() {
+    return start;
+  }
 
-    public LevelZeroTransferTimeStamp getStop() {
-        return stop;
-    }
+  public LevelZeroTransferTimeStamp getStop() {
+    return stop;
+  }
 }

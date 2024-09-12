@@ -19,26 +19,26 @@ package uk.ac.manchester.tornado.api.exceptions;
 
 public class TornadoTaskRuntimeException extends RuntimeException {
 
-    private final String message;
-    private Exception e;
-    static final String RESET = "\u001B[0m";
-    static final String RED = "\u001B[31m";
+  private final String message;
+  private Exception e;
+  static final String RESET = "\u001B[0m";
+  static final String RED = "\u001B[31m";
 
-    public TornadoTaskRuntimeException(final String msg) {
-        message = RED + msg + RESET;
-    }
+  public TornadoTaskRuntimeException(final String msg) {
+    message = RED + msg + RESET;
+  }
 
-    public TornadoTaskRuntimeException(final String msg, Exception e) {
-        message = RED + msg + RESET;
-        this.e = e;
-    }
+  public TornadoTaskRuntimeException(final String msg, Exception e) {
+    message = RED + msg + RESET;
+    this.e = e;
+  }
 
-    public Exception getException() {
-        return this.e;
-    }
+  public Exception getException() {
+    return this.e;
+  }
 
-    @Override
-    public String getMessage() {
-        return message;
-    }
+  @Override
+  public String getMessage() {
+    return message;
+  }
 }

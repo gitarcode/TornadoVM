@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.Node;
@@ -33,8 +34,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXArchitecture;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXNodeLIRBuilder;
@@ -43,27 +42,29 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 @NodeInfo
 public class LocalThreadIdNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<LocalThreadIdNode> TYPE = NodeClass.create(LocalThreadIdNode.class);
+  public static final NodeClass<LocalThreadIdNode> TYPE = NodeClass.create(LocalThreadIdNode.class);
 
-    @Node.Input
-    protected ConstantNode index;
+  @Node.Input protected ConstantNode index;
 
-    public LocalThreadIdNode(ConstantNode value) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        assert stamp != null;
-        index = value;
-    }
+  public LocalThreadIdNode(ConstantNode value) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    assert stamp != null;
+    index = value;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitLocalThreadId: dim=%s", index);
-        LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        LIRKind kind = tool.getLIRKind(stamp);
-        Variable result = tool.newVariable(kind);
-        PTXNodeLIRBuilder ptxNodeBuilder = (PTXNodeLIRBuilder) gen;
-        PTXArchitecture.PTXBuiltInRegisterArray builtIns = new PTXArchitecture.PTXBuiltInRegisterArray(((ConstantValue) gen.operand(index)).getJavaConstant().asInt());
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitLocalThreadId: dim=%s", index);
+    LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    LIRKind kind = tool.getLIRKind(stamp);
+    Variable result = tool.newVariable(kind);
+    PTXNodeLIRBuilder ptxNodeBuilder = (PTXNodeLIRBuilder) gen;
+    PTXArchitecture.PTXBuiltInRegisterArray builtIns =
+        new PTXArchitecture.PTXBuiltInRegisterArray(
+            ((ConstantValue) gen.operand(index)).getJavaConstant().asInt());
 
-        tool.append(new PTXLIRStmt.AssignStmt(result, ptxNodeBuilder.getBuiltInAllocation(builtIns.threadID)));
-        gen.setResult(this, result);
-    }
+    tool.append(
+        new PTXLIRStmt.AssignStmt(result, ptxNodeBuilder.getBuiltInAllocation(builtIns.threadID)));
+    gen.setResult(this, result);
+  }
 }

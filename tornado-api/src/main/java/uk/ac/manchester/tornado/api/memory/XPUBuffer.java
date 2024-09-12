@@ -18,55 +18,66 @@
 package uk.ac.manchester.tornado.api.memory;
 
 import java.util.List;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoMemoryException;
 import uk.ac.manchester.tornado.api.exceptions.TornadoOutOfMemoryException;
 
 public interface XPUBuffer {
 
-    class XPUBufferWrapper {
-        public final long buffer;
-        public long bufferOffset;
+  class XPUBufferWrapper {
+    public final long buffer;
+    public long bufferOffset;
 
-        public XPUBufferWrapper(long buffer, long bufferOffset) {
-            this.buffer = buffer;
-            this.bufferOffset = bufferOffset;
-        }
+    public XPUBufferWrapper(long buffer, long bufferOffset) {
+      this.buffer = buffer;
+      this.bufferOffset = bufferOffset;
     }
+  }
 
-    long toBuffer();
+  long toBuffer();
 
-    void setBuffer(XPUBufferWrapper bufferWrapper);
+  void setBuffer(XPUBufferWrapper bufferWrapper);
 
-    long getBufferOffset();
+  long getBufferOffset();
 
-    void read(long executionPlanId, Object reference);
+  void read(long executionPlanId, Object reference);
 
-    int read(long executionPlanId, Object reference, long hostOffset, long partialReadSize, int[] events, boolean useDeps);
+  int read(
+      long executionPlanId,
+      Object reference,
+      long hostOffset,
+      long partialReadSize,
+      int[] events,
+      boolean useDeps);
 
-    void write(long executionPlanId, Object reference);
+  void write(long executionPlanId, Object reference);
 
-    int enqueueRead(long executionPlanId, Object reference, long hostOffset, int[] events, boolean useDeps);
+  int enqueueRead(
+      long executionPlanId, Object reference, long hostOffset, int[] events, boolean useDeps);
 
-    List<Integer> enqueueWrite(long executionPlanId, Object reference, long batchSize, long hostOffset, int[] events, boolean useDeps);
+  List<Integer> enqueueWrite(
+      long executionPlanId,
+      Object reference,
+      long batchSize,
+      long hostOffset,
+      int[] events,
+      boolean useDeps);
 
-    void allocate(Object reference, long batchSize) throws TornadoOutOfMemoryException, TornadoMemoryException;
+  void allocate(Object reference, long batchSize)
+      throws TornadoOutOfMemoryException, TornadoMemoryException;
 
-    void markAsFreeBuffer() throws TornadoMemoryException;
+  void markAsFreeBuffer() throws TornadoMemoryException;
 
-    long size();
+  long size();
 
-    void setSizeSubRegion(long batchSize);
+  void setSizeSubRegion(long batchSize);
 
-    long getSizeSubRegionSize();
+  long getSizeSubRegionSize();
 
-    long deallocate();
+  long deallocate();
 
-    default int[] getIntBuffer() {
-        return null;
-    }
+  default int[] getIntBuffer() {
+    return null;
+  }
 
-    default void setIntBuffer(int[] arr) {
-    }
-
+  default void setIntBuffer(int[] arr) {}
 }

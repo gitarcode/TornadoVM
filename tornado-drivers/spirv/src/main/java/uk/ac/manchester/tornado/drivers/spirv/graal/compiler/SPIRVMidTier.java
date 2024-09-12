@@ -36,10 +36,9 @@ import org.graalvm.compiler.phases.common.IterativeConditionalEliminationPhase;
 import org.graalvm.compiler.phases.common.MidTierLoweringPhase;
 import org.graalvm.compiler.phases.common.ReassociationPhase;
 import org.graalvm.compiler.phases.common.RemoveValueProxyPhase;
-
-import uk.ac.manchester.tornado.drivers.common.compiler.phases.loops.TornadoPartialLoopUnroll;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.guards.BoundCheckEliminationPhase;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.guards.ExceptionCheckingElimination;
+import uk.ac.manchester.tornado.drivers.common.compiler.phases.loops.TornadoPartialLoopUnroll;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.memalloc.TornadoPanamaSegmentsHeaderPhase;
 import uk.ac.manchester.tornado.drivers.spirv.graal.phases.TornadoFloatingReadReplacement;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
@@ -48,57 +47,57 @@ import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoMidTier;
 /**
  * SPIR-V backend reuses from the OCL the following phases:
  *
- * - TornadoPanamaSegmentsHeaderPhase
+ * <p>- TornadoPanamaSegmentsHeaderPhase
  *
- * - BoundCheckEliminationPhase
+ * <p>- BoundCheckEliminationPhase
  *
- * - TornadoFloatingReadReplacement
+ * <p>- TornadoFloatingReadReplacement
  *
- * - TornadoPartialLoopUnroll
+ * <p>- TornadoPartialLoopUnroll
  */
 public class SPIRVMidTier extends TornadoMidTier {
 
-    public SPIRVMidTier(OptionValues options) {
+  public SPIRVMidTier(OptionValues options) {
 
-        appendPhase(new TornadoPanamaSegmentsHeaderPhase());
+    appendPhase(new TornadoPanamaSegmentsHeaderPhase());
 
-        appendPhase(new ExceptionCheckingElimination());
+    appendPhase(new ExceptionCheckingElimination());
 
-        CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
+    CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
 
-        appendPhase(canonicalizer);
+    appendPhase(canonicalizer);
 
-        appendPhase((new BoundCheckEliminationPhase()));
-        appendPhase(new ExceptionCheckingElimination());
+    appendPhase((new BoundCheckEliminationPhase()));
+    appendPhase(new ExceptionCheckingElimination());
 
-        if (OptFloatingReads.getValue(options)) {
-            appendPhase(new TornadoFloatingReadReplacement(canonicalizer));
-        }
-
-        appendPhase(canonicalizer);
-
-        if (ConditionalElimination.getValue(options)) {
-            appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, true));
-        }
-
-        appendPhase(new RemoveValueProxyPhase(canonicalizer));
-
-        appendPhase(new GuardLoweringPhase());
-
-        appendPhase(canonicalizer);
-
-        if (TornadoOptions.isPartialUnrollEnabled()) {
-            appendPhase(new TornadoPartialLoopUnroll());
-        }
-
-        appendPhase(new MidTierLoweringPhase(canonicalizer));
-
-        appendPhase(new FrameStateAssignmentPhase());
-
-        if (ReassociateExpressions.getValue(options)) {
-            appendPhase(new ReassociationPhase(canonicalizer));
-        }
-
-        appendPhase(canonicalizer);
+    if (OptFloatingReads.getValue(options)) {
+      appendPhase(new TornadoFloatingReadReplacement(canonicalizer));
     }
+
+    appendPhase(canonicalizer);
+
+    if (ConditionalElimination.getValue(options)) {
+      appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, true));
+    }
+
+    appendPhase(new RemoveValueProxyPhase(canonicalizer));
+
+    appendPhase(new GuardLoweringPhase());
+
+    appendPhase(canonicalizer);
+
+    if (TornadoOptions.isPartialUnrollEnabled()) {
+      appendPhase(new TornadoPartialLoopUnroll());
+    }
+
+    appendPhase(new MidTierLoweringPhase(canonicalizer));
+
+    appendPhase(new FrameStateAssignmentPhase());
+
+    if (ReassociateExpressions.getValue(options)) {
+      appendPhase(new ReassociationPhase(canonicalizer));
+    }
+
+    appendPhase(canonicalizer);
+  }
 }

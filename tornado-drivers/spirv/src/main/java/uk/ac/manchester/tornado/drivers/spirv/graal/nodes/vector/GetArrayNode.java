@@ -24,6 +24,7 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes.vector;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
 import org.graalvm.compiler.lir.gen.LIRGeneratorTool;
@@ -32,8 +33,6 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.spirv.graal.SPIRVStampFactory;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
@@ -42,39 +41,38 @@ import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 @NodeInfo
 public class GetArrayNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<GetArrayNode> TYPE = NodeClass.create(GetArrayNode.class);
-    private final SPIRVKind spirvKind;
+  public static final NodeClass<GetArrayNode> TYPE = NodeClass.create(GetArrayNode.class);
+  private final SPIRVKind spirvKind;
 
-    @Input
-    private ValueNode arrayNode;
+  @Input private ValueNode arrayNode;
 
-    private JavaKind elementKind;
+  private JavaKind elementKind;
 
-    public GetArrayNode(SPIRVKind spirvKind, ValueNode array, JavaKind elementKind) {
-        super(TYPE, SPIRVStampFactory.getStampFor(spirvKind));
-        this.spirvKind = spirvKind;
-        this.arrayNode = array;
-        this.elementKind = elementKind;
+  public GetArrayNode(SPIRVKind spirvKind, ValueNode array, JavaKind elementKind) {
+    super(TYPE, SPIRVStampFactory.getStampFor(spirvKind));
+    this.spirvKind = spirvKind;
+    this.arrayNode = array;
+    this.elementKind = elementKind;
+  }
+
+  @Override
+  public boolean inferStamp() {
+    return updateStamp(SPIRVStampFactory.getStampFor(spirvKind));
+  }
+
+  public SPIRVKind getSpirvKind() {
+    return spirvKind;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    if (TornadoOptions.OPTIMIZE_LOAD_STORE_SPIRV) {
+      tool.append(new SPIRVLIRStmt.PassValuePhi(result, generator.operand(arrayNode)));
+    } else {
+      tool.append(new SPIRVLIRStmt.AssignStmtWithLoad(result, generator.operand(arrayNode)));
     }
-
-    @Override
-    public boolean inferStamp() {
-        return updateStamp(SPIRVStampFactory.getStampFor(spirvKind));
-    }
-
-    public SPIRVKind getSpirvKind() {
-        return spirvKind;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        if (TornadoOptions.OPTIMIZE_LOAD_STORE_SPIRV) {
-            tool.append(new SPIRVLIRStmt.PassValuePhi(result, generator.operand(arrayNode)));
-        } else {
-            tool.append(new SPIRVLIRStmt.AssignStmtWithLoad(result, generator.operand(arrayNode)));
-        }
-        generator.setResult(this, result);
-    }
+    generator.setResult(this, result);
+  }
 }

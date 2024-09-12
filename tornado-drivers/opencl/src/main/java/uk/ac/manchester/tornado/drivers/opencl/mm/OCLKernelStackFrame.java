@@ -23,64 +23,63 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.mm;
 
-import uk.ac.manchester.tornado.drivers.opencl.OCLDeviceContext;
-import uk.ac.manchester.tornado.runtime.common.KernelStackFrame;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import uk.ac.manchester.tornado.drivers.opencl.OCLDeviceContext;
+import uk.ac.manchester.tornado.runtime.common.KernelStackFrame;
 
 public class OCLKernelStackFrame extends OCLByteBuffer implements KernelStackFrame {
 
-    public static final int RETURN_VALUE_INDEX = 0;
-    public static final int RESERVED_SLOTS = 3;
+  public static final int RETURN_VALUE_INDEX = 0;
+  public static final int RESERVED_SLOTS = 3;
 
-    private final ArrayList<CallArgument> callArguments;
+  private final ArrayList<CallArgument> callArguments;
 
-    private boolean isValid;
+  private boolean isValid;
 
-    OCLKernelStackFrame(long bufferId, int numArgs, OCLDeviceContext device) {
-        super(device, bufferId, 0, RESERVED_SLOTS << 3);
-        this.callArguments = new ArrayList<>(numArgs);
-        buffer.clear();
-        this.isValid = true;
+  OCLKernelStackFrame(long bufferId, int numArgs, OCLDeviceContext device) {
+    super(device, bufferId, 0, RESERVED_SLOTS << 3);
+    this.callArguments = new ArrayList<>(numArgs);
+    buffer.clear();
+    this.isValid = true;
+  }
+
+  @Override
+  public void addCallArgument(Object value, boolean isReferenceType) {
+    callArguments.add(new CallArgument(value, isReferenceType));
+  }
+
+  @Override
+  public void reset() {
+    callArguments.clear();
+  }
+
+  @Override
+  public boolean isValid() {
+    return isValid;
+  }
+
+  @Override
+  public void invalidate() {
+    isValid = false;
+    deviceContext.getPlatformContext().releaseBuffer(toBuffer());
+  }
+
+  @Override
+  public List<CallArgument> getCallArguments() {
+    return callArguments;
+  }
+
+  @Override
+  public void setKernelContext(HashMap<Integer, Integer> map) {
+    buffer.clear();
+    for (int i = 0; i < RESERVED_SLOTS; i++) {
+      if (map.containsKey(i)) {
+        buffer.putLong(map.get(i));
+      } else {
+        buffer.putLong(0);
+      }
     }
-
-    @Override
-    public void addCallArgument(Object value, boolean isReferenceType) {
-        callArguments.add(new CallArgument(value, isReferenceType));
-    }
-
-    @Override
-    public void reset() {
-        callArguments.clear();
-    }
-
-    @Override
-    public boolean isValid() {
-        return isValid;
-    }
-
-    @Override
-    public void invalidate() {
-        isValid = false;
-        deviceContext.getPlatformContext().releaseBuffer(toBuffer());
-    }
-
-    @Override
-    public List<CallArgument> getCallArguments() {
-        return callArguments;
-    }
-
-    @Override
-    public void setKernelContext(HashMap<Integer, Integer> map) {
-        buffer.clear();
-        for (int i = 0; i < RESERVED_SLOTS; i++) {
-            if (map.containsKey(i)) {
-                buffer.putLong(map.get(i));
-            } else {
-                buffer.putLong(0);
-            }
-        }
-    }
+  }
 }

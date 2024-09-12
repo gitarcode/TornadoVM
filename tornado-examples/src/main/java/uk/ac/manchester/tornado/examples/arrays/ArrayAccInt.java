@@ -25,42 +25,39 @@ import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.examples/uk.ac.manchester.tornado.examples.arrays.ArrayAccInt
  * </code>
  */
 public class ArrayAccInt {
 
-    public static void acc(IntArray a, int value) {
-        for (@Parallel int i = 0; i < a.getSize(); i++) {
-            a.set(i, a.get(i) + value);
-        }
+  public static void acc(IntArray a, int value) {
+    for (@Parallel int i = 0; i < a.getSize(); i++) {
+      a.set(i, a.get(i) + value);
     }
+  }
 
-    public static void main(String[] args) {
+  public static void main(String[] args) {
 
-        final int numElements = 8;
-        final int numKernels = 8;
-        IntArray a = new IntArray(numElements);
+    final int numElements = 8;
+    final int numKernels = 8;
+    IntArray a = new IntArray(numElements);
 
-        a.init(10);
+    a.init(10);
 
-        TaskGraph taskGraph = new TaskGraph("s0");
-        taskGraph.transferToDevice(DataTransferMode.FIRST_EXECUTION, a);
-        for (int i = 0; i < numKernels; i++) {
-            taskGraph.task("t" + i, ArrayAccInt::acc, a, 1);
-        }
-        taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, a);
-
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
-        executor.execute();
-
-        // The result must be the initial value for the array plus the number of tasks
-        // composed in the task-graph.
-        System.out.println("a: " + a);
+    TaskGraph taskGraph = new TaskGraph("s0");
+    taskGraph.transferToDevice(DataTransferMode.FIRST_EXECUTION, a);
+    for (int i = 0; i < numKernels; i++) {
+      taskGraph.task("t" + i, ArrayAccInt::acc, a, 1);
     }
+    taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, a);
+
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    executor.execute();
+
+    // The result must be the initial value for the array plus the number of tasks
+    // composed in the task-graph.
+    System.out.println("a: " + a);
+  }
 }

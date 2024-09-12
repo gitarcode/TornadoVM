@@ -22,34 +22,38 @@
 package uk.ac.manchester.tornado.drivers.common.compiler.phases.memalloc;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.java.NewArrayNode;
 import org.graalvm.compiler.phases.Phase;
-
 import uk.ac.manchester.tornado.runtime.graal.nodes.NewArrayNonVirtualizableNode;
 
 public class TornadoNewArrayDevirtualizationReplacement extends Phase {
 
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    protected void run(StructuredGraph graph) {
-        graph.getNodes().filter(NewArrayNode.class).forEach(newArrayNode -> {
-            NewArrayNonVirtualizableNode newArrayNonVirtualNode = new NewArrayNonVirtualizableNode(newArrayNode.elementType(), newArrayNode.length(), false);
+  protected void run(StructuredGraph graph) {
+    graph
+        .getNodes()
+        .filter(NewArrayNode.class)
+        .forEach(
+            newArrayNode -> {
+              NewArrayNonVirtualizableNode newArrayNonVirtualNode =
+                  new NewArrayNonVirtualizableNode(
+                      newArrayNode.elementType(), newArrayNode.length(), false);
 
-            graph.addOrUnique(newArrayNonVirtualNode);
+              graph.addOrUnique(newArrayNonVirtualNode);
 
-            newArrayNode.replaceAtUsages(newArrayNonVirtualNode);
+              newArrayNode.replaceAtUsages(newArrayNonVirtualNode);
 
-            graph.replaceFixed(newArrayNode, newArrayNonVirtualNode);
+              graph.replaceFixed(newArrayNode, newArrayNonVirtualNode);
 
-            if (!newArrayNode.hasNoUsages()) {
+              if (!newArrayNode.hasNoUsages()) {
                 newArrayNode.safeDelete();
-            }
-        });
-    }
+              }
+            });
+  }
 }

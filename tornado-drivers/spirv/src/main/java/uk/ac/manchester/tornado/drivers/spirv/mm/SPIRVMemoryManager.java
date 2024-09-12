@@ -28,39 +28,41 @@ import static uk.ac.manchester.tornado.runtime.common.TornadoOptions.DEVICE_AVAI
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import uk.ac.manchester.tornado.api.memory.TornadoMemoryProvider;
-import uk.ac.manchester.tornado.drivers.opencl.mm.OCLKernelStackFrame;
 import uk.ac.manchester.tornado.drivers.spirv.SPIRVDeviceContext;
 
 public class SPIRVMemoryManager implements TornadoMemoryProvider {
 
-    private SPIRVDeviceContext deviceContext;
+  private SPIRVDeviceContext deviceContext;
 
-    private Map<Long, SPIRVKernelStackFrame> spirvKernelStackFrame = new ConcurrentHashMap<>();
+  private Map<Long, SPIRVKernelStackFrame> spirvKernelStackFrame = new ConcurrentHashMap<>();
 
-    public SPIRVMemoryManager(SPIRVDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
+  public SPIRVMemoryManager(SPIRVDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+  }
+
+  @Override
+  public long getHeapSize() {
+    return DEVICE_AVAILABLE_MEMORY;
+  }
+
+  public SPIRVKernelStackFrame createKernelStackFrame(long threadId, final int maxArgs) {
+    if (!spirvKernelStackFrame.containsKey(threadId)) {
+      long kernelCallBuffer =
+          deviceContext
+              .getSpirvContext()
+              .allocateMemory(
+                  deviceContext.getDevice().getDeviceIndex(), RESERVED_SLOTS * Long.BYTES);
+      spirvKernelStackFrame.put(
+          threadId, new SPIRVKernelStackFrame(kernelCallBuffer, maxArgs, deviceContext));
     }
+    return spirvKernelStackFrame.get(threadId);
+  }
 
-    @Override
-    public long getHeapSize() {
-        return DEVICE_AVAILABLE_MEMORY;
+  public void releaseKernelStackFrame(long executionPlanId) {
+    SPIRVKernelStackFrame stackFrame = spirvKernelStackFrame.remove(executionPlanId);
+    if (stackFrame != null) {
+      stackFrame.invalidate();
     }
-
-    public SPIRVKernelStackFrame createKernelStackFrame(long threadId, final int maxArgs) {
-        if (!spirvKernelStackFrame.containsKey(threadId)) {
-            long kernelCallBuffer = deviceContext.getSpirvContext().allocateMemory(deviceContext.getDevice().getDeviceIndex(), RESERVED_SLOTS * Long.BYTES);
-            spirvKernelStackFrame.put(threadId, new SPIRVKernelStackFrame(kernelCallBuffer, maxArgs, deviceContext));
-        }
-        return spirvKernelStackFrame.get(threadId);
-    }
-
-    public void releaseKernelStackFrame(long executionPlanId) {
-        SPIRVKernelStackFrame stackFrame = spirvKernelStackFrame.remove(executionPlanId);
-        if (stackFrame != null) {
-            stackFrame.invalidate();
-        }
-    }
-
+  }
 }

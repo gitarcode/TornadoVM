@@ -17,23 +17,20 @@
  */
 package uk.ac.manchester.tornado.api.exceptions;
 
-import uk.ac.manchester.tornado.api.internal.annotations.CompilerIntrinsic;
-
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
+
+import uk.ac.manchester.tornado.api.internal.annotations.CompilerIntrinsic;
 
 public class Debug {
 
-    /**
-     * prints a message from all threads.
-     *
-     * @param msg
-     *     format string as per OpenCL spec
-     * @param args
-     *     arguments to format
-     */
-    @CompilerIntrinsic
-    public static void printf(String msg, Object... args) {
-        shouldNotReachHere();
-    }
-
+  /**
+   * prints a message from all threads.
+   *
+   * @param msg format string as per OpenCL spec
+   * @param args arguments to format
+   */
+  @CompilerIntrinsic
+  public static void printf(String msg, Object... args) {
+    shouldNotReachHere();
+  }
 }

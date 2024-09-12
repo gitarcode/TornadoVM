@@ -31,44 +31,43 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.memory.MemoryKill;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
 
-/**
- * Instruction: OpMemoryBarrier
- */
+/** Instruction: OpMemoryBarrier */
 @NodeInfo
 public class SPIRVBarrierNode extends FixedWithNextNode implements LIRLowerable, MemoryKill {
 
-    public static final NodeClass<SPIRVBarrierNode> TYPE = NodeClass.create(SPIRVBarrierNode.class);
+  public static final NodeClass<SPIRVBarrierNode> TYPE = NodeClass.create(SPIRVBarrierNode.class);
 
-    public enum SPIRVMemFenceFlags {
-        GLOBAL(0x200 | 0x10), //
-        LOCAL(0x100 | 0x10); //
+  public enum SPIRVMemFenceFlags {
+    GLOBAL(0x200 | 0x10), //
+    LOCAL(0x100 | 0x10); //
 
-        private int memorySemantics;
+    private int memorySemantics;
 
-        SPIRVMemFenceFlags(int semantics) {
-            this.memorySemantics = semantics;
-        }
-
-        public int getMemorySemantics() {
-            return memorySemantics;
-        }
+    SPIRVMemFenceFlags(int semantics) {
+      this.memorySemantics = semantics;
     }
 
-    private final SPIRVMemFenceFlags BARRIER_TYPE;
-
-    public SPIRVBarrierNode(SPIRVMemFenceFlags flags) {
-        super(TYPE, StampFactory.forVoid());
-        this.BARRIER_TYPE = flags;
+    public int getMemorySemantics() {
+      return memorySemantics;
     }
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        Logger.traceBuildLIR(Logger.BACKEND.SPIRV, "Append Barrier of type: " + BARRIER_TYPE);
-        generator.getLIRGeneratorTool().append(new SPIRVLIRStmt.ExprStmt(new SPIRVUnary.Barrier(BARRIER_TYPE)));
-    }
+  private final SPIRVMemFenceFlags BARRIER_TYPE;
+
+  public SPIRVBarrierNode(SPIRVMemFenceFlags flags) {
+    super(TYPE, StampFactory.forVoid());
+    this.BARRIER_TYPE = flags;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    Logger.traceBuildLIR(Logger.BACKEND.SPIRV, "Append Barrier of type: " + BARRIER_TYPE);
+    generator
+        .getLIRGeneratorTool()
+        .append(new SPIRVLIRStmt.ExprStmt(new SPIRVUnary.Barrier(BARRIER_TYPE)));
+  }
 }

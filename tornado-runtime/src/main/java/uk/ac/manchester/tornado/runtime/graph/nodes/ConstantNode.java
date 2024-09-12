@@ -25,20 +25,19 @@ package uk.ac.manchester.tornado.runtime.graph.nodes;
 
 public class ConstantNode extends AbstractNode {
 
-    public ConstantNode(int index) {
-        this.index = index;
-    }
+  public ConstantNode(int index) {
+    this.index = index;
+  }
 
-    @Override
-    public int compareTo(AbstractNode o) {
-        if (!(o instanceof ConstantNode)) {
-            return -1;
-        }
-        return Integer.compare(index, ((ConstantNode) o).index);
+  @Override
+  public int compareTo(AbstractNode o) {
+    if (!(o instanceof ConstantNode)) {
+      return -1;
     }
+    return Integer.compare(index, ((ConstantNode) o).index);
+  }
 
-    public String toString() {
-        return String.format("[%d]: constant %d", id, index);
-    }
-
+  public String toString() {
+    return String.format("[%d]: constant %d", id, index);
+  }
 }

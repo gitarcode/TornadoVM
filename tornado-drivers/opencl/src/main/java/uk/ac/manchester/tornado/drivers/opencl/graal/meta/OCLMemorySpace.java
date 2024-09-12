@@ -21,44 +21,48 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.meta;
 
-import org.graalvm.compiler.core.common.LIRKind;
-
 import jdk.vm.ci.meta.Value;
+import org.graalvm.compiler.core.common.LIRKind;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLArchitecture;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssemblerConstants;
 
 public class OCLMemorySpace extends Value {
 
-    public static final OCLMemorySpace GLOBAL = new OCLMemorySpace(OCLAssemblerConstants.GLOBAL_MEM_MODIFIER);
-    public static final OCLMemorySpace SHARED = new OCLMemorySpace(OCLAssemblerConstants.SHARED_MEM_MODIFIER);
-    public static final OCLMemorySpace LOCAL = new OCLMemorySpace(OCLAssemblerConstants.LOCAL_MEM_MODIFIER);
-    public static final OCLMemorySpace PRIVATE = new OCLMemorySpace(OCLAssemblerConstants.PRIVATE_MEM_MODIFIER);
-    public static final OCLMemorySpace CONSTANT = new OCLMemorySpace(OCLAssemblerConstants.CONSTANT_MEM_MODIFIER);
+  public static final OCLMemorySpace GLOBAL =
+      new OCLMemorySpace(OCLAssemblerConstants.GLOBAL_MEM_MODIFIER);
+  public static final OCLMemorySpace SHARED =
+      new OCLMemorySpace(OCLAssemblerConstants.SHARED_MEM_MODIFIER);
+  public static final OCLMemorySpace LOCAL =
+      new OCLMemorySpace(OCLAssemblerConstants.LOCAL_MEM_MODIFIER);
+  public static final OCLMemorySpace PRIVATE =
+      new OCLMemorySpace(OCLAssemblerConstants.PRIVATE_MEM_MODIFIER);
+  public static final OCLMemorySpace CONSTANT =
+      new OCLMemorySpace(OCLAssemblerConstants.CONSTANT_MEM_MODIFIER);
 
-    private final String name;
+  private final String name;
 
-    protected OCLMemorySpace(String name) {
-        super(LIRKind.Illegal);
-        this.name = name;
+  protected OCLMemorySpace(String name) {
+    super(LIRKind.Illegal);
+    this.name = name;
+  }
+
+  public OCLArchitecture.OCLMemoryBase getBase() {
+    if (this == GLOBAL) {
+      return OCLArchitecture.globalSpace;
+    } else if (this == LOCAL) {
+      return OCLArchitecture.localSpace;
+    } else if (this == CONSTANT) {
+      return OCLArchitecture.constantSpace;
+    } else if (this == PRIVATE) {
+      return OCLArchitecture.privateSpace;
+    } else {
+      TornadoInternalError.shouldNotReachHere();
+      return null;
     }
+  }
 
-    public OCLArchitecture.OCLMemoryBase getBase() {
-        if (this == GLOBAL) {
-            return OCLArchitecture.globalSpace;
-        } else if (this == LOCAL) {
-            return OCLArchitecture.localSpace;
-        } else if (this == CONSTANT) {
-            return OCLArchitecture.constantSpace;
-        } else if (this == PRIVATE) {
-            return OCLArchitecture.privateSpace;
-        } else {
-            TornadoInternalError.shouldNotReachHere();
-            return null;
-        }
-    }
-
-    public String name() {
-        return name;
-    }
+  public String name() {
+    return name;
+  }
 }

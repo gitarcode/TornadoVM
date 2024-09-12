@@ -33,12 +33,11 @@ import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstan
 import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstants.SQUARE_BRACKETS_OPEN;
 import static uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssemblerConstants.TAB;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.ConstantValue;
 import org.graalvm.compiler.lir.Opcode;
 import org.graalvm.compiler.lir.Variable;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXArchitecture.PTXMemoryBase;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXCompilationResultBuilder;
@@ -46,157 +45,151 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.meta.PTXMemorySpace;
 
 public class PTXUnary {
 
-    /**
-     * Abstract operation which consumes one input
-     */
-    protected static class UnaryConsumer extends PTXLIROp {
-        @Use
-        protected Value value;
+  /** Abstract operation which consumes one input */
+  protected static class UnaryConsumer extends PTXLIROp {
+    @Use protected Value value;
 
-        @Opcode
-        protected PTXUnaryOp opcode;
+    @Opcode protected PTXUnaryOp opcode;
 
-        UnaryConsumer(PTXUnaryOp opcode, LIRKind lirKind, Value value) {
-            super(lirKind);
-            this.value = value;
-            this.opcode = opcode;
-        }
-
-        public Value getValue() {
-            return value;
-        }
-
-        public PTXUnaryOp getOpcode() {
-            return opcode;
-        }
-
-        @Override
-        public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
-            opcode.emit(crb, value, dest);
-        }
+    UnaryConsumer(PTXUnaryOp opcode, LIRKind lirKind, Value value) {
+      super(lirKind);
+      this.value = value;
+      this.opcode = opcode;
     }
 
-    public static class Expr extends UnaryConsumer {
-        public Expr(PTXUnaryOp opcode, LIRKind lirKind, Value value) {
-            super(opcode, lirKind, value);
-        }
+    public Value getValue() {
+      return value;
     }
 
-    public static class Intrinsic extends UnaryConsumer {
-        public Intrinsic(PTXUnaryOp opCode, LIRKind lirKind, Value value) {
-            super(opCode, lirKind, value);
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%s(%s)", opcode.toString(), value);
-        }
+    public PTXUnaryOp getOpcode() {
+      return opcode;
     }
 
-    public static class Barrier extends PTXUnary.UnaryConsumer {
+    @Override
+    public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
+      opcode.emit(crb, value, dest);
+    }
+  }
 
-        private final int ctaInstance;
-        private final int numberOfThreads;
+  public static class Expr extends UnaryConsumer {
+    public Expr(PTXUnaryOp opcode, LIRKind lirKind, Value value) {
+      super(opcode, lirKind, value);
+    }
+  }
 
-        public Barrier(PTXAssembler.PTXUnaryOp opcode, int ctaInstance, int numberOfThreads) {
-            super(opcode, LIRKind.Illegal, null);
-            this.ctaInstance = ctaInstance;
-            this.numberOfThreads = numberOfThreads;
-        }
-
-        @Override
-        public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
-            opcode.emitOpcode(asm);
-            asm.emitSymbol(TAB);
-            asm.emitSymbol(String.valueOf(ctaInstance));
-            if (numberOfThreads != -1) {
-                asm.emitSymbol(COMMA);
-                asm.emitSymbol(SPACE);
-                asm.emitInt(numberOfThreads);
-            }
-        }
-
+  public static class Intrinsic extends UnaryConsumer {
+    public Intrinsic(PTXUnaryOp opCode, LIRKind lirKind, Value value) {
+      super(opCode, lirKind, value);
     }
 
-    public static class MemoryAccess extends UnaryConsumer {
+    @Override
+    public String toString() {
+      return String.format("%s(%s)", opcode.toString(), value);
+    }
+  }
 
-        private final PTXMemoryBase base;
-        private Value index;
-        private String name;
+  public static class Barrier extends PTXUnary.UnaryConsumer {
 
-        MemoryAccess(PTXMemoryBase base, Value value) {
-            super(null, LIRKind.Illegal, value);
-            this.base = base;
-        }
+    private final int ctaInstance;
+    private final int numberOfThreads;
 
-        public MemoryAccess(PTXMemoryBase base, Value value, Value index) {
-            super(null, LIRKind.Illegal, value);
-            this.base = base;
-            this.index = index;
-        }
-
-        public MemoryAccess(String name) {
-            super(null, LIRKind.Illegal, null);
-            this.base = paramSpace;
-            this.name = name;
-        }
-
-        @Override
-        public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
-            if (isSharedMemoryAccess()) {
-                asm.emitValue(value);
-                asm.emitSymbol(SQUARE_BRACKETS_OPEN);
-                asm.emitValue(index);
-                asm.emitSymbol(SQUARE_BRACKETS_CLOSE);
-            } else {
-                asm.emitSymbol(SQUARE_BRACKETS_OPEN);
-                if (name != null) {
-                    asm.emit(name);
-                }
-                if (value != null) {
-                    asm.emitValue(value);
-                }
-                if (index != null && ((ConstantValue) index).getJavaConstant().asInt() != 0) {
-                    asm.emitConstant((ConstantValue) index);
-                }
-                asm.emitSymbol(SQUARE_BRACKETS_CLOSE);
-            }
-        }
-
-        public void emit(PTXAssembler asm, int index) {
-            if (isSharedMemoryAccess()) {
-                if (value != null) {
-                    asm.emitValue(value);
-                }
-                asm.emitSymbol(SQUARE_BRACKETS_OPEN);
-                asm.emitConstant(index);
-            } else {
-                asm.emitSymbol(SQUARE_BRACKETS_OPEN);
-                if (name != null) {
-                    asm.emit(name);
-                }
-                if (value != null) {
-                    asm.emitValue(value);
-                }
-                if (index != 0) {
-                    asm.emitConstant(index);
-                }
-            }
-            asm.emitSymbol(SQUARE_BRACKETS_CLOSE);
-        }
-
-        private boolean isSharedMemoryAccess() {
-            return base.memorySpace.index() == PTXMemorySpace.SHARED.index();
-        }
-
-        public PTXMemoryBase getBase() {
-            return base;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%s", value);
-        }
+    public Barrier(PTXAssembler.PTXUnaryOp opcode, int ctaInstance, int numberOfThreads) {
+      super(opcode, LIRKind.Illegal, null);
+      this.ctaInstance = ctaInstance;
+      this.numberOfThreads = numberOfThreads;
     }
 
+    @Override
+    public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
+      opcode.emitOpcode(asm);
+      asm.emitSymbol(TAB);
+      asm.emitSymbol(String.valueOf(ctaInstance));
+      if (numberOfThreads != -1) {
+        asm.emitSymbol(COMMA);
+        asm.emitSymbol(SPACE);
+        asm.emitInt(numberOfThreads);
+      }
+    }
+  }
+
+  public static class MemoryAccess extends UnaryConsumer {
+
+    private final PTXMemoryBase base;
+    private Value index;
+    private String name;
+
+    MemoryAccess(PTXMemoryBase base, Value value) {
+      super(null, LIRKind.Illegal, value);
+      this.base = base;
+    }
+
+    public MemoryAccess(PTXMemoryBase base, Value value, Value index) {
+      super(null, LIRKind.Illegal, value);
+      this.base = base;
+      this.index = index;
+    }
+
+    public MemoryAccess(String name) {
+      super(null, LIRKind.Illegal, null);
+      this.base = paramSpace;
+      this.name = name;
+    }
+
+    @Override
+    public void emit(PTXCompilationResultBuilder crb, PTXAssembler asm, Variable dest) {
+      if (isSharedMemoryAccess()) {
+        asm.emitValue(value);
+        asm.emitSymbol(SQUARE_BRACKETS_OPEN);
+        asm.emitValue(index);
+        asm.emitSymbol(SQUARE_BRACKETS_CLOSE);
+      } else {
+        asm.emitSymbol(SQUARE_BRACKETS_OPEN);
+        if (name != null) {
+          asm.emit(name);
+        }
+        if (value != null) {
+          asm.emitValue(value);
+        }
+        if (index != null && ((ConstantValue) index).getJavaConstant().asInt() != 0) {
+          asm.emitConstant((ConstantValue) index);
+        }
+        asm.emitSymbol(SQUARE_BRACKETS_CLOSE);
+      }
+    }
+
+    public void emit(PTXAssembler asm, int index) {
+      if (isSharedMemoryAccess()) {
+        if (value != null) {
+          asm.emitValue(value);
+        }
+        asm.emitSymbol(SQUARE_BRACKETS_OPEN);
+        asm.emitConstant(index);
+      } else {
+        asm.emitSymbol(SQUARE_BRACKETS_OPEN);
+        if (name != null) {
+          asm.emit(name);
+        }
+        if (value != null) {
+          asm.emitValue(value);
+        }
+        if (index != 0) {
+          asm.emitConstant(index);
+        }
+      }
+      asm.emitSymbol(SQUARE_BRACKETS_CLOSE);
+    }
+
+    private boolean isSharedMemoryAccess() {
+      return base.memorySpace.index() == PTXMemorySpace.SHARED.index();
+    }
+
+    public PTXMemoryBase getBase() {
+      return base;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%s", value);
+    }
+  }
 }

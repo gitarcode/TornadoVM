@@ -32,30 +32,34 @@ import org.graalvm.compiler.nodes.spi.Replacements;
 import org.graalvm.compiler.phases.common.inlining.InliningUtil;
 import org.graalvm.compiler.phases.common.inlining.info.InlineInfo;
 import org.graalvm.compiler.phases.common.inlining.walker.MethodInvocation;
-
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoInliningPolicy;
 
 public class TornadoPartialInliningPolicy implements TornadoInliningPolicy {
 
-    public TornadoPartialInliningPolicy() {
-    }
+  public TornadoPartialInliningPolicy() {}
 
-    @Override
-    public boolean continueInlining(StructuredGraph graph) {
-        if (graph.getNodeCount() >= MaximumDesiredSize.getValue(graph.getOptions())) {
-            InliningUtil.logInliningDecision(getDebugContext(), "inlining is cut off by MaximumDesiredSize");
-            return false;
-        }
-        return true;
+  @Override
+  public boolean continueInlining(StructuredGraph graph) {
+    if (graph.getNodeCount() >= MaximumDesiredSize.getValue(graph.getOptions())) {
+      InliningUtil.logInliningDecision(
+          getDebugContext(), "inlining is cut off by MaximumDesiredSize");
+      return false;
     }
+    return true;
+  }
 
-    @Override
-    public Decision isWorthInlining(Replacements replacements, MethodInvocation invocation, InlineInfo calleeInfo, int inliningDepth, boolean fullyProcessed) {
-        final InlineInfo info = invocation.callee();
-        int nodes = info.determineNodeCount();
-        if (nodes > MaximumInliningSize.getValue(info.graph().getOptions()) && !invocation.isRoot()) {
-            return Decision.NO;
-        }
-        return Decision.YES;
+  @Override
+  public Decision isWorthInlining(
+      Replacements replacements,
+      MethodInvocation invocation,
+      InlineInfo calleeInfo,
+      int inliningDepth,
+      boolean fullyProcessed) {
+    final InlineInfo info = invocation.callee();
+    int nodes = info.determineNodeCount();
+    if (nodes > MaximumInliningSize.getValue(info.graph().getOptions()) && !invocation.isRoot()) {
+      return Decision.NO;
     }
+    return Decision.YES;
+  }
 }

@@ -18,7 +18,7 @@
 package uk.ac.manchester.tornado.api.exceptions;
 
 public class TornadoBackendNotFound extends TornadoRuntimeException {
-    public TornadoBackendNotFound(String msg) {
-        super(msg);
-    }
+  public TornadoBackendNotFound(String msg) {
+    super(msg);
+  }
 }

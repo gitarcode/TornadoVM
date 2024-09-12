@@ -22,32 +22,37 @@
  */
 package uk.ac.manchester.tornado.runtime.sketcher;
 
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.phases.PhaseSuite;
 import org.graalvm.compiler.phases.tiers.HighTierContext;
 import org.graalvm.compiler.phases.util.Providers;
-
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoSketchTier;
 
 public class SketchRequest {
 
-    final int driverIndex;
-    final int deviceIndex;
-    final ResolvedJavaMethod resolvedMethod;
-    final Providers providers;
-    final PhaseSuite<HighTierContext> graphBuilderSuite;
-    final TornadoSketchTier sketchTier;
+  final int driverIndex;
+  final int deviceIndex;
+  final ResolvedJavaMethod resolvedMethod;
+  final Providers providers;
+  final PhaseSuite<HighTierContext> graphBuilderSuite;
+  final TornadoSketchTier sketchTier;
 
-    public SketchRequest(ResolvedJavaMethod resolvedMethod, Providers providers, PhaseSuite<HighTierContext> graphBuilderSuite, TornadoSketchTier sketchTier, int driverIndex, int deviceIndex) {
-        this.resolvedMethod = resolvedMethod;
-        this.providers = providers;
-        this.graphBuilderSuite = graphBuilderSuite;
-        this.sketchTier = sketchTier;
-        this.driverIndex = driverIndex;
-        this.deviceIndex = deviceIndex;
-    }
+  public SketchRequest(
+      ResolvedJavaMethod resolvedMethod,
+      Providers providers,
+      PhaseSuite<HighTierContext> graphBuilderSuite,
+      TornadoSketchTier sketchTier,
+      int driverIndex,
+      int deviceIndex) {
+    this.resolvedMethod = resolvedMethod;
+    this.providers = providers;
+    this.graphBuilderSuite = graphBuilderSuite;
+    this.sketchTier = sketchTier;
+    this.driverIndex = driverIndex;
+    this.deviceIndex = deviceIndex;
+  }
 
-    public void run() {
-        TornadoSketcher.buildSketch(this);
-    }
+  public void run() {
+    TornadoSketcher.buildSketch(this);
+  }
 }

@@ -21,48 +21,46 @@ import uk.ac.manchester.tornado.api.DRMode;
 import uk.ac.manchester.tornado.api.GridScheduler;
 import uk.ac.manchester.tornado.api.Policy;
 
-/**
- * Class to store all objects and parameters related to the dispatch of an execution plan.
- */
+/** Class to store all objects and parameters related to the dispatch of an execution plan. */
 public class ExecutorFrame {
 
-    private final long executionPlanId;
-    private DRMode dynamicReconfigurationMode;
-    private Policy dynamicReconfigurationPolicy;
-    private GridScheduler gridScheduler;
+  private final long executionPlanId;
+  private DRMode dynamicReconfigurationMode;
+  private Policy dynamicReconfigurationPolicy;
+  private GridScheduler gridScheduler;
 
-    public ExecutorFrame(long id) {
-        this.executionPlanId = id;
-    }
+  public ExecutorFrame(long id) {
+    this.executionPlanId = id;
+  }
 
-    public ExecutorFrame withPolicy(Policy policy) {
-        this.dynamicReconfigurationPolicy = policy;
-        return this;
-    }
+  public ExecutorFrame withPolicy(Policy policy) {
+    this.dynamicReconfigurationPolicy = policy;
+    return this;
+  }
 
-    public ExecutorFrame withMode(DRMode drMode) {
-        this.dynamicReconfigurationMode = drMode;
-        return this;
-    }
+  public ExecutorFrame withMode(DRMode drMode) {
+    this.dynamicReconfigurationMode = drMode;
+    return this;
+  }
 
-    public ExecutorFrame withGridScheduler(GridScheduler gridScheduler) {
-        this.gridScheduler = gridScheduler;
-        return this;
-    }
+  public ExecutorFrame withGridScheduler(GridScheduler gridScheduler) {
+    this.gridScheduler = gridScheduler;
+    return this;
+  }
 
-    public Policy getDynamicReconfigurationPolicy() {
-        return dynamicReconfigurationPolicy;
-    }
+  public Policy getDynamicReconfigurationPolicy() {
+    return dynamicReconfigurationPolicy;
+  }
 
-    public DRMode getDRMode() {
-        return dynamicReconfigurationMode;
-    }
+  public DRMode getDRMode() {
+    return dynamicReconfigurationMode;
+  }
 
-    public GridScheduler getGridScheduler() {
-        return gridScheduler;
-    }
+  public GridScheduler getGridScheduler() {
+    return gridScheduler;
+  }
 
-    public long getExecutionPlanId() {
-        return this.executionPlanId;
-    }
+  public long getExecutionPlanId() {
+    return this.executionPlanId;
+  }
 }

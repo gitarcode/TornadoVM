@@ -31,82 +31,79 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner rotatevector
  * </code>
  */
 public class RotateTornado extends BenchmarkDriver {
 
-    private final int numElements;
-    private VectorFloat3 input;
-    private VectorFloat3 output;
-    private Matrix4x4Float m;
+  private final int numElements;
+  private VectorFloat3 input;
+  private VectorFloat3 output;
+  private Matrix4x4Float m;
 
-    public RotateTornado(int iterations, int numElements) {
-        super(iterations);
-        this.numElements = numElements;
+  public RotateTornado(int iterations, int numElements) {
+    super(iterations);
+    this.numElements = numElements;
+  }
+
+  @Override
+  public void setUp() {
+    input = new VectorFloat3(numElements);
+    output = new VectorFloat3(numElements);
+
+    m = new Matrix4x4Float();
+    m.identity();
+
+    final Float3 value = new Float3(1f, 2f, 3f);
+    for (int i = 0; i < numElements; i++) {
+      input.set(i, value);
     }
 
-    @Override
-    public void setUp() {
-        input = new VectorFloat3(numElements);
-        output = new VectorFloat3(numElements);
+    taskGraph = new TaskGraph("benchmark");
+    taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, input);
+    taskGraph.task("rotateVector", GraphicsKernels::rotateVector, output, m, input);
+    taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
-        m = new Matrix4x4Float();
-        m.identity();
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-        final Float3 value = new Float3(1f, 2f, 3f);
-        for (int i = 0; i < numElements; i++) {
-            input.set(i, value);
-        }
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    input = null;
+    output = null;
+    m = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-        taskGraph = new TaskGraph("benchmark");
-        taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, input);
-        taskGraph.task("rotateVector", GraphicsKernels::rotateVector, output, m, input);
-        taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+  @Override
+  public boolean validate(TornadoDevice device) {
+
+    final VectorFloat3 result = new VectorFloat3(numElements);
+
+    runBenchmark(device);
+    executionPlan.clearProfiles();
+
+    rotateVector(result, m, input);
+
+    float maxULP = 0f;
+    for (int i = 0; i < numElements; i++) {
+      final float ulp = findMaxULP(output.get(i), result.get(i));
+
+      if (ulp > maxULP) {
+        maxULP = ulp;
+      }
     }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        input = null;
-        output = null;
-        m = null;
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-
-        final VectorFloat3 result = new VectorFloat3(numElements);
-
-        runBenchmark(device);
-        executionPlan.clearProfiles();
-
-        rotateVector(result, m, input);
-
-        float maxULP = 0f;
-        for (int i = 0; i < numElements; i++) {
-            final float ulp = findMaxULP(output.get(i), result.get(i));
-
-            if (ulp > maxULP) {
-                maxULP = ulp;
-            }
-        }
-
-        return Float.compare(maxULP, MAX_ULP) <= 0;
-    }
+    return Float.compare(maxULP, MAX_ULP) <= 0;
+  }
 }

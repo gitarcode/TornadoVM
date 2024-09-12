@@ -23,39 +23,44 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.compiler;
 
+import jdk.vm.ci.meta.MetaAccessProvider;
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.spi.SimplifierTool;
 import org.graalvm.compiler.phases.common.CanonicalizerPhase;
-
-import jdk.vm.ci.meta.MetaAccessProvider;
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.vector.VectorElementOpNode;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class OCLCanonicalizer implements CanonicalizerPhase.CustomSimplification {
 
-    protected MetaAccessProvider metaAccess;
-    protected ResolvedJavaMethod method;
-    protected TaskDataContext meta;
-    protected Object[] args;
+  protected MetaAccessProvider metaAccess;
+  protected ResolvedJavaMethod method;
+  protected TaskDataContext meta;
+  protected Object[] args;
 
-    public void setContext(MetaAccessProvider metaAccess, ResolvedJavaMethod method, Object[] args, TaskDataContext meta) {
-        this.metaAccess = metaAccess;
-        this.method = method;
-        this.meta = meta;
-        this.args = args;
-    }
+  public void setContext(
+      MetaAccessProvider metaAccess,
+      ResolvedJavaMethod method,
+      Object[] args,
+      TaskDataContext meta) {
+    this.metaAccess = metaAccess;
+    this.method = method;
+    this.meta = meta;
+    this.args = args;
+  }
 
-    private Node canonicalizeVectorElementOp(VectorElementOpNode node) {
-        return node;
-    }
+  private Node canonicalizeVectorElementOp(VectorElementOpNode node) {
+    return node;
+  }
 
-    @Override
-    public void simplify(Node node, SimplifierTool tool) {
+  @Override
+  public void simplify(Node node, SimplifierTool tool) {}
 
-    }
-
-    public enum VectorOp {
-        MULT, ADD, SUB, DIV, ILLEGAL
-    };
+  public enum VectorOp {
+    MULT,
+    ADD,
+    SUB,
+    DIV,
+    ILLEGAL
+  };
 }

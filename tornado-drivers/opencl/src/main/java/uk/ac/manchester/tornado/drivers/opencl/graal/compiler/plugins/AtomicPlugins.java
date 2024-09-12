@@ -21,36 +21,42 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.compiler.plugins;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.graphbuilderconf.GraphBuilderContext;
 import org.graalvm.compiler.nodes.graphbuilderconf.InvocationPlugin;
 import org.graalvm.compiler.nodes.graphbuilderconf.InvocationPlugins;
 import org.graalvm.compiler.nodes.graphbuilderconf.InvocationPlugins.Registration;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.api.types.utils.FloatOps;
 import uk.ac.manchester.tornado.drivers.opencl.graal.nodes.AtomicAddNode;
 
 public class AtomicPlugins {
 
-    public static void registerPlugins(InvocationPlugins plugins) {
-        registerAtomicPlugins(plugins);
-    }
+  public static void registerPlugins(InvocationPlugins plugins) {
+    registerAtomicPlugins(plugins);
+  }
 
-    private static void registerAtomicPlugins(InvocationPlugins plugins) {
-        Registration r = new Registration(plugins, FloatOps.class);
+  private static void registerAtomicPlugins(InvocationPlugins plugins) {
+    Registration r = new Registration(plugins, FloatOps.class);
 
-        r.register(new InvocationPlugin("atomicAdd", float[].class, int.class, float.class) {
+    r.register(
+        new InvocationPlugin("atomicAdd", float[].class, int.class, float.class) {
 
-            @Override
-            public boolean apply(GraphBuilderContext b, ResolvedJavaMethod targetMethod, Receiver receiver, ValueNode array, ValueNode index, ValueNode value) {
+          @Override
+          public boolean apply(
+              GraphBuilderContext b,
+              ResolvedJavaMethod targetMethod,
+              Receiver receiver,
+              ValueNode array,
+              ValueNode index,
+              ValueNode value) {
 
-                final AtomicAddNode atomicAddNode = new AtomicAddNode(array, index, JavaKind.Float, value);
-                b.append(atomicAddNode);
-                return true;
-            }
-
+            final AtomicAddNode atomicAddNode =
+                new AtomicAddNode(array, index, JavaKind.Float, value);
+            b.append(atomicAddNode);
+            return true;
+          }
         });
-    }
+  }
 }

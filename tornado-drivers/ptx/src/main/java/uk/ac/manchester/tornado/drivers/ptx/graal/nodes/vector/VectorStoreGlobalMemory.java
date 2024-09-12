@@ -28,35 +28,38 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.providers.TornadoMemoryOrder;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXStampFactory;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkVectorStore;
 
-/**
- * The {@code VectorStoreGlobalMemory} represents a vector-write to global
- * memory.
- */
+/** The {@code VectorStoreGlobalMemory} represents a vector-write to global memory. */
 @NodeInfo(nameTemplate = "VectorStoreGlobalMemory")
-public final class VectorStoreGlobalMemory extends FixedWithNextNode implements LIRLowerable, MarkVectorStore {
+public final class VectorStoreGlobalMemory extends FixedWithNextNode
+    implements LIRLowerable, MarkVectorStore {
 
-    public static final NodeClass<VectorStoreGlobalMemory> TYPE = NodeClass.create(VectorStoreGlobalMemory.class);
+  public static final NodeClass<VectorStoreGlobalMemory> TYPE =
+      NodeClass.create(VectorStoreGlobalMemory.class);
 
-    @Input
-    ValueNode value;
-    @Input
-    ValueNode address;
+  @Input ValueNode value;
+  @Input ValueNode address;
 
-    public VectorStoreGlobalMemory(PTXKind vectorKind, ValueNode address, ValueNode value) {
-        super(TYPE, PTXStampFactory.getStampFor(vectorKind));
-        this.value = value;
-        this.address = address;
-    }
+  public VectorStoreGlobalMemory(PTXKind vectorKind, ValueNode address, ValueNode value) {
+    super(TYPE, PTXStampFactory.getStampFor(vectorKind));
+    this.value = value;
+    this.address = address;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRKind writeKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
-        gen.getLIRGeneratorTool().getArithmetic().emitStore(writeKind, gen.operand(address), gen.operand(value), null, TornadoMemoryOrder.GPU_MEMORY_MODE);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRKind writeKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
+    gen.getLIRGeneratorTool()
+        .getArithmetic()
+        .emitStore(
+            writeKind,
+            gen.operand(address),
+            gen.operand(value),
+            null,
+            TornadoMemoryOrder.GPU_MEMORY_MODE);
+  }
 }

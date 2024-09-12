@@ -29,45 +29,47 @@ import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 public class PTXNvidiaPowerMetric implements PowerMetric {
 
-    private final PTXDeviceContext deviceContext;
-    private final TornadoLogger logger;
+  private final PTXDeviceContext deviceContext;
+  private final TornadoLogger logger;
 
-    public PTXNvidiaPowerMetric(PTXDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
-        this.logger = new TornadoLogger(this.getClass());
-        initializePowerLibrary();
+  public PTXNvidiaPowerMetric(PTXDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+    this.logger = new TornadoLogger(this.getClass());
+    initializePowerLibrary();
+  }
+
+  static native long ptxNvmlInit() throws RuntimeException;
+
+  static native long ptxNvmlDeviceGetHandleByIndex(long index, long[] device)
+      throws RuntimeException;
+
+  static native long ptxNvmlDeviceGetPowerUsage(long[] device, long[] powerUsage)
+      throws RuntimeException;
+
+  @Override
+  public void initializePowerLibrary() throws RuntimeException {
+    try {
+      ptxNvmlInit();
+    } catch (RuntimeException e) {
+      logger.error(e.getMessage());
     }
+  }
 
-    static native long ptxNvmlInit() throws RuntimeException;
-
-    static native long ptxNvmlDeviceGetHandleByIndex(long index, long[] device) throws RuntimeException;
-
-    static native long ptxNvmlDeviceGetPowerUsage(long[] device, long[] powerUsage) throws RuntimeException;
-
-    @Override
-    public void initializePowerLibrary() throws RuntimeException {
-        try {
-            ptxNvmlInit();
-        } catch (RuntimeException e) {
-            logger.error(e.getMessage());
-        }
+  @Override
+  public void getHandleByIndex(long[] device) {
+    try {
+      ptxNvmlDeviceGetHandleByIndex(this.deviceContext.getDevice().getDeviceIndex(), device);
+    } catch (RuntimeException e) {
+      logger.error(e.getMessage());
     }
+  }
 
-    @Override
-    public void getHandleByIndex(long[] device) {
-        try {
-            ptxNvmlDeviceGetHandleByIndex(this.deviceContext.getDevice().getDeviceIndex(), device);
-        } catch (RuntimeException e) {
-            logger.error(e.getMessage());
-        }
+  @Override
+  public void getPowerUsage(long[] device, long[] powerUsage) {
+    try {
+      ptxNvmlDeviceGetPowerUsage(device, powerUsage);
+    } catch (RuntimeException e) {
+      logger.error(e.getMessage());
     }
-
-    @Override
-    public void getPowerUsage(long[] device, long[] powerUsage) {
-        try {
-            ptxNvmlDeviceGetPowerUsage(device, powerUsage);
-        } catch (RuntimeException e) {
-            logger.error(e.getMessage());
-        }
-    }
+  }
 }

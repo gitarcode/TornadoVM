@@ -39,32 +39,38 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 @NodeInfo
 public class PTXHalfFloatDivisionNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<PTXHalfFloatDivisionNode> TYPE = NodeClass.create(PTXHalfFloatDivisionNode.class);
+  public static final NodeClass<PTXHalfFloatDivisionNode> TYPE =
+      NodeClass.create(PTXHalfFloatDivisionNode.class);
 
-    @Input
-    private ValueNode dividend;
-    @Input
-    private ValueNode divisor;
+  @Input private ValueNode dividend;
+  @Input private ValueNode divisor;
 
-    public PTXHalfFloatDivisionNode(ValueNode dividend, ValueNode divisor) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.dividend = dividend;
-        this.divisor = divisor;
-    }
+  public PTXHalfFloatDivisionNode(ValueNode dividend, ValueNode divisor) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.dividend = dividend;
+    this.divisor = divisor;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Value dividendValue = generator.operand(dividend);
-        Value divisorValue = generator.operand(divisor);
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Value dividendValue = generator.operand(dividend);
+    Value divisorValue = generator.operand(divisor);
 
-        Variable dividendConvertedToFloat = tool.newVariable(LIRKind.value(PTXKind.F32));
-        Variable divisorConvertedToFloat = tool.newVariable(LIRKind.value(PTXKind.F32));
-        Variable floatResult = tool.newVariable(LIRKind.value(PTXKind.F32));
+    Variable dividendConvertedToFloat = tool.newVariable(LIRKind.value(PTXKind.F32));
+    Variable divisorConvertedToFloat = tool.newVariable(LIRKind.value(PTXKind.F32));
+    Variable floatResult = tool.newVariable(LIRKind.value(PTXKind.F32));
 
-        Variable halfFloatResult = tool.newVariable(LIRKind.value(PTXKind.F16));
+    Variable halfFloatResult = tool.newVariable(LIRKind.value(PTXKind.F16));
 
-        tool.append(new PTXLIRStmt.DivideHalfFloatStmt(dividendValue, divisorValue, dividendConvertedToFloat, divisorConvertedToFloat, floatResult, halfFloatResult));
-        generator.setResult(this, halfFloatResult);
-    }
+    tool.append(
+        new PTXLIRStmt.DivideHalfFloatStmt(
+            dividendValue,
+            divisorValue,
+            dividendConvertedToFloat,
+            divisorConvertedToFloat,
+            floatResult,
+            halfFloatResult));
+    generator.setResult(this, halfFloatResult);
+  }
 }

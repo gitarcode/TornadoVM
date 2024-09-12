@@ -19,19 +19,19 @@ package uk.ac.manchester.tornado.api.exceptions;
 
 public class TornadoDynamicReconfigurationException extends RuntimeException {
 
-    private final String message;
+  private final String message;
 
-    public TornadoDynamicReconfigurationException(final String msg) {
-        message = msg;
-    }
+  public TornadoDynamicReconfigurationException(final String msg) {
+    message = msg;
+  }
 
-    public TornadoDynamicReconfigurationException(Exception e) {
-        message = e.getMessage();
-        this.initCause(e.getCause());
-    }
+  public TornadoDynamicReconfigurationException(Exception e) {
+    message = e.getMessage();
+    this.initCause(e.getCause());
+  }
 
-    @Override
-    public String getMessage() {
-        return message;
-    }
+  @Override
+  public String getMessage() {
+    return message;
+  }
 }

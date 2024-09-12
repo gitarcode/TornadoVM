@@ -21,7 +21,6 @@ import static uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays.sgemv;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -39,7 +38,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -48,84 +46,83 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.sgemv.JMHSgemV
  * </code>
  */
 public class JMHSgemV {
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        private final int m = Integer.parseInt(System.getProperty("x", "8192"));
-        private final int n = Integer.parseInt(System.getProperty("y", "8192"));
-        private FloatArray a;
-        private FloatArray x;
-        private FloatArray y;
-        private TornadoExecutionPlan executor;
+    private final int m = Integer.parseInt(System.getProperty("x", "8192"));
+    private final int n = Integer.parseInt(System.getProperty("y", "8192"));
+    private FloatArray a;
+    private FloatArray x;
+    private FloatArray y;
+    private TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            a = new FloatArray(m * n);
-            x = new FloatArray(n);
-            y = new FloatArray(n);
+    @Setup(Level.Trial)
+    public void doSetup() {
+      a = new FloatArray(m * n);
+      x = new FloatArray(n);
+      y = new FloatArray(n);
 
-            final Random random = new Random();
+      final Random random = new Random();
 
-            for (int i = 0; i < m; i++) {
-                a.set(i * (m + 1), 1);
-            }
+      for (int i = 0; i < m; i++) {
+        a.set(i * (m + 1), 1);
+      }
 
-            for (int i = 0; i < n; i++) {
-                x.set(i, random.nextFloat());
-            }
+      for (int i = 0; i < n; i++) {
+        x.set(i, random.nextFloat());
+      }
 
-            TaskGraph taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, x) //
-                    .task("sgemv", LinearAlgebraArrays::sgemv, m, n, a, x, y) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, x) //
+              .task("sgemv", LinearAlgebraArrays::sgemv, m, n, a, x, y) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, y);
 
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
-        }
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void sgemVJava(BenchmarkSetup state) {
-        sgemv(state.m, state.n, state.a, state.x, state.y);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void sgemVJava(BenchmarkSetup state) {
+    sgemv(state.m, state.n, state.a, state.x, state.y);
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void sgemVTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void sgemVTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHSgemV.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHSgemV.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

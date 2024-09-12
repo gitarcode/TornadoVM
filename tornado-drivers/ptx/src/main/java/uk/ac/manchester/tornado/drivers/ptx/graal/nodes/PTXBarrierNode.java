@@ -28,7 +28,6 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.memory.MemoryKill;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.asm.PTXAssembler;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
@@ -37,20 +36,28 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXUnary;
 @NodeInfo
 public class PTXBarrierNode extends FixedWithNextNode implements LIRLowerable, MemoryKill {
 
-    public static final NodeClass<PTXBarrierNode> TYPE = NodeClass.create(PTXBarrierNode.class);
+  public static final NodeClass<PTXBarrierNode> TYPE = NodeClass.create(PTXBarrierNode.class);
 
-    private final int ctaInstance;
-    private final int numberOfThreads;
+  private final int ctaInstance;
+  private final int numberOfThreads;
 
-    public PTXBarrierNode(int ctaInstance, int numberOfThreads) {
-        super(TYPE, StampFactory.forVoid());
-        this.ctaInstance = ctaInstance;
-        this.numberOfThreads = numberOfThreads;
-    }
+  public PTXBarrierNode(int ctaInstance, int numberOfThreads) {
+    super(TYPE, StampFactory.forVoid());
+    this.ctaInstance = ctaInstance;
+    this.numberOfThreads = numberOfThreads;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitPTXBarrier: ctaInstance=%d, numberOfThreads=%d", ctaInstance, numberOfThreads);
-        gen.getLIRGeneratorTool().append(new PTXLIRStmt.ExprStmt(new PTXUnary.Barrier(PTXAssembler.PTXUnaryIntrinsic.BARRIER_SYNC, ctaInstance, numberOfThreads)));
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    Logger.traceBuildLIR(
+        Logger.BACKEND.PTX,
+        "emitPTXBarrier: ctaInstance=%d, numberOfThreads=%d",
+        ctaInstance,
+        numberOfThreads);
+    gen.getLIRGeneratorTool()
+        .append(
+            new PTXLIRStmt.ExprStmt(
+                new PTXUnary.Barrier(
+                    PTXAssembler.PTXUnaryIntrinsic.BARRIER_SYNC, ctaInstance, numberOfThreads)));
+  }
 }

@@ -23,6 +23,8 @@ package uk.ac.manchester.tornado.drivers.ptx.graal.nodes;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -36,9 +38,6 @@ import org.graalvm.compiler.nodes.calc.BinaryNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXArithmeticTool;
@@ -47,108 +46,111 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt.AssignStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkIntIntrinsicNode;
 
 @NodeInfo(nameTemplate = "{p#operation/s}")
-public class PTXIntBinaryIntrinsicNode extends BinaryNode implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
+public class PTXIntBinaryIntrinsicNode extends BinaryNode
+    implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
 
-    public static final NodeClass<PTXIntBinaryIntrinsicNode> TYPE = NodeClass.create(PTXIntBinaryIntrinsicNode.class);
-    protected final Operation operation;
+  public static final NodeClass<PTXIntBinaryIntrinsicNode> TYPE =
+      NodeClass.create(PTXIntBinaryIntrinsicNode.class);
+  protected final Operation operation;
 
-    protected PTXIntBinaryIntrinsicNode(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
-        super(TYPE, StampFactory.forKind(kind), x, y);
-        this.operation = op;
+  protected PTXIntBinaryIntrinsicNode(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
+    super(TYPE, StampFactory.forKind(kind), x, y);
+    this.operation = op;
+  }
+
+  public static ValueNode create(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
+    ValueNode c = tryConstantFold(x, y, op, kind);
+    if (c != null) {
+      return c;
     }
+    return new PTXIntBinaryIntrinsicNode(x, y, op, kind);
+  }
 
-    public static ValueNode create(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
-        ValueNode c = tryConstantFold(x, y, op, kind);
-        if (c != null) {
-            return c;
-        }
-        return new PTXIntBinaryIntrinsicNode(x, y, op, kind);
+  protected static ValueNode tryConstantFold(
+      ValueNode x, ValueNode y, Operation op, JavaKind kind) {
+    ConstantNode result = null;
+
+    if (x.isConstant() && y.isConstant()) {
+      if (kind == JavaKind.Int) {
+        int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), op);
+        result = ConstantNode.forInt(ret);
+      } else if (kind == JavaKind.Long) {
+        long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), op);
+        result = ConstantNode.forLong(ret);
+      }
     }
+    return result;
+  }
 
-    protected static ValueNode tryConstantFold(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
-        ConstantNode result = null;
+  private static long doCompute(long x, long y, Operation op) {
+    return switch (op) {
+      case MIN -> Math.min(x, y);
+      case MAX -> Math.max(x, y);
+      default -> throw new TornadoInternalError("unknown op %s", op);
+    };
+  }
 
-        if (x.isConstant() && y.isConstant()) {
-            if (kind == JavaKind.Int) {
-                int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), op);
-                result = ConstantNode.forInt(ret);
-            } else if (kind == JavaKind.Long) {
-                long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), op);
-                result = ConstantNode.forLong(ret);
-            }
-        }
-        return result;
-    }
+  private static int doCompute(int x, int y, Operation op) {
+    return switch (op) {
+      case MIN -> Math.min(x, y);
+      case MAX -> Math.max(x, y);
+      default -> throw new TornadoInternalError("unknown op %s", op);
+    };
+  }
 
-    private static long doCompute(long x, long y, Operation op) {
-        return switch (op) {
-            case MIN -> Math.min(x, y);
-            case MAX -> Math.max(x, y);
-            default -> throw new TornadoInternalError("unknown op %s", op);
+  @Override
+  public String getOperation() {
+    return operation.toString();
+  }
+
+  @Override
+  public ValueNode canonical(CanonicalizerTool tool) {
+    return canonical(tool, getX(), getY());
+  }
+
+  @Override
+  public Stamp foldStamp(Stamp stampX, Stamp stampY) {
+    return stamp(NodeView.DEFAULT);
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool tool) {
+    generate(tool, tool.getLIRGeneratorTool().getArithmetic());
+  }
+
+  public Operation operation() {
+    return operation;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
+    Logger.traceBuildLIR(
+        Logger.BACKEND.PTX, "emitPTXIntBinaryIntrinsic: op=%s, x=%s, y=%s", operation, x, y);
+    PTXBuiltinTool gen = ((PTXArithmeticTool) lirGen).getGen().getPtxBuiltinTool();
+    Value x = builder.operand(getX());
+    Value y = builder.operand(getY());
+    Value result =
+        switch (operation()) {
+          case MIN -> gen.genIntMin(x, y);
+          case MAX -> gen.genIntMax(x, y);
+          default -> throw shouldNotReachHere();
         };
+    Variable var = builder.getLIRGeneratorTool().newVariable(result.getValueKind());
+    builder.getLIRGeneratorTool().append(new AssignStmt(var, result));
+    builder.setResult(this, var);
+  }
+
+  @Override
+  public ValueNode canonical(CanonicalizerTool tool, ValueNode x, ValueNode y) {
+    ValueNode c = tryConstantFold(x, y, operation(), getStackKind());
+    if (c != null) {
+      return c;
     }
+    return this;
+  }
 
-    private static int doCompute(int x, int y, Operation op) {
-        return switch (op) {
-            case MIN -> Math.min(x, y);
-            case MAX -> Math.max(x, y);
-            default -> throw new TornadoInternalError("unknown op %s", op);
-        };
-    }
-
-    @Override
-    public String getOperation() {
-        return operation.toString();
-    }
-
-    @Override
-    public ValueNode canonical(CanonicalizerTool tool) {
-        return canonical(tool, getX(), getY());
-    }
-
-    @Override
-    public Stamp foldStamp(Stamp stampX, Stamp stampY) {
-        return stamp(NodeView.DEFAULT);
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool tool) {
-        generate(tool, tool.getLIRGeneratorTool().getArithmetic());
-    }
-
-    public Operation operation() {
-        return operation;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitPTXIntBinaryIntrinsic: op=%s, x=%s, y=%s", operation, x, y);
-        PTXBuiltinTool gen = ((PTXArithmeticTool) lirGen).getGen().getPtxBuiltinTool();
-        Value x = builder.operand(getX());
-        Value y = builder.operand(getY());
-        Value result = switch (operation()) {
-            case MIN -> gen.genIntMin(x, y);
-            case MAX -> gen.genIntMax(x, y);
-            default -> throw shouldNotReachHere();
-        };
-        Variable var = builder.getLIRGeneratorTool().newVariable(result.getValueKind());
-        builder.getLIRGeneratorTool().append(new AssignStmt(var, result));
-        builder.setResult(this, var);
-
-    }
-
-    @Override
-    public ValueNode canonical(CanonicalizerTool tool, ValueNode x, ValueNode y) {
-        ValueNode c = tryConstantFold(x, y, operation(), getStackKind());
-        if (c != null) {
-            return c;
-        }
-        return this;
-    }
-
-    public enum Operation {
-        MAX, //
-        MIN, //
-    }
-
+  public enum Operation {
+    MAX, //
+    MIN, //
+  }
 }

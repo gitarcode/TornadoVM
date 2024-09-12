@@ -27,18 +27,17 @@ import java.util.Map;
 
 public class MetaReduceCodeAnalysis {
 
-    private Map<Integer, MetaReduceTasks> analysisTaskGraphTable;
+  private Map<Integer, MetaReduceTasks> analysisTaskGraphTable;
 
-    MetaReduceCodeAnalysis(Map<Integer, MetaReduceTasks> analysisTaskSchedule) {
-        this.analysisTaskGraphTable = analysisTaskSchedule;
-    }
+  MetaReduceCodeAnalysis(Map<Integer, MetaReduceTasks> analysisTaskSchedule) {
+    this.analysisTaskGraphTable = analysisTaskSchedule;
+  }
 
-    public boolean isValid() {
-        return (analysisTaskGraphTable != null) && !(analysisTaskGraphTable.isEmpty());
-    }
+  public boolean isValid() {
+    return (analysisTaskGraphTable != null) && !(analysisTaskGraphTable.isEmpty());
+  }
 
-    public Map<Integer, MetaReduceTasks> getTable() {
-        return analysisTaskGraphTable;
-    }
-
+  public Map<Integer, MetaReduceTasks> getTable() {
+    return analysisTaskGraphTable;
+  }
 }

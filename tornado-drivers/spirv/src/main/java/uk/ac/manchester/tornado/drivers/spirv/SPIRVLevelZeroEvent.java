@@ -30,87 +30,84 @@ import uk.ac.manchester.tornado.drivers.spirv.timestamps.TimeStamp;
 
 public class SPIRVLevelZeroEvent extends SPIRVEvent {
 
-    private int eventId;
-    private EventDescriptor descriptorId;
-    private LevelZeroTransferTimeStamp start;
-    private LevelZeroTransferTimeStamp stop;
-    private long startTime;
-    private long endTime;
+  private int eventId;
+  private EventDescriptor descriptorId;
+  private LevelZeroTransferTimeStamp start;
+  private LevelZeroTransferTimeStamp stop;
+  private long startTime;
+  private long endTime;
 
-    public SPIRVLevelZeroEvent(EventDescriptor descriptorId, int eventId, TimeStamp start, TimeStamp end) {
-        this.descriptorId = descriptorId;
-        this.eventId = eventId;
-        this.start = (LevelZeroTransferTimeStamp) start;
-        this.stop = (LevelZeroTransferTimeStamp) end;
-    }
+  public SPIRVLevelZeroEvent(
+      EventDescriptor descriptorId, int eventId, TimeStamp start, TimeStamp end) {
+    this.descriptorId = descriptorId;
+    this.eventId = eventId;
+    this.start = (LevelZeroTransferTimeStamp) start;
+    this.stop = (LevelZeroTransferTimeStamp) end;
+  }
 
-    @Override
-    public void waitForEvents(long executionPlanId) {
-        start.readTimeStamp();
-        stop.readTimeStamp();
-        start.flush(executionPlanId);
-        startTime = start.getTimeStamp();
-        endTime = stop.getTimeStamp();
-    }
+  @Override
+  public void waitForEvents(long executionPlanId) {
+    start.readTimeStamp();
+    stop.readTimeStamp();
+    start.flush(executionPlanId);
+    startTime = start.getTimeStamp();
+    endTime = stop.getTimeStamp();
+  }
 
-    @Override
-    public String getName() {
-        return descriptorId.getNameDescription();
-    }
+  @Override
+  public String getName() {
+    return descriptorId.getNameDescription();
+  }
 
-    @Override
-    public long getQueuedTime() {
-        return 0;
-    }
+  @Override
+  public long getQueuedTime() {
+    return 0;
+  }
 
-    @Override
-    public long getSubmitTime() {
-        return 0;
-    }
+  @Override
+  public long getSubmitTime() {
+    return 0;
+  }
 
-    @Override
-    public long getStartTime() {
-        return startTime;
-    }
+  @Override
+  public long getStartTime() {
+    return startTime;
+  }
 
-    @Override
-    public long getEndTime() {
-        return endTime;
-    }
+  @Override
+  public long getEndTime() {
+    return endTime;
+  }
 
-    @Override
-    public long getElapsedTime() {
-        long value = (endTime - startTime) * start.getTimeResolution();
-        return value;
-    }
+  @Override
+  public long getElapsedTime() {
+    long value = (endTime - startTime) * start.getTimeResolution();
+    return value;
+  }
 
-    @Override
-    public long getDriverDispatchTime() {
-        return 0;
-    }
+  @Override
+  public long getDriverDispatchTime() {
+    return 0;
+  }
 
-    @Override
-    public double getElapsedTimeInSeconds() {
-        return 0;
-    }
+  @Override
+  public double getElapsedTimeInSeconds() {
+    return 0;
+  }
 
-    @Override
-    public TornadoExecutionStatus getStatus() {
-        return null;
-    }
+  @Override
+  public TornadoExecutionStatus getStatus() {
+    return null;
+  }
 
-    @Override
-    public double getTotalTimeInSeconds() {
-        return 0;
-    }
+  @Override
+  public double getTotalTimeInSeconds() {
+    return 0;
+  }
 
-    @Override
-    public void waitOn() {
+  @Override
+  public void waitOn() {}
 
-    }
-
-    @Override
-    public void destroy() {
-    }
-
+  @Override
+  public void destroy() {}
 }

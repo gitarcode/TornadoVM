@@ -22,45 +22,44 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkRunner;
 
 public class Benchmark extends BenchmarkRunner {
 
-    private int size;
+  private int size;
 
-    @Override
-    public void parseArgs(String[] args) {
-        if (args.length == 2) {
-            iterations = Integer.parseInt(args[0]);
-            size = Integer.parseInt(args[1]);
-        } else if (args.length == 1) {
-            System.out.println("Two arguments are needed: iterations size");
-            System.exit(0);
-        } else {
-            iterations = 41;
-            size = 8192;
-        }
+  @Override
+  public void parseArgs(String[] args) {
+    if (args.length == 2) {
+      iterations = Integer.parseInt(args[0]);
+      size = Integer.parseInt(args[1]);
+    } else if (args.length == 1) {
+      System.out.println("Two arguments are needed: iterations size");
+      System.exit(0);
+    } else {
+      iterations = 41;
+      size = 8192;
     }
+  }
 
-    @Override
-    protected String getName() {
-        return "montecarlo";
-    }
+  @Override
+  protected String getName() {
+    return "montecarlo";
+  }
 
-    @Override
-    protected String getIdString() {
-        return String.format("%s-%d-%d", getName(), iterations, size);
-    }
+  @Override
+  protected String getIdString() {
+    return String.format("%s-%d-%d", getName(), iterations, size);
+  }
 
-    @Override
-    protected String getConfigString() {
-        return String.format("size=%d", size);
-    }
+  @Override
+  protected String getConfigString() {
+    return String.format("size=%d", size);
+  }
 
-    @Override
-    protected BenchmarkDriver getJavaDriver() {
-        return new MonteCarloJava(iterations, size);
-    }
+  @Override
+  protected BenchmarkDriver getJavaDriver() {
+    return new MonteCarloJava(iterations, size);
+  }
 
-    @Override
-    protected BenchmarkDriver getTornadoDriver() {
-        return new MonteCarloTornado(iterations, size);
-    }
-
+  @Override
+  protected BenchmarkDriver getTornadoDriver() {
+    return new MonteCarloTornado(iterations, size);
+  }
 }

@@ -21,78 +21,84 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.phases;
 
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.phases.OptimisticOptimizations;
 import org.graalvm.compiler.phases.PhaseSuite;
 import org.graalvm.compiler.phases.tiers.HighTierContext;
 import org.graalvm.compiler.phases.util.Providers;
-
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.runtime.common.BatchCompilationConfig;
 import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class TornadoHighTierContext extends HighTierContext {
 
-    protected final ResolvedJavaMethod method;
-    protected final Object[] args;
-    protected final TaskDataContext meta;
-    protected final boolean isKernel;
-    private BatchCompilationConfig batchCompilationConfig;
+  protected final ResolvedJavaMethod method;
+  protected final Object[] args;
+  protected final TaskDataContext meta;
+  protected final boolean isKernel;
+  private BatchCompilationConfig batchCompilationConfig;
 
-    public TornadoHighTierContext(Providers providers, PhaseSuite<HighTierContext> graphBuilderSuite, OptimisticOptimizations optimisticOpts, ResolvedJavaMethod method, Object[] args,
-            TaskDataContext meta, boolean isKernel, BatchCompilationConfig batchCompilationConfig) {
-        super(providers, graphBuilderSuite, optimisticOpts);
-        this.method = method;
-        this.args = args;
-        this.meta = meta;
-        this.isKernel = isKernel;
-        this.batchCompilationConfig = batchCompilationConfig;
-    }
+  public TornadoHighTierContext(
+      Providers providers,
+      PhaseSuite<HighTierContext> graphBuilderSuite,
+      OptimisticOptimizations optimisticOpts,
+      ResolvedJavaMethod method,
+      Object[] args,
+      TaskDataContext meta,
+      boolean isKernel,
+      BatchCompilationConfig batchCompilationConfig) {
+    super(providers, graphBuilderSuite, optimisticOpts);
+    this.method = method;
+    this.args = args;
+    this.meta = meta;
+    this.isKernel = isKernel;
+    this.batchCompilationConfig = batchCompilationConfig;
+  }
 
-    public ResolvedJavaMethod getMethod() {
-        return method;
-    }
+  public ResolvedJavaMethod getMethod() {
+    return method;
+  }
 
-    public Object[] getArgs() {
-        return args;
-    }
+  public Object[] getArgs() {
+    return args;
+  }
 
-    public boolean hasArgs() {
-        return args != null;
-    }
+  public boolean hasArgs() {
+    return args != null;
+  }
 
-    public Object getArg(int index) {
-        return args[index];
-    }
+  public Object getArg(int index) {
+    return args[index];
+  }
 
-    public int getNumArgs() {
-        return (hasArgs()) ? args.length : 0;
-    }
+  public int getNumArgs() {
+    return (hasArgs()) ? args.length : 0;
+  }
 
-    public TaskDataContext getMeta() {
-        return meta;
-    }
+  public TaskDataContext getMeta() {
+    return meta;
+  }
 
-    public TornadoXPUDevice getDeviceMapping() {
-        return meta.getXPUDevice();
-    }
+  public TornadoXPUDevice getDeviceMapping() {
+    return meta.getXPUDevice();
+  }
 
-    public boolean hasMeta() {
-        return meta != null;
-    }
+  public boolean hasMeta() {
+    return meta != null;
+  }
 
-    public boolean isKernel() {
-        return isKernel;
-    }
+  public boolean isKernel() {
+    return isKernel;
+  }
 
-    public BatchCompilationConfig getBatchCompilationConfig() {
-        return batchCompilationConfig;
-    }
+  public BatchCompilationConfig getBatchCompilationConfig() {
+    return batchCompilationConfig;
+  }
 
-    public boolean isGridSchedulerEnabled() {
-        if (meta != null) {
-            return meta.isGridSchedulerEnabled();
-        }
-        return false;
+  public boolean isGridSchedulerEnabled() {
+    if (meta != null) {
+      return meta.isGridSchedulerEnabled();
     }
+    return false;
+  }
 }

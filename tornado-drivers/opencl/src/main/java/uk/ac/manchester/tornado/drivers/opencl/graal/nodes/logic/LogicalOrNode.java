@@ -23,13 +23,12 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.nodes.logic;
 
 import static uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLBinaryOp.LOGICAL_OR;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
 import org.graalvm.compiler.lir.gen.LIRGeneratorTool;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.LogicNode;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLBinary;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.logic.BinaryLogicalNode;
@@ -37,17 +36,18 @@ import uk.ac.manchester.tornado.runtime.graal.nodes.logic.BinaryLogicalNode;
 @NodeInfo(shortName = "||")
 public class LogicalOrNode extends BinaryLogicalNode {
 
-    public static final NodeClass<LogicalOrNode> TYPE = NodeClass.create(LogicalOrNode.class);
+  public static final NodeClass<LogicalOrNode> TYPE = NodeClass.create(LogicalOrNode.class);
 
-    public LogicalOrNode(LogicNode x, LogicNode y) {
-        super(TYPE, x, y);
-    }
+  public LogicalOrNode(LogicNode x, LogicNode y) {
+    super(TYPE, x, y);
+  }
 
-    @Override
-    public Value generate(LIRGeneratorTool tool, Value x, Value y) {
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        AssignStmt assign = new AssignStmt(result, new OCLBinary.Expr(LOGICAL_OR, tool.getLIRKind(stamp), x, y));
-        tool.append(assign);
-        return result;
-    }
+  @Override
+  public Value generate(LIRGeneratorTool tool, Value x, Value y) {
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    AssignStmt assign =
+        new AssignStmt(result, new OCLBinary.Expr(LOGICAL_OR, tool.getLIRKind(stamp), x, y));
+    tool.append(assign);
+    return result;
+  }
 }

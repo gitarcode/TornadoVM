@@ -27,130 +27,164 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner euler
  * </code>
  */
 public class EulerTornado extends BenchmarkDriver {
 
-    private int size;
-    LongArray input;
-    LongArray outputA;
-    LongArray outputB;
-    LongArray outputC;
-    LongArray outputD;
-    LongArray outputE;
+  private int size;
+  LongArray input;
+  LongArray outputA;
+  LongArray outputB;
+  LongArray outputC;
+  LongArray outputD;
+  LongArray outputE;
 
-    public EulerTornado(int iterations, int size) {
-        super(iterations);
-        this.size = size;
+  public EulerTornado(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
+
+  private LongArray init(int size) {
+    LongArray input = new LongArray(size);
+    for (int i = 0; i < size; i++) {
+      input.set(i, ((long) i * i * i * i * i));
     }
+    return input;
+  }
 
-    private LongArray init(int size) {
-        LongArray input = new LongArray(size);
-        for (int i = 0; i < size; i++) {
-            input.set(i, ((long) i * i * i * i * i));
-        }
-        return input;
+  @Override
+  public void setUp() {
+    input = init(size);
+    outputA = new LongArray(size);
+    outputB = new LongArray(size);
+    outputC = new LongArray(size);
+    outputD = new LongArray(size);
+    outputE = new LongArray(size);
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
+            .task(
+                "euler",
+                ComputeKernels::euler,
+                size,
+                input,
+                outputA,
+                outputB,
+                outputC,
+                outputD,
+                outputE) //
+            .transferToHost(
+                DataTransferMode.EVERY_EXECUTION, outputA, outputB, outputC, outputD, outputE);
+
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
+
+  @Override
+  public void tearDown() {
+    input = null;
+    outputA = null;
+    outputB = null;
+    outputC = null;
+    outputD = null;
+    outputE = null;
+    super.tearDown();
+  }
+
+  private void runSequential(
+      int size,
+      LongArray input,
+      LongArray outputA,
+      LongArray outputB,
+      LongArray outputC,
+      LongArray outputD,
+      LongArray outputE) {
+    ComputeKernels.euler(size, input, outputA, outputB, outputC, outputD, outputE);
+    for (int i = 0; i < outputA.getSize(); i++) {
+      if (outputA.get(i) != 0) {
+        long a = outputA.get(i);
+        long b = outputB.get(i);
+        long c = outputC.get(i);
+        long d = outputD.get(i);
+        long e = outputE.get(i);
+        System.out.println(a + "^5 + " + b + "^5 + " + c + "^5 + " + d + "^5 = " + e + "^5");
+      }
     }
+  }
 
-    @Override
-    public void setUp() {
-        input = init(size);
-        outputA = new LongArray(size);
-        outputB = new LongArray(size);
-        outputC = new LongArray(size);
-        outputD = new LongArray(size);
-        outputE = new LongArray(size);
-        taskGraph = new TaskGraph("benchmark") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .task("euler", ComputeKernels::euler, size, input, outputA, outputB, outputC, outputD, outputE) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, outputA, outputB, outputC, outputD, outputE);
+  private void runParallel(
+      int size,
+      LongArray input,
+      LongArray outputA,
+      LongArray outputB,
+      LongArray outputC,
+      LongArray outputD,
+      LongArray outputE,
+      TornadoDevice device) {
+    TaskGraph graph =
+        new TaskGraph("s0") //
+            .task(
+                "s0",
+                ComputeKernels::euler,
+                size,
+                input,
+                outputA,
+                outputB,
+                outputC,
+                outputD,
+                outputE) //
+            .transferToHost(
+                DataTransferMode.EVERY_EXECUTION, outputA, outputB, outputC, outputD, outputE);
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+    ImmutableTaskGraph immutableTaskGraph = graph.snapshot();
+    TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withDevice(device).execute();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+    LongArray input = init(size);
+    LongArray outputA = new LongArray(size);
+    LongArray outputB = new LongArray(size);
+    LongArray outputC = new LongArray(size);
+    LongArray outputD = new LongArray(size);
+    LongArray outputE = new LongArray(size);
+
+    runSequential(size, input, outputA, outputB, outputC, outputD, outputE);
+
+    LongArray outputAT = new LongArray(size);
+    LongArray outputBT = new LongArray(size);
+    LongArray outputCT = new LongArray(size);
+    LongArray outputDT = new LongArray(size);
+    LongArray outputET = new LongArray(size);
+
+    runParallel(size, input, outputAT, outputBT, outputCT, outputDT, outputET, device);
+
+    for (int i = 0; i < outputA.getSize(); i++) {
+      if (outputAT.get(i) != outputA.get(i)) {
+        return false;
+      }
+      if (outputBT.get(i) != outputB.get(i)) {
+        return false;
+      }
+      if (outputCT.get(i) != outputC.get(i)) {
+        return false;
+      }
+      if (outputDT.get(i) != outputD.get(i)) {
+        return false;
+      }
+      if (outputET.get(i) != outputE.get(i)) {
+        return false;
+      }
     }
+    return true;
+  }
 
-    @Override
-    public void tearDown() {
-        input = null;
-        outputA = null;
-        outputB = null;
-        outputC = null;
-        outputD = null;
-        outputE = null;
-        super.tearDown();
-    }
-
-    private void runSequential(int size, LongArray input, LongArray outputA, LongArray outputB, LongArray outputC, LongArray outputD, LongArray outputE) {
-        ComputeKernels.euler(size, input, outputA, outputB, outputC, outputD, outputE);
-        for (int i = 0; i < outputA.getSize(); i++) {
-            if (outputA.get(i) != 0) {
-                long a = outputA.get(i);
-                long b = outputB.get(i);
-                long c = outputC.get(i);
-                long d = outputD.get(i);
-                long e = outputE.get(i);
-                System.out.println(a + "^5 + " + b + "^5 + " + c + "^5 + " + d + "^5 = " + e + "^5");
-            }
-        }
-    }
-
-    private void runParallel(int size, LongArray input, LongArray outputA, LongArray outputB, LongArray outputC, LongArray outputD, LongArray outputE, TornadoDevice device) {
-        TaskGraph graph = new TaskGraph("s0") //
-                .task("s0", ComputeKernels::euler, size, input, outputA, outputB, outputC, outputD, outputE) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, outputA, outputB, outputC, outputD, outputE);
-
-        ImmutableTaskGraph immutableTaskGraph = graph.snapshot();
-        TornadoExecutionPlan executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withDevice(device).execute();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        LongArray input = init(size);
-        LongArray outputA = new LongArray(size);
-        LongArray outputB = new LongArray(size);
-        LongArray outputC = new LongArray(size);
-        LongArray outputD = new LongArray(size);
-        LongArray outputE = new LongArray(size);
-
-        runSequential(size, input, outputA, outputB, outputC, outputD, outputE);
-
-        LongArray outputAT = new LongArray(size);
-        LongArray outputBT = new LongArray(size);
-        LongArray outputCT = new LongArray(size);
-        LongArray outputDT = new LongArray(size);
-        LongArray outputET = new LongArray(size);
-
-        runParallel(size, input, outputAT, outputBT, outputCT, outputDT, outputET, device);
-
-        for (int i = 0; i < outputA.getSize(); i++) {
-            if (outputAT.get(i) != outputA.get(i)) {
-                return false;
-            }
-            if (outputBT.get(i) != outputB.get(i)) {
-                return false;
-            }
-            if (outputCT.get(i) != outputC.get(i)) {
-                return false;
-            }
-            if (outputDT.get(i) != outputD.get(i)) {
-                return false;
-            }
-            if (outputET.get(i) != outputE.get(i)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 }

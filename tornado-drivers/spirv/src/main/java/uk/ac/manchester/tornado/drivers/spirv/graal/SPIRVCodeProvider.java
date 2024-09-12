@@ -34,67 +34,69 @@ import jdk.vm.ci.meta.ResolvedJavaMethod;
 import jdk.vm.ci.meta.SpeculationLog;
 import uk.ac.manchester.tornado.drivers.spirv.SPIRVTargetDescription;
 
-/**
- * Access to the code cache for SPIRV and interaction with JVMCI.
- */
+/** Access to the code cache for SPIRV and interaction with JVMCI. */
 public class SPIRVCodeProvider implements CodeCacheProvider {
 
-    private SPIRVTargetDescription target;
+  private SPIRVTargetDescription target;
 
-    public SPIRVCodeProvider(SPIRVTargetDescription target) {
-        this.target = target;
-    }
+  public SPIRVCodeProvider(SPIRVTargetDescription target) {
+    this.target = target;
+  }
 
-    @Override
-    public InstalledCode installCode(ResolvedJavaMethod method, CompiledCode compiledCode, InstalledCode installedCode, SpeculationLog log, boolean isDefault) {
-        unimplemented("waiting for CompiledCode to be implemented first");
-        return null;
-    }
+  @Override
+  public InstalledCode installCode(
+      ResolvedJavaMethod method,
+      CompiledCode compiledCode,
+      InstalledCode installedCode,
+      SpeculationLog log,
+      boolean isDefault) {
+    unimplemented("waiting for CompiledCode to be implemented first");
+    return null;
+  }
 
-    @Override
-    public void invalidateInstalledCode(InstalledCode installedCode) {
-        installedCode.invalidate();
-    }
+  @Override
+  public void invalidateInstalledCode(InstalledCode installedCode) {
+    installedCode.invalidate();
+  }
 
-    /**
-     * Obtain a register configuration that will be used when compiling a given
-     * method.
-     * 
-     * @return SPIRVRegisterConfig
-     */
-    @Override
-    public RegisterConfig getRegisterConfig() {
-        return new SPIRVRegisterConfig();
-    }
+  /**
+   * Obtain a register configuration that will be used when compiling a given method.
+   *
+   * @return SPIRVRegisterConfig
+   */
+  @Override
+  public RegisterConfig getRegisterConfig() {
+    return new SPIRVRegisterConfig();
+  }
 
-    @Override
-    public int getMinimumOutgoingSize() {
-        return 0;
-    }
+  @Override
+  public int getMinimumOutgoingSize() {
+    return 0;
+  }
 
-    /**
-     * A descriptor for the target architecture.
-     * 
-     * @return {@link TargetDescription}
-     */
-    @Override
-    public TargetDescription getTarget() {
-        return target;
-    }
+  /**
+   * A descriptor for the target architecture.
+   *
+   * @return {@link TargetDescription}
+   */
+  @Override
+  public TargetDescription getTarget() {
+    return target;
+  }
 
-    @Override
-    public SpeculationLog createSpeculationLog() {
-        return null;
-    }
+  @Override
+  public SpeculationLog createSpeculationLog() {
+    return null;
+  }
 
-    @Override
-    public long getMaxCallTargetOffset(long address) {
-        unimplemented("Max call target offset not implemented yet.");
-        return -1;
-    }
+  @Override
+  public long getMaxCallTargetOffset(long address) {
+    unimplemented("Max call target offset not implemented yet.");
+    return -1;
+  }
 
-    @Override
-    public boolean shouldDebugNonSafepoints() {
-        return false;
-    }
+  @Override
+  public boolean shouldDebugNonSafepoints() {
+    return false;
+  }
 }

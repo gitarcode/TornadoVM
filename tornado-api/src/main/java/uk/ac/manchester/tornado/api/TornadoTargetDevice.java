@@ -19,26 +19,25 @@ package uk.ac.manchester.tornado.api;
 
 public interface TornadoTargetDevice {
 
-    String getDeviceName();
+  String getDeviceName();
 
-    long getDeviceGlobalMemorySize();
+  long getDeviceGlobalMemorySize();
 
-    long getDeviceLocalMemorySize();
+  long getDeviceLocalMemorySize();
 
-    int getDeviceMaxComputeUnits();
+  int getDeviceMaxComputeUnits();
 
-    long[] getDeviceMaxWorkItemSizes();
+  long[] getDeviceMaxWorkItemSizes();
 
-    long[] getDeviceMaxWorkGroupSize();
+  long[] getDeviceMaxWorkGroupSize();
 
-    int getMaxThreadsPerBlock();
+  int getMaxThreadsPerBlock();
 
-    int getDeviceMaxClockFrequency();
+  int getDeviceMaxClockFrequency();
 
-    long getDeviceMaxConstantBufferSize();
+  long getDeviceMaxConstantBufferSize();
 
-    long getDeviceMaxAllocationSize();
+  long getDeviceMaxAllocationSize();
 
-    String getDeviceInfo();
-
+  String getDeviceInfo();
 }

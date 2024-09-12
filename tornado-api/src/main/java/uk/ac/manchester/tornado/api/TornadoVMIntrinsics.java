@@ -24,18 +24,18 @@ import uk.ac.manchester.tornado.api.types.arrays.IntArray;
 @TornadoVMIntrinsic
 public class TornadoVMIntrinsics {
 
-    /**
-     * Compute (old + value) and store result at location pointed by p. The function returns old.
-     *
-     * @param array
-     * @param index
-     * @param value
-     * @return old value
-     */
-    @Deprecated
-    public static synchronized int atomic_add(IntArray array, int index, int value) {
-        int old = array.get(index);
-        array.set(index, array.get(index) + value);
-        return old;
-    }
+  /**
+   * Compute (old + value) and store result at location pointed by p. The function returns old.
+   *
+   * @param array
+   * @param index
+   * @param value
+   * @return old value
+   */
+  @Deprecated
+  public static synchronized int atomic_add(IntArray array, int index, int value) {
+    int old = array.get(index);
+    array.set(index, array.get(index) + value);
+    return old;
+  }
 }

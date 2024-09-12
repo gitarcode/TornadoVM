@@ -24,6 +24,8 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -34,9 +36,6 @@ import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.SPIRVLIRGenerator;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
@@ -45,34 +44,36 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
 @NodeInfo
 public class SPIRVKernelContextAccessNode extends FloatingNode implements LIRLowerable {
 
-    @Input
-    private ConstantNode index;
+  @Input private ConstantNode index;
 
-    public static final NodeClass<SPIRVKernelContextAccessNode> TYPE = NodeClass.create(SPIRVKernelContextAccessNode.class);
+  public static final NodeClass<SPIRVKernelContextAccessNode> TYPE =
+      NodeClass.create(SPIRVKernelContextAccessNode.class);
 
-    public SPIRVKernelContextAccessNode(ConstantNode index) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        this.index = index;
-    }
+  public SPIRVKernelContextAccessNode(ConstantNode index) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    this.index = index;
+  }
 
-    public ConstantNode getIndex() {
-        return this.index;
-    }
+  public ConstantNode getIndex() {
+    return this.index;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
 
-        // We know we load an integer value
-        SPIRVKind spirvKind = SPIRVKind.OP_TYPE_INT_32;
-        LIRKind lirKind = LIRKind.value(spirvKind);
+    // We know we load an integer value
+    SPIRVKind spirvKind = SPIRVKind.OP_TYPE_INT_32;
+    LIRKind lirKind = LIRKind.value(spirvKind);
 
-        Value value = gen.operand(index);
-        SPIRVLIRStmt.ASSIGNIndexedParameter assignStmt = new SPIRVLIRStmt.ASSIGNIndexedParameter(result, new SPIRVUnary.LoadIndexValueFromKernelContext(lirKind, spirvKind, value));
-        gen.setResult(this, result);
+    Value value = gen.operand(index);
+    SPIRVLIRStmt.ASSIGNIndexedParameter assignStmt =
+        new SPIRVLIRStmt.ASSIGNIndexedParameter(
+            result, new SPIRVUnary.LoadIndexValueFromKernelContext(lirKind, spirvKind, value));
+    gen.setResult(this, result);
 
-        SPIRVLIRGenerator spirvlirGenerator = (SPIRVLIRGenerator) gen.getLIRGeneratorTool();
-        spirvlirGenerator.append(assignStmt);
-    }
+    SPIRVLIRGenerator spirvlirGenerator = (SPIRVLIRGenerator) gen.getLIRGeneratorTool();
+    spirvlirGenerator.append(assignStmt);
+  }
 }

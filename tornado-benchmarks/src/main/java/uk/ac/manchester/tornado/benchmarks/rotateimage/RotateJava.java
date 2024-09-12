@@ -27,56 +27,56 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class RotateJava extends BenchmarkDriver {
 
-    private final int numElementsX;
-    private final int numElementsY;
+  private final int numElementsX;
+  private final int numElementsY;
 
-    private ImageFloat3 input;
-    private ImageFloat3 output;
-    private Matrix4x4Float m;
+  private ImageFloat3 input;
+  private ImageFloat3 output;
+  private Matrix4x4Float m;
 
-    public RotateJava(int iterations, int numElementsX, int numElementsY) {
-        super(iterations);
-        this.numElementsX = numElementsX;
-        this.numElementsY = numElementsY;
+  public RotateJava(int iterations, int numElementsX, int numElementsY) {
+    super(iterations);
+    this.numElementsX = numElementsX;
+    this.numElementsY = numElementsY;
+  }
+
+  @Override
+  public void setUp() {
+    input = new ImageFloat3(numElementsX, numElementsY);
+    output = new ImageFloat3(numElementsX, numElementsY);
+    m = new Matrix4x4Float();
+    m.identity();
+    final Float3 value = new Float3(1f, 2f, 3f);
+    for (int i = 0; i < input.Y(); i++) {
+      for (int j = 0; j < input.X(); j++) {
+        input.set(j, i, value);
+      }
     }
+  }
 
-    @Override
-    public void setUp() {
-        input = new ImageFloat3(numElementsX, numElementsY);
-        output = new ImageFloat3(numElementsX, numElementsY);
-        m = new Matrix4x4Float();
-        m.identity();
-        final Float3 value = new Float3(1f, 2f, 3f);
-        for (int i = 0; i < input.Y(); i++) {
-            for (int j = 0; j < input.X(); j++) {
-                input.set(j, i, value);
-            }
-        }
-    }
+  @Override
+  public void tearDown() {
+    input = null;
+    output = null;
+    m = null;
+    super.tearDown();
+  }
 
-    @Override
-    public void tearDown() {
-        input = null;
-        output = null;
-        m = null;
-        super.tearDown();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    rotateImage(output, m, input);
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        rotateImage(output, m, input);
-    }
+  @Override
+  public void barrier() {}
 
-    @Override
-    public void barrier() {
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

@@ -21,22 +21,20 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.snippets;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.replacements.SnippetTemplate.SnippetInfo;
-
-import jdk.vm.ci.meta.JavaKind;
 
 /// FIXME: <Refactor> across 3 backends
 public interface TornadoSnippetTypeInference {
 
-    SnippetInfo inferIntSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferIntSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo inferLongSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferLongSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo inferFloatSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferFloatSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo inferDoubleSnippet(ValueNode value, ValueNode extra);
+  SnippetInfo inferDoubleSnippet(ValueNode value, ValueNode extra);
 
-    SnippetInfo getSnippetInstance(JavaKind elementKind, ValueNode value, ValueNode extra);
-
+  SnippetInfo getSnippetInstance(JavaKind elementKind, ValueNode value, ValueNode extra);
 }

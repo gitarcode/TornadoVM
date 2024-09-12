@@ -35,7 +35,6 @@ import org.graalvm.compiler.phases.common.FixReadsPhase;
 import org.graalvm.compiler.phases.common.IterativeConditionalEliminationPhase;
 import org.graalvm.compiler.phases.common.LowTierLoweringPhase;
 import org.graalvm.compiler.phases.schedule.SchedulePhase;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.analysis.TornadoFeatureExtraction;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.loops.TornadoLoopCanonicalization;
@@ -49,50 +48,55 @@ import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoLowTier;
 
 public class PTXLowTier extends TornadoLowTier {
 
-    TornadoDeviceContext tornadoDeviceContext;
+  TornadoDeviceContext tornadoDeviceContext;
 
-    public PTXLowTier(OptionValues options, TornadoDeviceContext tornadoDeviceContext, AddressLoweringByNodePhase.AddressLowering addressLowering) {
-        this.tornadoDeviceContext = tornadoDeviceContext;
-        CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
+  public PTXLowTier(
+      OptionValues options,
+      TornadoDeviceContext tornadoDeviceContext,
+      AddressLoweringByNodePhase.AddressLowering addressLowering) {
+    this.tornadoDeviceContext = tornadoDeviceContext;
+    CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
 
-        appendPhase(new LowTierLoweringPhase(canonicalizer));
+    appendPhase(new LowTierLoweringPhase(canonicalizer));
 
-        /*
-         * Cleanup IsNull checks resulting from MID_TIER/LOW_TIER lowering and
-         * ExpandLogic phase.
-         */
-        if (ConditionalElimination.getValue(options)) {
-            appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
-        }
-
-        appendPhase(new TornadoHalfFloatVectorOffset());
-
-        appendPhase(new FixReadsPhase(true, new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS)));
-
-        appendPhase(new TornadoFixedArrayCopyPhase());
-
-        appendPhase(new AddressLoweringByNodePhase(addressLowering));
-
-        appendPhase(new DeadCodeEliminationPhase(Required));
-
-        appendPhase(new TornadoLoopCanonicalization());
-
-        if (TornadoOptions.ENABLE_FMA) {
-            appendPhase(new PTXFMAPhase());
-        }
-
-        if (TornadoOptions.MATH_OPTIMIZATIONS) {
-            appendPhase(new InverseSquareRootPhase());
-        }
-
-        appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS));
-
-        if (TornadoOptions.FEATURE_EXTRACTION) {
-            appendPhase(new TornadoFeatureExtraction(tornadoDeviceContext));
-        }
-
-        if (TornadoOptions.DUMP_LOW_TIER_WITH_IGV) {
-            appendPhase(new DumpLowTierGraph());
-        }
+    /*
+     * Cleanup IsNull checks resulting from MID_TIER/LOW_TIER lowering and
+     * ExpandLogic phase.
+     */
+    if (ConditionalElimination.getValue(options)) {
+      appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
     }
+
+    appendPhase(new TornadoHalfFloatVectorOffset());
+
+    appendPhase(
+        new FixReadsPhase(
+            true, new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS)));
+
+    appendPhase(new TornadoFixedArrayCopyPhase());
+
+    appendPhase(new AddressLoweringByNodePhase(addressLowering));
+
+    appendPhase(new DeadCodeEliminationPhase(Required));
+
+    appendPhase(new TornadoLoopCanonicalization());
+
+    if (TornadoOptions.ENABLE_FMA) {
+      appendPhase(new PTXFMAPhase());
+    }
+
+    if (TornadoOptions.MATH_OPTIMIZATIONS) {
+      appendPhase(new InverseSquareRootPhase());
+    }
+
+    appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.LATEST_OUT_OF_LOOPS));
+
+    if (TornadoOptions.FEATURE_EXTRACTION) {
+      appendPhase(new TornadoFeatureExtraction(tornadoDeviceContext));
+    }
+
+    if (TornadoOptions.DUMP_LOW_TIER_WITH_IGV) {
+      appendPhase(new DumpLowTierGraph());
+    }
+  }
 }

@@ -25,8 +25,7 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 public interface SPIRVDispatcher {
 
-    int getNumPlatforms();
+  int getNumPlatforms();
 
-    SPIRVPlatform getPlatform(int index);
-
+  SPIRVPlatform getPlatform(int index);
 }

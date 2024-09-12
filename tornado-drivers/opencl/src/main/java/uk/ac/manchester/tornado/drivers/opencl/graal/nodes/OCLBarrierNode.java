@@ -30,7 +30,6 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.memory.MemoryKill;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLUnaryIntrinsic;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
@@ -38,21 +37,23 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
 @NodeInfo
 public class OCLBarrierNode extends FixedWithNextNode implements LIRLowerable, MemoryKill {
 
-    public static final NodeClass<OCLBarrierNode> TYPE = NodeClass.create(OCLBarrierNode.class);
+  public static final NodeClass<OCLBarrierNode> TYPE = NodeClass.create(OCLBarrierNode.class);
 
-    public enum OCLMemFenceFlags {
-        GLOBAL, LOCAL;
-    }
+  public enum OCLMemFenceFlags {
+    GLOBAL,
+    LOCAL;
+  }
 
-    private final OCLMemFenceFlags flags;
+  private final OCLMemFenceFlags flags;
 
-    public OCLBarrierNode(OCLMemFenceFlags flags) {
-        super(TYPE, StampFactory.forVoid());
-        this.flags = flags;
-    }
+  public OCLBarrierNode(OCLMemFenceFlags flags) {
+    super(TYPE, StampFactory.forVoid());
+    this.flags = flags;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        gen.getLIRGeneratorTool().append(new OCLLIRStmt.ExprStmt(new OCLUnary.Barrier(OCLUnaryIntrinsic.BARRIER, flags)));
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    gen.getLIRGeneratorTool()
+        .append(new OCLLIRStmt.ExprStmt(new OCLUnary.Barrier(OCLUnaryIntrinsic.BARRIER, flags)));
+  }
 }

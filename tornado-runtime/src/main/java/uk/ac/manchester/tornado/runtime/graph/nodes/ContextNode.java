@@ -25,87 +25,79 @@ package uk.ac.manchester.tornado.runtime.graph.nodes;
 import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
 
 /**
- * It represents a context node used in a
- * {@link uk.ac.manchester.tornado.runtime.graph.TornadoVMGraphCompiler}.
+ * It represents a context node used in a {@link
+ * uk.ac.manchester.tornado.runtime.graph.TornadoVMGraphCompiler}.
  */
 public class ContextNode extends AbstractNode {
 
-    private int deviceIndex;
-    private TornadoXPUDevice device;
+  private int deviceIndex;
+  private TornadoXPUDevice device;
 
-    /**
-     * It constructs a ContextNode with the given device index and
-     * {@link TornadoXPUDevice}.
-     *
-     * @param index
-     *     The index of the device.
-     * @param device
-     *     The {@link TornadoXPUDevice} associated with this context
-     *     node.
-     */
-    public ContextNode(int index, TornadoXPUDevice device) {
-        this.deviceIndex = index;
-        this.device = device;
+  /**
+   * It constructs a ContextNode with the given device index and {@link TornadoXPUDevice}.
+   *
+   * @param index The index of the device.
+   * @param device The {@link TornadoXPUDevice} associated with this context node.
+   */
+  public ContextNode(int index, TornadoXPUDevice device) {
+    this.deviceIndex = index;
+    this.device = device;
+  }
+
+  @Override
+  public int compareTo(AbstractNode o) {
+    if (!(o instanceof ContextNode)) {
+      return -1;
     }
 
-    @Override
-    public int compareTo(AbstractNode o) {
-        if (!(o instanceof ContextNode)) {
-            return -1;
-        }
+    return Integer.compare(deviceIndex, ((ContextNode) o).deviceIndex);
+  }
 
-        return Integer.compare(deviceIndex, ((ContextNode) o).deviceIndex);
+  /**
+   * It gets the device index associated with this context node.
+   *
+   * @return The device index.
+   */
+  public int getDeviceIndex() {
+    return deviceIndex;
+  }
+
+  /**
+   * It sets the device index associated with this context node.
+   *
+   * @param deviceIndex The device index to set.
+   */
+  public void setDeviceIndex(int deviceIndex) {
+    this.deviceIndex = deviceIndex;
+  }
+
+  /**
+   * It gets the {@link TornadoXPUDevice} associated with this context node.
+   *
+   * @return {@link TornadoXPUDevice}
+   */
+  public TornadoXPUDevice getDevice() {
+    return this.device;
+  }
+
+  /**
+   * It sets the {@link TornadoXPUDevice} associated with this context node.
+   *
+   * @param device The {@link TornadoXPUDevice} to set.
+   */
+  public void setDevice(TornadoXPUDevice device) {
+    this.device = device;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+
+    sb.append(String.format("[%d]: context device=%d, [ ", id, deviceIndex));
+    for (AbstractNode use : uses) {
+      sb.append("").append(use.getId()).append(" ");
     }
-
-    /**
-     * It gets the device index associated with this context node.
-     *
-     * @return The device index.
-     */
-    public int getDeviceIndex() {
-        return deviceIndex;
-    }
-
-    /**
-     * It sets the device index associated with this context node.
-     *
-     * @param deviceIndex
-     *     The device index to set.
-     */
-    public void setDeviceIndex(int deviceIndex) {
-        this.deviceIndex = deviceIndex;
-    }
-
-    /**
-     * It gets the {@link TornadoXPUDevice} associated with this context
-     * node.
-     *
-     * @return {@link TornadoXPUDevice}
-     */
-    public TornadoXPUDevice getDevice() {
-        return this.device;
-    }
-
-    /**
-     * It sets the {@link TornadoXPUDevice} associated with this context
-     * node.
-     *
-     * @param device
-     *     The {@link TornadoXPUDevice} to set.
-     */
-    public void setDevice(TornadoXPUDevice device) {
-        this.device = device;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(String.format("[%d]: context device=%d, [ ", id, deviceIndex));
-        for (AbstractNode use : uses) {
-            sb.append("").append(use.getId()).append(" ");
-        }
-        sb.append("]");
-        return sb.toString();
-    }
+    sb.append("]");
+    return sb.toString();
+  }
 }

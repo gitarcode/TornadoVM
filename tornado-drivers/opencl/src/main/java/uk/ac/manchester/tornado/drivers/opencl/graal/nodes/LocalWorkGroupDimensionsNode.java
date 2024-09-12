@@ -23,50 +23,45 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.ConstantNode;
-import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 
-import jdk.vm.ci.meta.JavaKind;
-
 @NodeInfo
 public class LocalWorkGroupDimensionsNode extends FloatingNode implements LIRLowerable {
 
-    @Input
-    ConstantNode x;
-    @Input
-    ConstantNode y;
-    @Input
-    ConstantNode z;
+  @Input ConstantNode x;
+  @Input ConstantNode y;
+  @Input ConstantNode z;
 
-    public static final NodeClass<LocalWorkGroupDimensionsNode> TYPE = NodeClass.create(LocalWorkGroupDimensionsNode.class);
+  public static final NodeClass<LocalWorkGroupDimensionsNode> TYPE =
+      NodeClass.create(LocalWorkGroupDimensionsNode.class);
 
-    public LocalWorkGroupDimensionsNode(ConstantNode x, ConstantNode y, ConstantNode z) {
-        super(TYPE, StampFactory.forKind(JavaKind.Int));
-        assert stamp != null;
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
+  public LocalWorkGroupDimensionsNode(ConstantNode x, ConstantNode y, ConstantNode z) {
+    super(TYPE, StampFactory.forKind(JavaKind.Int));
+    assert stamp != null;
+    this.x = x;
+    this.y = y;
+    this.z = z;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {}
 
-    public String getXToString() {
-        return x.asJavaConstant().toValueString();
-    }
+  public String getXToString() {
+    return x.asJavaConstant().toValueString();
+  }
 
-    public String getYToString() {
-        return y.asJavaConstant().toValueString();
-    }
+  public String getYToString() {
+    return y.asJavaConstant().toValueString();
+  }
 
-    public String getZToString() {
-        return z.asJavaConstant().toValueString();
-    }
+  public String getZToString() {
+    return z.asJavaConstant().toValueString();
+  }
 }

@@ -34,7 +34,6 @@ import org.graalvm.compiler.phases.common.DeadCodeEliminationPhase;
 import org.graalvm.compiler.phases.common.IterativeConditionalEliminationPhase;
 import org.graalvm.compiler.phases.common.inlining.InliningPhase;
 import org.graalvm.compiler.phases.common.inlining.policy.InliningPolicy;
-
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoHalfFloatFixedGuardElimination;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoSketchTierContext;
@@ -53,41 +52,46 @@ import uk.ac.manchester.tornado.runtime.graal.phases.sketcher.TornadoStampResolv
 
 public class TornadoSketchTier extends PhaseSuite<TornadoSketchTierContext> {
 
-    protected final CanonicalizerPhase.CustomSimplification customSimplification;
+  protected final CanonicalizerPhase.CustomSimplification customSimplification;
 
-    public TornadoSketchTier(OptionValues options, CanonicalizerPhase.CustomSimplification customCanonicalizer) {
-        this.customSimplification = customCanonicalizer;
+  public TornadoSketchTier(
+      OptionValues options, CanonicalizerPhase.CustomSimplification customCanonicalizer) {
+    this.customSimplification = customCanonicalizer;
 
-        appendPhase(new TornadoNumericPromotionPhase());
+    appendPhase(new TornadoNumericPromotionPhase());
 
-        InliningPolicy inliningPolicy = (TornadoOptions.FULL_INLINING) ? new TornadoFullInliningPolicy() : new TornadoPartialInliningPolicy();
+    InliningPolicy inliningPolicy =
+        (TornadoOptions.FULL_INLINING)
+            ? new TornadoFullInliningPolicy()
+            : new TornadoPartialInliningPolicy();
 
-        CanonicalizerPhase canonicalizer = createCanonicalizerPhase(options, customCanonicalizer);
+    CanonicalizerPhase canonicalizer = createCanonicalizerPhase(options, customCanonicalizer);
+    appendPhase(canonicalizer);
+
+    if (Inline.getValue(options)) {
+      appendPhase(new InliningPhase(inliningPolicy, canonicalizer));
+      appendPhase(new DeadCodeEliminationPhase(Optional));
+
+      if (ConditionalElimination.getValue(options)) {
         appendPhase(canonicalizer);
-
-        if (Inline.getValue(options)) {
-            appendPhase(new InliningPhase(inliningPolicy, canonicalizer));
-            appendPhase(new DeadCodeEliminationPhase(Optional));
-
-            if (ConditionalElimination.getValue(options)) {
-                appendPhase(canonicalizer);
-                appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
-            }
-        }
-
-        appendPhase(new TornadoStampResolver());
-        appendPhase(new TornadoHalfFloatFixedGuardElimination());
-        appendPhase(new TornadoNativeTypeElimination());
-        appendPhase(new TornadoReduceReplacement());
-        appendPhase(new TornadoApiReplacement());
-        appendPhase(new TornadoKernelContextReplacement());
-        appendPhase(new TornadoAutoParalleliser());
-        appendPhase(new TornadoDataflowAnalysis());
-        appendPhase(new TornadoPanamaPrivateMemory());
-        appendPhase(new TornadoBatchFunctionAnalysis());
+        appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
+      }
     }
 
-    private CanonicalizerPhase createCanonicalizerPhase(OptionValues options, CanonicalizerPhase.CustomSimplification customCanonicalizer) {
-        return CanonicalizerPhase.create();
-    }
+    appendPhase(new TornadoStampResolver());
+    appendPhase(new TornadoHalfFloatFixedGuardElimination());
+    appendPhase(new TornadoNativeTypeElimination());
+    appendPhase(new TornadoReduceReplacement());
+    appendPhase(new TornadoApiReplacement());
+    appendPhase(new TornadoKernelContextReplacement());
+    appendPhase(new TornadoAutoParalleliser());
+    appendPhase(new TornadoDataflowAnalysis());
+    appendPhase(new TornadoPanamaPrivateMemory());
+    appendPhase(new TornadoBatchFunctionAnalysis());
+  }
+
+  private CanonicalizerPhase createCanonicalizerPhase(
+      OptionValues options, CanonicalizerPhase.CustomSimplification customCanonicalizer) {
+    return CanonicalizerPhase.create();
+  }
 }

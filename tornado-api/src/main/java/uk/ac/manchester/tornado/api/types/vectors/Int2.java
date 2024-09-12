@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.api.types.vectors;
 
 import java.nio.IntBuffer;
-
 import uk.ac.manchester.tornado.api.internal.annotations.Payload;
 import uk.ac.manchester.tornado.api.internal.annotations.Vector;
 import uk.ac.manchester.tornado.api.math.TornadoMath;
@@ -26,201 +25,195 @@ import uk.ac.manchester.tornado.api.math.TornadoMath;
 @Vector
 public final class Int2 implements TornadoVectorsInterface<IntBuffer> {
 
-    public static final Class<Int2> TYPE = Int2.class;
+  public static final Class<Int2> TYPE = Int2.class;
 
-    private static final String NUMBER_FORMAT = "{ x=%-7d, y=%-7d }";
-    /**
-     * number of elements in the storage.
-     */
-    private static final int NUM_ELEMENTS = 2;
-    /**
-     * backing array.
-     */
-    @Payload
-    private final int[] storage;
+  private static final String NUMBER_FORMAT = "{ x=%-7d, y=%-7d }";
 
-    private Int2(int[] storage) {
-        this.storage = storage;
-    }
+  /** number of elements in the storage. */
+  private static final int NUM_ELEMENTS = 2;
 
-    public Int2() {
-        this(new int[NUM_ELEMENTS]);
-    }
+  /** backing array. */
+  @Payload private final int[] storage;
 
-    public Int2(int x, int y) {
-        this();
-        setX(x);
-        setY(y);
-    }
+  private Int2(int[] storage) {
+    this.storage = storage;
+  }
 
-    /**
-     * * Operations on Int2 vectors.
-     */
-    /*
-     * vector = op( vector, vector )
-     */
-    public static Int2 add(Int2 a, Int2 b) {
-        return new Int2(a.getX() + b.getX(), a.getY() + b.getY());
-    }
+  public Int2() {
+    this(new int[NUM_ELEMENTS]);
+  }
 
-    public static Int2 sub(Int2 a, Int2 b) {
-        return new Int2(a.getX() - b.getX(), a.getY() - b.getY());
-    }
+  public Int2(int x, int y) {
+    this();
+    setX(x);
+    setY(y);
+  }
 
-    public static Int2 div(Int2 a, Int2 b) {
-        return new Int2(a.getX() / b.getX(), a.getY() / b.getY());
-    }
+  /** * Operations on Int2 vectors. */
+  /*
+   * vector = op( vector, vector )
+   */
+  public static Int2 add(Int2 a, Int2 b) {
+    return new Int2(a.getX() + b.getX(), a.getY() + b.getY());
+  }
 
-    public static Int2 mult(Int2 a, Int2 b) {
-        return new Int2(a.getX() * b.getX(), a.getY() * b.getY());
-    }
+  public static Int2 sub(Int2 a, Int2 b) {
+    return new Int2(a.getX() - b.getX(), a.getY() - b.getY());
+  }
 
-    public static Int2 min(Int2 a, Int2 b) {
-        return new Int2(Math.min(a.getX(), b.getX()), Math.min(a.getY(), b.getY()));
-    }
+  public static Int2 div(Int2 a, Int2 b) {
+    return new Int2(a.getX() / b.getX(), a.getY() / b.getY());
+  }
 
-    public static Int2 max(Int2 a, Int2 b) {
-        return new Int2(Math.max(a.getX(), b.getX()), Math.max(a.getY(), b.getY()));
-    }
+  public static Int2 mult(Int2 a, Int2 b) {
+    return new Int2(a.getX() * b.getX(), a.getY() * b.getY());
+  }
 
-    /*
-     * vector = op (vector, scalar)
-     */
-    public static Int2 add(Int2 a, int b) {
-        return new Int2(a.getX() + b, a.getY() + b);
-    }
+  public static Int2 min(Int2 a, Int2 b) {
+    return new Int2(Math.min(a.getX(), b.getX()), Math.min(a.getY(), b.getY()));
+  }
 
-    public static Int2 sub(Int2 a, int b) {
-        return new Int2(a.getX() - b, a.getY() - b);
-    }
+  public static Int2 max(Int2 a, Int2 b) {
+    return new Int2(Math.max(a.getX(), b.getX()), Math.max(a.getY(), b.getY()));
+  }
 
-    public static Int2 mult(Int2 a, int b) {
-        return new Int2(a.getX() * b, a.getY() * b);
-    }
+  /*
+   * vector = op (vector, scalar)
+   */
+  public static Int2 add(Int2 a, int b) {
+    return new Int2(a.getX() + b, a.getY() + b);
+  }
 
-    public static Int2 div(Int2 a, int b) {
-        return new Int2(a.getX() / b, a.getY() / b);
-    }
+  public static Int2 sub(Int2 a, int b) {
+    return new Int2(a.getX() - b, a.getY() - b);
+  }
 
-    public static Int2 inc(Int2 a, int value) {
-        return add(a, value);
-    }
+  public static Int2 mult(Int2 a, int b) {
+    return new Int2(a.getX() * b, a.getY() * b);
+  }
 
-    public static Int2 dec(Int2 a, int value) {
-        return sub(a, value);
-    }
+  public static Int2 div(Int2 a, int b) {
+    return new Int2(a.getX() / b, a.getY() / b);
+  }
 
-    public static Int2 scaleByInverse(Int2 a, int value) {
-        return mult(a, 1 / value);
-    }
+  public static Int2 inc(Int2 a, int value) {
+    return add(a, value);
+  }
 
-    public static Int2 scale(Int2 a, int value) {
-        return mult(a, value);
-    }
+  public static Int2 dec(Int2 a, int value) {
+    return sub(a, value);
+  }
 
-    public static Int2 clamp(Int2 x, int min, int max) {
-        return new Int2(TornadoMath.clamp(x.getX(), min, max), TornadoMath.clamp(x.getY(), min, max));
-    }
+  public static Int2 scaleByInverse(Int2 a, int value) {
+    return mult(a, 1 / value);
+  }
 
-    /*
-     * vector wide operations
-     */
-    public static int min(Int2 value) {
-        return Math.min(value.getX(), value.getY());
-    }
+  public static Int2 scale(Int2 a, int value) {
+    return mult(a, value);
+  }
 
-    public static int max(Int2 value) {
-        return Math.max(value.getX(), value.getY());
-    }
+  public static Int2 clamp(Int2 x, int min, int max) {
+    return new Int2(TornadoMath.clamp(x.getX(), min, max), TornadoMath.clamp(x.getY(), min, max));
+  }
 
-    public static int dot(Int2 a, Int2 b) {
-        final Int2 m = mult(a, b);
-        return m.getX() + m.getY();
-    }
+  /*
+   * vector wide operations
+   */
+  public static int min(Int2 value) {
+    return Math.min(value.getX(), value.getY());
+  }
 
-    public static boolean isEqual(Int2 a, Int2 b) {
-        return TornadoMath.isEqual(a.toArray(), b.toArray());
-    }
+  public static int max(Int2 value) {
+    return Math.max(value.getX(), value.getY());
+  }
 
-    private int[] toArray() {
-        return storage;
-    }
+  public static int dot(Int2 a, Int2 b) {
+    final Int2 m = mult(a, b);
+    return m.getX() + m.getY();
+  }
 
-    public int get(int index) {
-        return storage[index];
-    }
+  public static boolean isEqual(Int2 a, Int2 b) {
+    return TornadoMath.isEqual(a.toArray(), b.toArray());
+  }
 
-    public void set(int index, int value) {
-        storage[index] = value;
-    }
+  private int[] toArray() {
+    return storage;
+  }
 
-    public void set(Int2 value) {
-        setX(value.getX());
-        setY(value.getY());
-    }
+  public int get(int index) {
+    return storage[index];
+  }
 
-    public int getX() {
-        return get(0);
-    }
+  public void set(int index, int value) {
+    storage[index] = value;
+  }
 
-    public void setX(int value) {
-        set(0, value);
-    }
+  public void set(Int2 value) {
+    setX(value.getX());
+    setY(value.getY());
+  }
 
-    public int getY() {
-        return get(1);
-    }
+  public int getX() {
+    return get(0);
+  }
 
-    public void setY(int value) {
-        set(1, value);
-    }
+  public void setX(int value) {
+    set(0, value);
+  }
 
-    public int getS0() {
-        return get(0);
-    }
+  public int getY() {
+    return get(1);
+  }
 
-    public int getS1() {
-        return get(1);
-    }
+  public void setY(int value) {
+    set(1, value);
+  }
 
-    /**
-     * Duplicates this vector.
-     *
-     * @return {@link Int2}
-     */
-    public Int2 duplicate() {
-        Int2 vector = new Int2();
-        vector.set(this);
-        return vector;
-    }
+  public int getS0() {
+    return get(0);
+  }
 
-    public String toString(String fmt) {
-        return String.format(fmt, getX(), getY());
-    }
+  public int getS1() {
+    return get(1);
+  }
 
-    @Override
-    public String toString() {
-        return toString(NUMBER_FORMAT);
-    }
+  /**
+   * Duplicates this vector.
+   *
+   * @return {@link Int2}
+   */
+  public Int2 duplicate() {
+    Int2 vector = new Int2();
+    vector.set(this);
+    return vector;
+  }
 
-    @Override
-    public void loadFromBuffer(IntBuffer buffer) {
-        asBuffer().put(buffer);
-    }
+  public String toString(String fmt) {
+    return String.format(fmt, getX(), getY());
+  }
 
-    @Override
-    public IntBuffer asBuffer() {
-        return IntBuffer.wrap(storage);
-    }
+  @Override
+  public String toString() {
+    return toString(NUMBER_FORMAT);
+  }
 
-    @Override
-    public int size() {
-        return NUM_ELEMENTS;
-    }
+  @Override
+  public void loadFromBuffer(IntBuffer buffer) {
+    asBuffer().put(buffer);
+  }
 
-    @Override
-    public long getNumBytes() {
-        return NUM_ELEMENTS * 4;
-    }
+  @Override
+  public IntBuffer asBuffer() {
+    return IntBuffer.wrap(storage);
+  }
 
+  @Override
+  public int size() {
+    return NUM_ELEMENTS;
+  }
+
+  @Override
+  public long getNumBytes() {
+    return NUM_ELEMENTS * 4;
+  }
 }

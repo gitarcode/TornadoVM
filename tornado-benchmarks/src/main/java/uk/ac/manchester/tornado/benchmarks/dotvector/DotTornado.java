@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.dotvector;
 import static uk.ac.manchester.tornado.api.math.TornadoMath.findULPDistance;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
@@ -32,78 +31,73 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner dotvector
  * </code>
  */
 public class DotTornado extends BenchmarkDriver {
 
-    private final int numElements;
+  private final int numElements;
 
-    private VectorFloat3 a;
-    private VectorFloat3 b;
-    private FloatArray c;
+  private VectorFloat3 a;
+  private VectorFloat3 b;
+  private FloatArray c;
 
-    public DotTornado(int iterations, int numElements) {
-        super(iterations);
-        this.numElements = numElements;
+  public DotTornado(int iterations, int numElements) {
+    super(iterations);
+    this.numElements = numElements;
+  }
+
+  @Override
+  public void setUp() {
+    a = new VectorFloat3(numElements);
+    b = new VectorFloat3(numElements);
+    c = new FloatArray(numElements);
+
+    Random r = new Random();
+    for (int i = 0; i < numElements; i++) {
+      a.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
+      b.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
     }
 
-    @Override
-    public void setUp() {
-        a = new VectorFloat3(numElements);
-        b = new VectorFloat3(numElements);
-        c = new FloatArray(numElements);
+    taskGraph = new TaskGraph("benchmark");
+    taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b);
+    taskGraph.task("dotVector", GraphicsKernels::dotVector, a, b, c);
+    taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-        Random r = new Random();
-        for (int i = 0; i < numElements; i++) {
-            a.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-            b.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-        }
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-        taskGraph = new TaskGraph("benchmark");
-        taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b);
-        taskGraph.task("dotVector", GraphicsKernels::dotVector, a, b, c);
-        taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
 
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+    a = null;
+    b = null;
+    c = null;
 
-    }
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 
-        a = null;
-        b = null;
-        c = null;
+  @Override
+  public boolean validate(TornadoDevice device) {
 
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+    final FloatArray result = new FloatArray(numElements);
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+    runBenchmark(device);
+    executionPlan.clearProfiles();
 
-    @Override
-    public boolean validate(TornadoDevice device) {
+    GraphicsKernels.dotVector(a, b, result);
 
-        final FloatArray result = new FloatArray(numElements);
-
-        runBenchmark(device);
-        executionPlan.clearProfiles();
-
-        GraphicsKernels.dotVector(a, b, result);
-
-        final float ulp = findULPDistance(result, c);
-        return Float.compare(ulp, MAX_ULP) <= 0;
-    }
-
+    final float ulp = findULPDistance(result, c);
+    return Float.compare(ulp, MAX_ULP) <= 0;
+  }
 }

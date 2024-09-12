@@ -23,6 +23,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.gen.ArithmeticLIRGeneratorTool;
@@ -31,42 +32,38 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLArithmeticTool;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkFloatingPointIntrinsicsNode;
 
 @NodeInfo(shortName = "OCL-FMA")
-public class OCLFMANode extends FloatingNode implements ArithmeticLIRLowerable, MarkFloatingPointIntrinsicsNode {
+public class OCLFMANode extends FloatingNode
+    implements ArithmeticLIRLowerable, MarkFloatingPointIntrinsicsNode {
 
-    public static final NodeClass<OCLFMANode> TYPE = NodeClass.create(OCLFMANode.class);
+  public static final NodeClass<OCLFMANode> TYPE = NodeClass.create(OCLFMANode.class);
 
-    @Input
-    protected ValueNode x;
-    @Input
-    protected ValueNode y;
-    @Input
-    protected ValueNode z;
+  @Input protected ValueNode x;
+  @Input protected ValueNode y;
+  @Input protected ValueNode z;
 
-    public OCLFMANode(ValueNode x, ValueNode y, ValueNode z) {
-        super(TYPE, StampFactory.forKind(x.getStackKind()));
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
+  public OCLFMANode(ValueNode x, ValueNode y, ValueNode z) {
+    super(TYPE, StampFactory.forKind(x.getStackKind()));
+    this.x = x;
+    this.y = y;
+    this.z = z;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool gen) {
-        Value op1 = builder.operand(x);
-        Value op2 = builder.operand(y);
-        Value op3 = builder.operand(z);
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool gen) {
+    Value op1 = builder.operand(x);
+    Value op2 = builder.operand(y);
+    Value op3 = builder.operand(z);
 
-        OCLArithmeticTool oclArithmeticTool = (OCLArithmeticTool) gen;
-        builder.setResult(this, oclArithmeticTool.emitFMAInstruction(op1, op2, op3));
-    }
+    OCLArithmeticTool oclArithmeticTool = (OCLArithmeticTool) gen;
+    builder.setResult(this, oclArithmeticTool.emitFMAInstruction(op1, op2, op3));
+  }
 
-    @Override
-    public String getOperation() {
-        return "FMA";
-    }
+  @Override
+  public String getOperation() {
+    return "FMA";
+  }
 }

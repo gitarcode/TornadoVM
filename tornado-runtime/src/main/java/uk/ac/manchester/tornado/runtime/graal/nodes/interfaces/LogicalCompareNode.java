@@ -23,6 +23,4 @@ package uk.ac.manchester.tornado.runtime.graal.nodes.interfaces;
 
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 
-public interface LogicalCompareNode extends LIRLowerable {
-
-}
+public interface LogicalCompareNode extends LIRLowerable {}

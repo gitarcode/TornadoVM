@@ -21,7 +21,6 @@
 package uk.ac.manchester.tornado.drivers.common.compiler.phases.guards;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.GraphState;
@@ -34,41 +33,44 @@ import org.graalvm.compiler.nodes.calc.IntegerBelowNode;
 import org.graalvm.compiler.nodes.calc.IsNullNode;
 import org.graalvm.compiler.nodes.extended.GuardedNode;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoMidTierContext;
 
 public class ExceptionCheckingElimination extends BasePhase<TornadoMidTierContext> {
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    /**
-     * Removes all exception checking - loop bounds and null checks.
-     */
-    @Override
-    protected void run(StructuredGraph graph, TornadoMidTierContext context) {
+  /** Removes all exception checking - loop bounds and null checks. */
+  @Override
+  protected void run(StructuredGraph graph, TornadoMidTierContext context) {
 
-        graph.getNodes().filter(GuardedNode.class::isInstance).snapshot().forEach((node) -> {
-            GuardedNode guardedNode = (GuardedNode) node;
-            if (guardedNode.getGuard() instanceof GuardNode guard) {
+    graph
+        .getNodes()
+        .filter(GuardedNode.class::isInstance)
+        .snapshot()
+        .forEach(
+            (node) -> {
+              GuardedNode guardedNode = (GuardedNode) node;
+              if (guardedNode.getGuard() instanceof GuardNode guard) {
 
                 LogicNode condition = guard.getCondition();
 
                 if (condition instanceof IsNullNode) {
-                    Node input = condition.inputs().first();
+                  Node input = condition.inputs().first();
 
-                    if (guard.isNegated()) {
-                        condition.replaceFirstInput(input, LogicConstantNode.contradiction(graph));
-                    } else {
-                        condition.replaceFirstInput(input, LogicConstantNode.tautology(graph));
-                    }
+                  if (guard.isNegated()) {
+                    condition.replaceFirstInput(input, LogicConstantNode.contradiction(graph));
+                  } else {
+                    condition.replaceFirstInput(input, LogicConstantNode.tautology(graph));
+                  }
 
                 } else if (condition instanceof IntegerBelowNode) {
-                    ValueNode x = ((IntegerBelowNode) condition).getX();
-                    condition.replaceFirstInput(x, graph.addOrUnique(ConstantNode.forInt(Integer.MAX_VALUE)));
+                  ValueNode x = ((IntegerBelowNode) condition).getX();
+                  condition.replaceFirstInput(
+                      x, graph.addOrUnique(ConstantNode.forInt(Integer.MAX_VALUE)));
                 }
-            }
-        });
-    }
+              }
+            });
+  }
 }

@@ -24,34 +24,35 @@
 package uk.ac.manchester.tornado.drivers.ptx.mm;
 
 import java.nio.ByteBuffer;
-
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 // FIXME <REFACTOR> Remove this class (common.mm)
 public class PrimitiveSerialiser {
 
-    private static void align(ByteBuffer buffer, int align) {
-        while (buffer.position() % align != 0) {
-            buffer.put((byte) 0);
-        }
+  private static void align(ByteBuffer buffer, int align) {
+    while (buffer.position() % align != 0) {
+      buffer.put((byte) 0);
+    }
+  }
+
+  public static void put(ByteBuffer buffer, Object value) {
+    put(buffer, value, 0);
+  }
+
+  public static void put(ByteBuffer buffer, Object value, int alignment) {
+    switch (value) {
+      case Integer i -> buffer.putInt((int) value);
+      case Long l -> buffer.putLong((long) value);
+      case Short i -> buffer.putShort((short) value);
+      case Float v -> buffer.putFloat((float) value);
+      case Double v -> buffer.putDouble((double) value);
+      case null, default ->
+          new TornadoLogger()
+              .warn("unable to serialise: %s (%s)", value, value.getClass().getName());
     }
 
-    public static void put(ByteBuffer buffer, Object value) {
-        put(buffer, value, 0);
+    if (alignment != 0) {
+      align(buffer, alignment);
     }
-
-    public static void put(ByteBuffer buffer, Object value, int alignment) {
-        switch (value) {
-            case Integer i -> buffer.putInt((int) value);
-            case Long l -> buffer.putLong((long) value);
-            case Short i -> buffer.putShort((short) value);
-            case Float v -> buffer.putFloat((float) value);
-            case Double v -> buffer.putDouble((double) value);
-            case null, default -> new TornadoLogger().warn("unable to serialise: %s (%s)", value, value.getClass().getName());
-        }
-
-        if (alignment != 0) {
-            align(buffer, alignment);
-        }
-    }
+  }
 }

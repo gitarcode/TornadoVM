@@ -27,55 +27,52 @@ import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimp
 
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
-
-import org.graalvm.compiler.api.replacements.SnippetReflectionProvider;
-
 import jdk.vm.ci.meta.JavaConstant;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.ResolvedJavaField;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
 import jdk.vm.ci.meta.ResolvedJavaType;
+import org.graalvm.compiler.api.replacements.SnippetReflectionProvider;
 
 public class TornadoSnippetReflectionProvider implements SnippetReflectionProvider {
 
-    @Override
-    public JavaConstant forBoxed(JavaKind kind, Object value) {
-        unimplemented();
-        return null;
-    }
+  @Override
+  public JavaConstant forBoxed(JavaKind kind, Object value) {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public JavaConstant forObject(Object object) {
-        unimplemented();
-        return null;
-    }
+  @Override
+  public JavaConstant forObject(Object object) {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public <T> T asObject(Class<T> type, JavaConstant constant) {
-        unimplemented();
-        return null;
-    }
+  @Override
+  public <T> T asObject(Class<T> type, JavaConstant constant) {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public <T> T getInjectedNodeIntrinsicParameter(Class<T> type) {
-        unimplemented();
-        return null;
-    }
+  @Override
+  public <T> T getInjectedNodeIntrinsicParameter(Class<T> type) {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public Class<?> originalClass(ResolvedJavaType type) {
-        unimplemented();
-        return null;
-    }
+  @Override
+  public Class<?> originalClass(ResolvedJavaType type) {
+    unimplemented();
+    return null;
+  }
 
-    @Override
-    public Executable originalMethod(ResolvedJavaMethod method) {
-        return null;
-    }
+  @Override
+  public Executable originalMethod(ResolvedJavaMethod method) {
+    return null;
+  }
 
-    @Override
-    public Field originalField(ResolvedJavaField field) {
-        return null;
-    }
-
+  @Override
+  public Field originalField(ResolvedJavaField field) {
+    return null;
+  }
 }

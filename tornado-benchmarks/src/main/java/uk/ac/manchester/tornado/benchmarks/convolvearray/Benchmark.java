@@ -22,50 +22,48 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkRunner;
 
 public class Benchmark extends BenchmarkRunner {
 
-    private int width;
-    private int height;
-    private int filtersize;
+  private int width;
+  private int height;
+  private int filtersize;
 
-    @Override
-    public void parseArgs(String[] args) {
-        if (args.length == 4) {
-            iterations = Integer.parseInt(args[0]);
-            width = Integer.parseInt(args[1]);
-            height = Integer.parseInt(args[2]);
-            filtersize = Integer.parseInt(args[3]);
+  @Override
+  public void parseArgs(String[] args) {
+    if (args.length == 4) {
+      iterations = Integer.parseInt(args[0]);
+      width = Integer.parseInt(args[1]);
+      height = Integer.parseInt(args[2]);
+      filtersize = Integer.parseInt(args[3]);
 
-        } else {
-            iterations = 100;
-            width = 2048;
-            height = 2048;
-            filtersize = 5;
-
-        }
+    } else {
+      iterations = 100;
+      width = 2048;
+      height = 2048;
+      filtersize = 5;
     }
+  }
 
-    @Override
-    protected String getName() {
-        return "convolve-array";
-    }
+  @Override
+  protected String getName() {
+    return "convolve-array";
+  }
 
-    @Override
-    protected String getIdString() {
-        return String.format("%s-%d-%d-%d-%d", getName(), iterations, width, height, filtersize);
-    }
+  @Override
+  protected String getIdString() {
+    return String.format("%s-%d-%d-%d-%d", getName(), iterations, width, height, filtersize);
+  }
 
-    @Override
-    protected String getConfigString() {
-        return String.format("width=%d, height=%d, filtersize=%d", width, height, filtersize);
-    }
+  @Override
+  protected String getConfigString() {
+    return String.format("width=%d, height=%d, filtersize=%d", width, height, filtersize);
+  }
 
-    @Override
-    protected BenchmarkDriver getJavaDriver() {
-        return new ConvolveImageArrayJava(iterations, width, height, filtersize);
-    }
+  @Override
+  protected BenchmarkDriver getJavaDriver() {
+    return new ConvolveImageArrayJava(iterations, width, height, filtersize);
+  }
 
-    @Override
-    protected BenchmarkDriver getTornadoDriver() {
-        return new ConvolveImageArrayTornado(iterations, width, height, filtersize);
-    }
-
+  @Override
+  protected BenchmarkDriver getTornadoDriver() {
+    return new ConvolveImageArrayTornado(iterations, width, height, filtersize);
+  }
 }

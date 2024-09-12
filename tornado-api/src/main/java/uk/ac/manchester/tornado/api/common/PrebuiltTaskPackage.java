@@ -18,56 +18,58 @@
 package uk.ac.manchester.tornado.api.common;
 
 import java.util.stream.IntStream;
-
 import uk.ac.manchester.tornado.api.AccessorParameters;
 
 public class PrebuiltTaskPackage extends TaskPackage {
 
-    private final String entryPoint;
-    private final String filename;
-    private final Object[] args;
-    private final Access[] accesses;
-    private int[] atomics;
+  private final String entryPoint;
+  private final String filename;
+  private final Object[] args;
+  private final Access[] accesses;
+  private int[] atomics;
 
-    PrebuiltTaskPackage(String id, String entryPoint, String fileName, AccessorParameters accessorParameters) {
-        super(id, null);
-        this.entryPoint = entryPoint;
-        this.filename = fileName;
-        this.args = new Object[accessorParameters.numAccessors()];
-        this.accesses = new Access[accessorParameters.numAccessors()];
-        IntStream.range(0, accessorParameters.numAccessors()).forEach(i -> {
-            this.args[i] = accessorParameters.getAccessor(i).object();
-            this.accesses[i] = accessorParameters.getAccessor(i).access();
-        });
-    }
+  PrebuiltTaskPackage(
+      String id, String entryPoint, String fileName, AccessorParameters accessorParameters) {
+    super(id, null);
+    this.entryPoint = entryPoint;
+    this.filename = fileName;
+    this.args = new Object[accessorParameters.numAccessors()];
+    this.accesses = new Access[accessorParameters.numAccessors()];
+    IntStream.range(0, accessorParameters.numAccessors())
+        .forEach(
+            i -> {
+              this.args[i] = accessorParameters.getAccessor(i).object();
+              this.accesses[i] = accessorParameters.getAccessor(i).access();
+            });
+  }
 
-    public PrebuiltTaskPackage withAtomics(int[] atomics) {
-        this.atomics = atomics;
-        return this;
-    }
+  public PrebuiltTaskPackage withAtomics(int[] atomics) {
+    this.atomics = atomics;
+    return this;
+  }
 
-    public String getEntryPoint() {
-        return entryPoint;
-    }
+  public String getEntryPoint() {
+    return entryPoint;
+  }
 
-    public String getFilename() {
-        return filename;
-    }
+  public String getFilename() {
+    return filename;
+  }
 
-    public Object[] getArgs() {
-        return args;
-    }
+  public Object[] getArgs() {
+    return args;
+  }
 
-    public Access[] getAccesses() {
-        return accesses;
-    }
+  public Access[] getAccesses() {
+    return accesses;
+  }
 
-    @Override
-    public boolean isPrebuiltTask() {
-        return true;
-    }
+  @Override
+  public boolean isPrebuiltTask() {
+    return true;
+  }
 
-    public int[] getAtomics() {
-        return atomics;
-    }
+  public int[] getAtomics() {
+    return atomics;
+  }
 }

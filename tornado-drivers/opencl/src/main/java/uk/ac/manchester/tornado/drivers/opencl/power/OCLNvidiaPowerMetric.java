@@ -30,45 +30,46 @@ import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 public class OCLNvidiaPowerMetric implements PowerMetric {
 
-    private final OCLDeviceContext deviceContext;
-    private final TornadoLogger logger;
+  private final OCLDeviceContext deviceContext;
+  private final TornadoLogger logger;
 
-    public OCLNvidiaPowerMetric(OCLDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
-        this.logger = new TornadoLogger(this.getClass());
-        initializePowerLibrary();
+  public OCLNvidiaPowerMetric(OCLDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+    this.logger = new TornadoLogger(this.getClass());
+    initializePowerLibrary();
+  }
+
+  static native long clNvmlInit() throws OCLException;
+
+  static native long clNvmlDeviceGetHandleByIndex(long index, long[] device) throws OCLException;
+
+  static native long clNvmlDeviceGetPowerUsage(long[] device, long[] powerUsage)
+      throws OCLException;
+
+  @Override
+  public void initializePowerLibrary() {
+    try {
+      clNvmlInit();
+    } catch (OCLException e) {
+      logger.error(e.getMessage());
     }
+  }
 
-    static native long clNvmlInit() throws OCLException;
-
-    static native long clNvmlDeviceGetHandleByIndex(long index, long[] device) throws OCLException;
-
-    static native long clNvmlDeviceGetPowerUsage(long[] device, long[] powerUsage) throws OCLException;
-
-    @Override
-    public void initializePowerLibrary() {
-        try {
-            clNvmlInit();
-        } catch (OCLException e) {
-            logger.error(e.getMessage());
-        }
+  @Override
+  public void getHandleByIndex(long[] device) {
+    try {
+      clNvmlDeviceGetHandleByIndex(this.deviceContext.getDevice().getIndex(), device);
+    } catch (OCLException e) {
+      logger.error(e.getMessage());
     }
+  }
 
-    @Override
-    public void getHandleByIndex(long[] device) {
-        try {
-            clNvmlDeviceGetHandleByIndex(this.deviceContext.getDevice().getIndex(), device);
-        } catch (OCLException e) {
-            logger.error(e.getMessage());
-        }
+  @Override
+  public void getPowerUsage(long[] device, long[] powerUsage) {
+    try {
+      clNvmlDeviceGetPowerUsage(device, powerUsage);
+    } catch (OCLException e) {
+      logger.error(e.getMessage());
     }
-
-    @Override
-    public void getPowerUsage(long[] device, long[] powerUsage) {
-        try {
-            clNvmlDeviceGetPowerUsage(device, powerUsage);
-        } catch (OCLException e) {
-            logger.error(e.getMessage());
-        }
-    }
+  }
 }

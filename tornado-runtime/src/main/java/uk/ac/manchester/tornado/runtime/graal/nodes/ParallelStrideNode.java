@@ -30,10 +30,10 @@ import org.graalvm.compiler.nodes.ValueNode;
 @NodeInfo(nameTemplate = "Stride")
 public class ParallelStrideNode extends AbstractParallelNode {
 
-    public static final NodeClass<ParallelStrideNode> TYPE = NodeClass.create(ParallelStrideNode.class);
+  public static final NodeClass<ParallelStrideNode> TYPE =
+      NodeClass.create(ParallelStrideNode.class);
 
-    public ParallelStrideNode(int index, ValueNode stride) {
-        super(TYPE, index, stride);
-    }
-
+  public ParallelStrideNode(int index, ValueNode stride) {
+    super(TYPE, index, stride);
+  }
 }

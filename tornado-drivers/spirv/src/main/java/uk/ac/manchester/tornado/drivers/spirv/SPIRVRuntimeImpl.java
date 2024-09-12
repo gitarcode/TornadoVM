@@ -26,67 +26,70 @@ package uk.ac.manchester.tornado.drivers.spirv;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
 
 /**
- * Class for Calling JNI methods that can dispatch SPIR-V code.
- * code.
- * <p>
- * There are currently two ways:
- * <p>
- * - Via the OpenCL Runtime (OpenCL >= 2.1)
- * <p>
- * - Via the Level-Zero API.
+ * Class for Calling JNI methods that can dispatch SPIR-V code. code.
+ *
+ * <p>There are currently two ways:
+ *
+ * <p>- Via the OpenCL Runtime (OpenCL >= 2.1)
+ *
+ * <p>- Via the Level-Zero API.
+ *
  * <p>
  */
 public class SPIRVRuntimeImpl {
 
-    private final String ERROR_PLATFORM_NOT_IMPLEMENTED = "SPIR-V Runtime Implementation not supported: " + TornadoOptions.SPIRV_DISPATCHER + " \nUse \"opencl\" or \"levelzero\"";
+  private final String ERROR_PLATFORM_NOT_IMPLEMENTED =
+      "SPIR-V Runtime Implementation not supported: "
+          + TornadoOptions.SPIRV_DISPATCHER
+          + " \nUse \"opencl\" or \"levelzero\"";
 
-    private List<SPIRVPlatform> platforms;
-    private static SPIRVRuntimeImpl instance;
+  private List<SPIRVPlatform> platforms;
+  private static SPIRVRuntimeImpl instance;
 
-    public static SPIRVRuntimeImpl getInstance() {
-        if (instance == null) {
-            instance = new SPIRVRuntimeImpl();
-        }
-        return instance;
+  public static SPIRVRuntimeImpl getInstance() {
+    if (instance == null) {
+      instance = new SPIRVRuntimeImpl();
     }
+    return instance;
+  }
 
-    private SPIRVRuntimeImpl() {
-        init();
+  private SPIRVRuntimeImpl() {
+    init();
+  }
+
+  private synchronized void init() {
+    if (platforms == null) {
+      SPIRVDispatcher[] dispatchers = new SPIRVDispatcher[SPIRVRuntimeType.values().length];
+      SPIRVDispatcher levelZeroDriver = new SPIRVLevelZeroDriver();
+      SPIRVDispatcher openCLDriver = new SPIRVOpenCLDriver();
+      int index = 0;
+      if (TornadoOptions.SPIRV_DISPATCHER.equalsIgnoreCase("opencl")) {
+        dispatchers[index++] = openCLDriver;
+        dispatchers[index] = levelZeroDriver;
+      } else if (TornadoOptions.SPIRV_DISPATCHER.equalsIgnoreCase("levelzero")) {
+        dispatchers[index++] = levelZeroDriver;
+        dispatchers[index] = openCLDriver;
+      } else {
+        throw new TornadoRuntimeException(ERROR_PLATFORM_NOT_IMPLEMENTED);
+      }
+
+      platforms = new ArrayList<>();
+      for (SPIRVDispatcher dispatcher : dispatchers) {
+        IntStream.range(0, dispatcher.getNumPlatforms())
+            .forEach(platformIndex -> platforms.add(dispatcher.getPlatform(platformIndex)));
+      }
     }
+  }
 
-    private synchronized void init() {
-        if (platforms == null) {
-            SPIRVDispatcher[] dispatchers = new SPIRVDispatcher[SPIRVRuntimeType.values().length];
-            SPIRVDispatcher levelZeroDriver = new SPIRVLevelZeroDriver();
-            SPIRVDispatcher openCLDriver = new SPIRVOpenCLDriver();
-            int index = 0;
-            if (TornadoOptions.SPIRV_DISPATCHER.equalsIgnoreCase("opencl")) {
-                dispatchers[index++] = openCLDriver;
-                dispatchers[index] = levelZeroDriver;
-            } else if (TornadoOptions.SPIRV_DISPATCHER.equalsIgnoreCase("levelzero")) {
-                dispatchers[index++] = levelZeroDriver;
-                dispatchers[index] = openCLDriver;
-            } else {
-                throw new TornadoRuntimeException(ERROR_PLATFORM_NOT_IMPLEMENTED);
-            }
+  public int getNumPlatforms() {
+    return platforms.size();
+  }
 
-            platforms = new ArrayList<>();
-            for (SPIRVDispatcher dispatcher : dispatchers) {
-                IntStream.range(0, dispatcher.getNumPlatforms()).forEach(platformIndex -> platforms.add(dispatcher.getPlatform(platformIndex)));
-            }
-        }
-    }
-
-    public int getNumPlatforms() {
-        return platforms.size();
-    }
-
-    public SPIRVPlatform getPlatform(int platformIndex) {
-        return platforms.get(platformIndex);
-    }
+  public SPIRVPlatform getPlatform(int platformIndex) {
+    return platforms.get(platformIndex);
+  }
 }

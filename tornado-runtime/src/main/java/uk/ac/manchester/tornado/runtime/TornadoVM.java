@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
-
 import uk.ac.manchester.tornado.api.GridScheduler;
 import uk.ac.manchester.tornado.api.common.Event;
 import uk.ac.manchester.tornado.api.exceptions.TornadoBailoutRuntimeException;
@@ -49,164 +48,169 @@ import uk.ac.manchester.tornado.runtime.interpreter.TornadoVMInterpreter;
 import uk.ac.manchester.tornado.runtime.tasks.TornadoTaskGraph;
 
 /**
- * There is an instance of the {@link TornadoVM} per {@link TornadoTaskGraph}.
- * Each TornadoVM contains the logic to orchestrate the execution on the
- * parallel device (e.g., a GPU).
+ * There is an instance of the {@link TornadoVM} per {@link TornadoTaskGraph}. Each TornadoVM
+ * contains the logic to orchestrate the execution on the parallel device (e.g., a GPU).
  */
 public class TornadoVM {
-    private TornadoExecutionContext executionContext;
+  private TornadoExecutionContext executionContext;
 
-    private TornadoProfiler timeProfiler;
+  private TornadoProfiler timeProfiler;
 
-    private final TornadoVMBytecodeResult[] tornadoVMBytecodes;
+  private final TornadoVMBytecodeResult[] tornadoVMBytecodes;
 
-    private final TornadoVMInterpreter[] tornadoVMInterpreters;
+  private final TornadoVMInterpreter[] tornadoVMInterpreters;
 
-    /**
-     * It constructs a new TornadoVM instance.
-     *
-     * @param executionContext
-     *     the {@link TornadoExecutionContext} for containing the execution
-     *     context
-     * @param tornadoGraph
-     *     the {@link TornadoGraph} representing the TaskGraph
-     * @param timeProfiler
-     *     the {@link TornadoProfiler} for profiling execution time
-     */
-    public TornadoVM(TornadoExecutionContext executionContext, TornadoGraph tornadoGraph, TornadoProfiler timeProfiler) {
-        this.executionContext = executionContext;
-        this.timeProfiler = timeProfiler;
-        this.tornadoVMBytecodes = TornadoVMGraphCompiler.compile(tornadoGraph, executionContext);
-        this.tornadoVMInterpreters = new TornadoVMInterpreter[executionContext.getValidContextSize()];
-        bindBytecodesToInterpreters();
+  /**
+   * It constructs a new TornadoVM instance.
+   *
+   * @param executionContext the {@link TornadoExecutionContext} for containing the execution
+   *     context
+   * @param tornadoGraph the {@link TornadoGraph} representing the TaskGraph
+   * @param timeProfiler the {@link TornadoProfiler} for profiling execution time
+   */
+  public TornadoVM(
+      TornadoExecutionContext executionContext,
+      TornadoGraph tornadoGraph,
+      TornadoProfiler timeProfiler) {
+    this.executionContext = executionContext;
+    this.timeProfiler = timeProfiler;
+    this.tornadoVMBytecodes = TornadoVMGraphCompiler.compile(tornadoGraph, executionContext);
+    this.tornadoVMInterpreters = new TornadoVMInterpreter[executionContext.getValidContextSize()];
+    bindBytecodesToInterpreters();
+  }
+
+  /**
+   * It binds bytecodes to interpreters for each valid context. One valid context per assigned
+   * device.
+   */
+  private void bindBytecodesToInterpreters() {
+    assert tornadoVMInterpreters.length == executionContext.getValidContextSize();
+    final Deque<Integer> activeDevices = executionContext.getActiveDeviceIndexes();
+    int bound = executionContext.getValidContextSize();
+    for (int i = 0; i < bound; i++) {
+      tornadoVMInterpreters[i] =
+          new TornadoVMInterpreter(
+              executionContext, //
+              tornadoVMBytecodes[i], //
+              timeProfiler, //
+              executionContext.getDevice(activeDevices.pop()));
+    }
+  }
+
+  /**
+   * It executes the interpreter manager either concurrently in multiple threads or in
+   * single-threaded mode.
+   *
+   * @return An {@link Event} indicating the completion of execution.
+   */
+  public Event execute(boolean isParallel, TornadoProfiler profiler) {
+    // Set the profiler for all interpreters
+    this.timeProfiler = profiler;
+    Arrays.stream(tornadoVMInterpreters)
+        .forEach(tornadoVMInterpreter -> tornadoVMInterpreter.setTimeProfiler(timeProfiler));
+
+    if (shouldInterpreterRunInParallel(isParallel)) {
+      return executeInterpreterThreadManager(isParallel);
+    } else {
+      return executeInterpreterSingleThreaded();
+    }
+  }
+
+  private int calculateNumberOfJavaThreads(boolean isTaskGraphConcurrent) {
+    return shouldRunConcurrently(isTaskGraphConcurrent)
+        ? executionContext.getValidContextSize()
+        : 1;
+  }
+
+  private boolean shouldInterpreterRunInParallel(boolean isParallel) {
+    return calculateNumberOfJavaThreads(isParallel) != 1;
+  }
+
+  private Event executeInterpreterSingleThreaded() {
+    Arrays.stream(tornadoVMInterpreters).forEach(TornadoVMInterpreter::execute);
+    return new EmptyEvent();
+  }
+
+  /**
+   * It executes the interpreter manager either in concurrently in multiple threads or in
+   * single-threaded mode.
+   *
+   * @return An {@link Event} indicating the completion of execution.
+   */
+  private Event executeInterpreterThreadManager(boolean isParallel) {
+    // Create a thread pool with a fixed number of threads
+    int numberOfJavaThreads = calculateNumberOfJavaThreads(isParallel);
+    ExecutorService executor = Executors.newFixedThreadPool(numberOfJavaThreads);
+
+    // Create a list to hold the futures of each execution
+    List<Future<?>> futures = new ArrayList<>();
+
+    // Submit each task to the thread pool
+    for (TornadoVMInterpreter tornadoVMInterpreter : tornadoVMInterpreters) {
+      Future<?> future = executor.submit(tornadoVMInterpreter::execute);
+      futures.add(future);
+    }
+    // Wait for all tasks to complete
+    try {
+      for (Future<?> future : futures) {
+        future.get();
+      }
+    } catch (ExecutionException | InterruptedException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof TornadoBailoutRuntimeException) {
+        throw new TornadoBailoutRuntimeException(e.getMessage());
+      } else if (cause instanceof TornadoFailureException) {
+        throw new TornadoFailureException(e);
+      } else if (cause instanceof TornadoRuntimeException) {
+        throw new TornadoRuntimeException(e);
+      } else if (cause instanceof TornadoDeviceFP64NotSupported) {
+        throw new TornadoDeviceFP64NotSupported(e.getMessage());
+      } else {
+        throw new RuntimeException(e);
+      }
+    } finally {
+      // Shutdown the executor after all tasks have completed
+      executor.shutdown();
     }
 
-    /**
-     * It binds bytecodes to interpreters for each valid context. One valid context
-     * per assigned device.
-     */
-    private void bindBytecodesToInterpreters() {
-        assert tornadoVMInterpreters.length == executionContext.getValidContextSize();
-        final Deque<Integer> activeDevices = executionContext.getActiveDeviceIndexes();
-        int bound = executionContext.getValidContextSize();
-        for (int i = 0; i < bound; i++) {
-            tornadoVMInterpreters[i] = new TornadoVMInterpreter(executionContext, //
-                    tornadoVMBytecodes[i],  //
-                    timeProfiler,  //
-                    executionContext.getDevice(activeDevices.pop()));
-        }
-    }
+    return new EmptyEvent();
+  }
 
-    /**
-     * It executes the interpreter manager either concurrently in multiple threads
-     * or in single-threaded mode.
-     *
-     * @return An {@link Event} indicating the completion of execution.
-     */
-    public Event execute(boolean isParallel, TornadoProfiler profiler) {
-        // Set the profiler for all interpreters
-        this.timeProfiler = profiler;
-        Arrays.stream(tornadoVMInterpreters).forEach(tornadoVMInterpreter -> tornadoVMInterpreter.setTimeProfiler(timeProfiler));
+  private boolean shouldRunConcurrently(boolean isTaskGraphConcurrent) {
+    return (isTaskGraphConcurrent || TornadoOptions.CONCURRENT_INTERPRETERS)
+        && (executionContext.getValidContextSize() > 1);
+  }
 
-        if (shouldInterpreterRunInParallel(isParallel)) {
-            return executeInterpreterThreadManager(isParallel);
-        } else {
-            return executeInterpreterSingleThreaded();
-        }
-    }
+  public void executeActionOnInterpreters(Consumer<TornadoVMInterpreter> action) {
+    Arrays.stream(tornadoVMInterpreters).forEach(action::accept);
+  }
 
-    private int calculateNumberOfJavaThreads(boolean isTaskGraphConcurrent) {
-        return shouldRunConcurrently(isTaskGraphConcurrent) ? executionContext.getValidContextSize() : 1;
-    }
+  public void clearInstalledCode() {
+    executeActionOnInterpreters(TornadoVMInterpreter::clearInstalledCode);
+  }
 
-    private boolean shouldInterpreterRunInParallel(boolean isParallel) {
-        return calculateNumberOfJavaThreads(isParallel) != 1;
-    }
+  public void dumpProfiles() {
+    executeActionOnInterpreters(TornadoVMInterpreter::dumpProfiles);
+  }
 
-    private Event executeInterpreterSingleThreaded() {
-        Arrays.stream(tornadoVMInterpreters).forEach(TornadoVMInterpreter::execute);
-        return new EmptyEvent();
-    }
+  public void dumpEvents() {
+    executeActionOnInterpreters(TornadoVMInterpreter::dumpEvents);
+  }
 
-    /**
-     * It executes the interpreter manager either in concurrently in multiple
-     * threads or in single-threaded mode.
-     *
-     * @return An {@link Event} indicating the completion of execution.
-     */
-    private Event executeInterpreterThreadManager(boolean isParallel) {
-        // Create a thread pool with a fixed number of threads
-        int numberOfJavaThreads = calculateNumberOfJavaThreads(isParallel);
-        ExecutorService executor = Executors.newFixedThreadPool(numberOfJavaThreads);
+  public void clearProfiles() {
+    executeActionOnInterpreters(TornadoVMInterpreter::clearProfiles);
+  }
 
-        // Create a list to hold the futures of each execution
-        List<Future<?>> futures = new ArrayList<>();
+  public void printTimes() {
+    executeActionOnInterpreters(TornadoVMInterpreter::printTimes);
+  }
 
-        // Submit each task to the thread pool
-        for (TornadoVMInterpreter tornadoVMInterpreter : tornadoVMInterpreters) {
-            Future<?> future = executor.submit(tornadoVMInterpreter::execute);
-            futures.add(future);
-        }
-        // Wait for all tasks to complete
-        try {
-            for (Future<?> future : futures) {
-                future.get();
-            }
-        } catch (ExecutionException | InterruptedException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof TornadoBailoutRuntimeException) {
-                throw new TornadoBailoutRuntimeException(e.getMessage());
-            } else if (cause instanceof TornadoFailureException) {
-                throw new TornadoFailureException(e);
-            } else if (cause instanceof TornadoRuntimeException) {
-                throw new TornadoRuntimeException(e);
-            } else if (cause instanceof TornadoDeviceFP64NotSupported) {
-                throw new TornadoDeviceFP64NotSupported(e.getMessage());
-            } else {
-                throw new RuntimeException(e);
-            }
-        } finally {
-            // Shutdown the executor after all tasks have completed
-            executor.shutdown();
-        }
+  public void warmup() {
+    executeActionOnInterpreters(TornadoVMInterpreter::warmup);
+  }
 
-        return new EmptyEvent();
-    }
-
-    private boolean shouldRunConcurrently(boolean isTaskGraphConcurrent) {
-        return (isTaskGraphConcurrent || TornadoOptions.CONCURRENT_INTERPRETERS) && (executionContext.getValidContextSize() > 1);
-    }
-
-    public void executeActionOnInterpreters(Consumer<TornadoVMInterpreter> action) {
-        Arrays.stream(tornadoVMInterpreters).forEach(action::accept);
-    }
-
-    public void clearInstalledCode() {
-        executeActionOnInterpreters(TornadoVMInterpreter::clearInstalledCode);
-    }
-
-    public void dumpProfiles() {
-        executeActionOnInterpreters(TornadoVMInterpreter::dumpProfiles);
-    }
-
-    public void dumpEvents() {
-        executeActionOnInterpreters(TornadoVMInterpreter::dumpEvents);
-    }
-
-    public void clearProfiles() {
-        executeActionOnInterpreters(TornadoVMInterpreter::clearProfiles);
-    }
-
-    public void printTimes() {
-        executeActionOnInterpreters(TornadoVMInterpreter::printTimes);
-    }
-
-    public void warmup() {
-        executeActionOnInterpreters(TornadoVMInterpreter::warmup);
-    }
-
-    public void setGridScheduler(GridScheduler gridScheduler) {
-        Arrays.stream(tornadoVMInterpreters).forEach(interpreter -> interpreter.setGridScheduler(gridScheduler));
-    }
-
+  public void setGridScheduler(GridScheduler gridScheduler) {
+    Arrays.stream(tornadoVMInterpreters)
+        .forEach(interpreter -> interpreter.setGridScheduler(gridScheduler));
+  }
 }

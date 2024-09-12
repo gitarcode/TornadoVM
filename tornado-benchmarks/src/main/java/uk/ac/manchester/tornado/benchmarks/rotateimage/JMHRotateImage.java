@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.rotateimage;
 import static uk.ac.manchester.tornado.benchmarks.GraphicsKernels.rotateImage;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -38,7 +37,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -49,82 +47,81 @@ import uk.ac.manchester.tornado.api.types.vectors.Float3;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.rotateimage.JMHRotateImage
  * </code>
  */
 public class JMHRotateImage {
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        private final int numElementsX = Integer.parseInt(System.getProperty("x", "2048"));
-        private final int numElementsY = Integer.parseInt(System.getProperty("y", "2048"));
-        private ImageFloat3 input;
-        private ImageFloat3 output;
-        private Matrix4x4Float m;
-        private TornadoExecutionPlan executor;
+    private final int numElementsX = Integer.parseInt(System.getProperty("x", "2048"));
+    private final int numElementsY = Integer.parseInt(System.getProperty("y", "2048"));
+    private ImageFloat3 input;
+    private ImageFloat3 output;
+    private Matrix4x4Float m;
+    private TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            input = new ImageFloat3(numElementsX, numElementsY);
-            output = new ImageFloat3(numElementsX, numElementsY);
-            m = new Matrix4x4Float();
-            m.identity();
+    @Setup(Level.Trial)
+    public void doSetup() {
+      input = new ImageFloat3(numElementsX, numElementsY);
+      output = new ImageFloat3(numElementsX, numElementsY);
+      m = new Matrix4x4Float();
+      m.identity();
 
-            final Float3 value = new Float3(1f, 2f, 3f);
-            for (int i = 0; i < input.Y(); i++) {
-                for (int j = 0; j < input.X(); j++) {
-                    input.set(j, i, value);
-                }
-            }
-
-            TaskGraph taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                    .task("rotateImage", GraphicsKernels::rotateImage, output, m, input) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
+      final Float3 value = new Float3(1f, 2f, 3f);
+      for (int i = 0; i < input.Y(); i++) {
+        for (int j = 0; j < input.X(); j++) {
+          input.set(j, i, value);
         }
-    }
+      }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void rotateImageJava(BenchmarkSetup state) {
-        rotateImage(state.output, state.m, state.input);
-    }
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
+              .task("rotateImage", GraphicsKernels::rotateImage, output, m, input) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void rotateImageTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHRotateImage.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void rotateImageJava(BenchmarkSetup state) {
+    rotateImage(state.output, state.m, state.input);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void rotateImageTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
+
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHRotateImage.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

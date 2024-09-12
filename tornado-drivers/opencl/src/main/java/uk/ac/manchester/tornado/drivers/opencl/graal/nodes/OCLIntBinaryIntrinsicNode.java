@@ -25,6 +25,8 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -38,9 +40,6 @@ import org.graalvm.compiler.nodes.calc.BinaryNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLArithmeticTool;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLBuiltinTool;
@@ -48,129 +47,132 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkIntIntrinsicNode;
 
 @NodeInfo(nameTemplate = "{p#operation/s}")
-public class OCLIntBinaryIntrinsicNode extends BinaryNode implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
+public class OCLIntBinaryIntrinsicNode extends BinaryNode
+    implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
 
-    public static final NodeClass<OCLIntBinaryIntrinsicNode> TYPE = NodeClass.create(OCLIntBinaryIntrinsicNode.class);
-    protected final Operation operation;
-    protected OCLIntBinaryIntrinsicNode(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
-        super(TYPE, StampFactory.forKind(kind), x, y);
-        this.operation = op;
+  public static final NodeClass<OCLIntBinaryIntrinsicNode> TYPE =
+      NodeClass.create(OCLIntBinaryIntrinsicNode.class);
+  protected final Operation operation;
+
+  protected OCLIntBinaryIntrinsicNode(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
+    super(TYPE, StampFactory.forKind(kind), x, y);
+    this.operation = op;
+  }
+
+  public static ValueNode create(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
+    ValueNode c = tryConstantFold(x, y, op, kind);
+    if (c != null) {
+      return c;
     }
+    return new OCLIntBinaryIntrinsicNode(x, y, op, kind);
+  }
 
-    public static ValueNode create(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
-        ValueNode c = tryConstantFold(x, y, op, kind);
-        if (c != null) {
-            return c;
-        }
-        return new OCLIntBinaryIntrinsicNode(x, y, op, kind);
+  protected static ValueNode tryConstantFold(
+      ValueNode x, ValueNode y, Operation op, JavaKind kind) {
+    ConstantNode result = null;
+
+    if (x.isConstant() && y.isConstant()) {
+      if (kind == JavaKind.Int) {
+        int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), op);
+        result = ConstantNode.forInt(ret);
+      } else if (kind == JavaKind.Long) {
+        long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), op);
+        result = ConstantNode.forLong(ret);
+      }
     }
+    return result;
+  }
 
-    protected static ValueNode tryConstantFold(ValueNode x, ValueNode y, Operation op, JavaKind kind) {
-        ConstantNode result = null;
+  // @formatter:on
 
-        if (x.isConstant() && y.isConstant()) {
-            if (kind == JavaKind.Int) {
-                int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), op);
-                result = ConstantNode.forInt(ret);
-            } else if (kind == JavaKind.Long) {
-                long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), op);
-                result = ConstantNode.forLong(ret);
-            }
-        }
-        return result;
+  private static long doCompute(long x, long y, Operation op) {
+    switch (op) {
+      case MIN:
+        return Math.min(x, y);
+      case MAX:
+        return Math.max(x, y);
+      default:
+        throw new TornadoInternalError("unknown op %s", op);
     }
-    //@formatter:on
+  }
 
-    private static long doCompute(long x, long y, Operation op) {
-        switch (op) {
-            case MIN:
-                return Math.min(x, y);
-            case MAX:
-                return Math.max(x, y);
-            default:
-                throw new TornadoInternalError("unknown op %s", op);
-        }
+  private static int doCompute(int x, int y, Operation op) {
+    switch (op) {
+      case MIN:
+        return Math.min(x, y);
+      case MAX:
+        return Math.max(x, y);
+      default:
+        throw new TornadoInternalError("unknown op %s", op);
     }
+  }
 
-    private static int doCompute(int x, int y, Operation op) {
-        switch (op) {
-            case MIN:
-                return Math.min(x, y);
-            case MAX:
-                return Math.max(x, y);
-            default:
-                throw new TornadoInternalError("unknown op %s", op);
-        }
+  @Override
+  public String getOperation() {
+    return operation.toString();
+  }
+
+  @Override
+  public ValueNode canonical(CanonicalizerTool tool) {
+    return canonical(tool, getX(), getY());
+  }
+
+  @Override
+  public Stamp foldStamp(Stamp stampX, Stamp stampY) {
+    return stamp(NodeView.DEFAULT);
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool tool) {
+    generate(tool, tool.getLIRGeneratorTool().getArithmetic());
+  }
+
+  public Operation operation() {
+    return operation;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
+    OCLBuiltinTool gen = ((OCLArithmeticTool) lirGen).getGen().getOCLBuiltinTool();
+    Value x = builder.operand(getX());
+    Value y = builder.operand(getY());
+    Value result;
+    switch (operation()) {
+      case MIN:
+        result = gen.genIntMin(x, y);
+        break;
+      case MAX:
+        result = gen.genIntMax(x, y);
+        break;
+      default:
+        throw shouldNotReachHere();
     }
+    Variable var = builder.getLIRGeneratorTool().newVariable(result.getValueKind());
+    builder.getLIRGeneratorTool().append(new AssignStmt(var, result));
+    builder.setResult(this, var);
+  }
 
-    @Override
-    public String getOperation() {
-        return operation.toString();
+  @Override
+  public ValueNode canonical(CanonicalizerTool tool, ValueNode x, ValueNode y) {
+    ValueNode c = tryConstantFold(x, y, operation(), getStackKind());
+    if (c != null) {
+      return c;
     }
+    return this;
+  }
 
-    @Override
-    public ValueNode canonical(CanonicalizerTool tool) {
-        return canonical(tool, getX(), getY());
-    }
-
-    @Override
-    public Stamp foldStamp(Stamp stampX, Stamp stampY) {
-        return stamp(NodeView.DEFAULT);
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool tool) {
-        generate(tool, tool.getLIRGeneratorTool().getArithmetic());
-    }
-
-    public Operation operation() {
-        return operation;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
-        OCLBuiltinTool gen = ((OCLArithmeticTool) lirGen).getGen().getOCLBuiltinTool();
-        Value x = builder.operand(getX());
-        Value y = builder.operand(getY());
-        Value result;
-        switch (operation()) {
-            case MIN:
-                result = gen.genIntMin(x, y);
-                break;
-            case MAX:
-                result = gen.genIntMax(x, y);
-                break;
-            default:
-                throw shouldNotReachHere();
-        }
-        Variable var = builder.getLIRGeneratorTool().newVariable(result.getValueKind());
-        builder.getLIRGeneratorTool().append(new AssignStmt(var, result));
-        builder.setResult(this, var);
-
-    }
-
-    @Override
-    public ValueNode canonical(CanonicalizerTool tool, ValueNode x, ValueNode y) {
-        ValueNode c = tryConstantFold(x, y, operation(), getStackKind());
-        if (c != null) {
-            return c;
-        }
-        return this;
-    }
-
-    //@formatter:off
-    public enum Operation {
-        ABS_DIFF,
-        ABS_SAT,
-        HADD,
-        RHADD,
-        MAX,
-        MIN,
-        MUL_HI,
-        ROTATE,
-        SUB_SAT,
-        UPSAMPLE,
-        MUL24
-    }
-
+  // @formatter:off
+  public enum Operation {
+    ABS_DIFF,
+    ABS_SAT,
+    HADD,
+    RHADD,
+    MAX,
+    MIN,
+    MUL_HI,
+    ROTATE,
+    SUB_SAT,
+    UPSAMPLE,
+    MUL24
+  }
 }

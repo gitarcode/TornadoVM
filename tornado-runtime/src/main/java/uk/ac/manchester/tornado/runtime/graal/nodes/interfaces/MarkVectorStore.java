@@ -24,8 +24,7 @@
 package uk.ac.manchester.tornado.runtime.graal.nodes.interfaces;
 
 /**
- * This interface is used for accessing the Vector Store node type outside the
- * scope of drivers package.
+ * This interface is used for accessing the Vector Store node type outside the scope of drivers
+ * package.
  */
-public interface MarkVectorStore {
-}
+public interface MarkVectorStore {}

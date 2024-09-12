@@ -27,19 +27,14 @@ import uk.ac.manchester.tornado.drivers.common.power.PowerMetric;
 
 public class OCLEmptyPowerMetric implements PowerMetric {
 
-    public OCLEmptyPowerMetric() {
-    }
+  public OCLEmptyPowerMetric() {}
 
-    @Override
-    public void initializePowerLibrary() {
-    }
+  @Override
+  public void initializePowerLibrary() {}
 
-    @Override
-    public void getHandleByIndex(long[] device) {
-    }
+  @Override
+  public void getHandleByIndex(long[] device) {}
 
-    @Override
-    public void getPowerUsage(long[] device, long[] powerUsage) {
-
-    }
+  @Override
+  public void getPowerUsage(long[] device, long[] powerUsage) {}
 }

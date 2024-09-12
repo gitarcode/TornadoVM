@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.nodes.logic;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.graph.IterableNodeType;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.NodeClass;
@@ -31,54 +32,54 @@ import org.graalvm.compiler.nodes.LogicNode;
 import org.graalvm.compiler.nodes.spi.Canonicalizable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.LogicalCompareNode;
 
 @NodeInfo
-public abstract class BinaryLogicalNode extends LogicNode implements IterableNodeType, Canonicalizable.Binary<LogicNode>, LogicalCompareNode {
+public abstract class BinaryLogicalNode extends LogicNode
+    implements IterableNodeType, Canonicalizable.Binary<LogicNode>, LogicalCompareNode {
 
-    public static final NodeClass<BinaryLogicalNode> TYPE = NodeClass.create(BinaryLogicalNode.class);
+  public static final NodeClass<BinaryLogicalNode> TYPE = NodeClass.create(BinaryLogicalNode.class);
 
-    @Input(InputType.Condition)
-    LogicNode x;
-    @Input(InputType.Condition)
-    LogicNode y;
+  @Input(InputType.Condition)
+  LogicNode x;
 
-    protected BinaryLogicalNode(NodeClass<? extends BinaryLogicalNode> type, LogicNode x, LogicNode y) {
-        super(type);
-        this.x = x;
-        this.y = y;
-    }
+  @Input(InputType.Condition)
+  LogicNode y;
 
-    @Override
-    public final void generate(NodeLIRBuilderTool builder) {
-        Value x = builder.operand(getX());
-        Value y = builder.operand(getY());
-        Value result = generate(builder.getLIRGeneratorTool(), x, y);
-        builder.setResult(this, result);
-    }
+  protected BinaryLogicalNode(
+      NodeClass<? extends BinaryLogicalNode> type, LogicNode x, LogicNode y) {
+    super(type);
+    this.x = x;
+    this.y = y;
+  }
 
-    public abstract Value generate(LIRGeneratorTool gen, Value x, Value y);
+  @Override
+  public final void generate(NodeLIRBuilderTool builder) {
+    Value x = builder.operand(getX());
+    Value y = builder.operand(getY());
+    Value result = generate(builder.getLIRGeneratorTool(), x, y);
+    builder.setResult(this, result);
+  }
 
-    @Override
-    public LogicNode canonical(CanonicalizerTool tool) {
-        return this;
-    }
+  public abstract Value generate(LIRGeneratorTool gen, Value x, Value y);
 
-    @Override
-    public Node canonical(CanonicalizerTool tool, LogicNode forX, LogicNode forY) {
-        return this;
-    }
+  @Override
+  public LogicNode canonical(CanonicalizerTool tool) {
+    return this;
+  }
 
-    @Override
-    public LogicNode getX() {
-        return x;
-    }
+  @Override
+  public Node canonical(CanonicalizerTool tool, LogicNode forX, LogicNode forY) {
+    return this;
+  }
 
-    @Override
-    public LogicNode getY() {
-        return y;
-    }
+  @Override
+  public LogicNode getX() {
+    return x;
+  }
 
+  @Override
+  public LogicNode getY() {
+    return y;
+  }
 }

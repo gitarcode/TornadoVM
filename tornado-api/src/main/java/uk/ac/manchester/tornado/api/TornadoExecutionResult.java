@@ -18,82 +18,70 @@
 package uk.ac.manchester.tornado.api;
 
 /**
- * Object created when the {@link TornadoExecutionPlan#execute()} is finished.
- * This objects stores the results of the execution. Additionally, if the
- * execution plan enabled the profiler information, this object also stores all
- * profiler information (e.g., read/write time, kernel time, etc.) through the
- * {@link TornadoProfilerResult} object.
+ * Object created when the {@link TornadoExecutionPlan#execute()} is finished. This objects stores
+ * the results of the execution. Additionally, if the execution plan enabled the profiler
+ * information, this object also stores all profiler information (e.g., read/write time, kernel
+ * time, etc.) through the {@link TornadoProfilerResult} object.
  *
  * @since 0.15.0
  */
 public class TornadoExecutionResult {
 
-    private final TornadoProfilerResult tornadoProfilerResult;
+  private final TornadoProfilerResult tornadoProfilerResult;
 
-    TornadoExecutionResult(TornadoProfilerResult profilerResult) {
-        this.tornadoProfilerResult = profilerResult;
-    }
+  TornadoExecutionResult(TornadoProfilerResult profilerResult) {
+    this.tornadoProfilerResult = profilerResult;
+  }
 
-    /**
-     * Method to obtain the profiler information associated to the latest execution
-     * plan. Note that, all timers associated to the profiler are enabled only if
-     * the execution plan enables the profiler.
-     *
-     * @return {@link TornadoProfilerResult}
-     *
-     * @since 0.15.0
-     */
-    public TornadoProfilerResult getProfilerResult() {
-        return tornadoProfilerResult;
-    }
+  /**
+   * Method to obtain the profiler information associated to the latest execution plan. Note that,
+   * all timers associated to the profiler are enabled only if the execution plan enables the
+   * profiler.
+   *
+   * @return {@link TornadoProfilerResult}
+   * @since 0.15.0
+   */
+  public TornadoProfilerResult getProfilerResult() {
+    return tornadoProfilerResult;
+  }
 
-    /**
-     * Transfer data from device to host. This is applied for all immutable
-     * task-graphs within an executor. This method is used when a task-graph defines
-     * transferToHost using the
-     * {@link uk.ac.manchester.tornado.api.enums.DataTransferMode#UNDER_DEMAND}.
-     * This indicates the runtime to not to copy-out the data en every iteration and
-     * transfer the data under demand.
-     *
-     * @param objects
-     *     Host objects to transfer the data to.
-     *
-     * @return {@link TornadoExecutionResult}
-     *
-     * @since 0.15.0
-     */
-    public TornadoExecutionResult transferToHost(Object... objects) {
-        tornadoProfilerResult.getExecutor().transferToHost(objects);
-        return this;
-    }
+  /**
+   * Transfer data from device to host. This is applied for all immutable task-graphs within an
+   * executor. This method is used when a task-graph defines transferToHost using the {@link
+   * uk.ac.manchester.tornado.api.enums.DataTransferMode#UNDER_DEMAND}. This indicates the runtime
+   * to not to copy-out the data en every iteration and transfer the data under demand.
+   *
+   * @param objects Host objects to transfer the data to.
+   * @return {@link TornadoExecutionResult}
+   * @since 0.15.0
+   */
+  public TornadoExecutionResult transferToHost(Object... objects) {
+    tornadoProfilerResult.getExecutor().transferToHost(objects);
+    return this;
+  }
 
-    /**
-     * Partial data transfer from the device to the host. This is applied for all immutable
-     * task-graphs within an executor. This indicates the runtime to not to copy-out the data
-     * en every iteration and transfer the data under demand. The sub-region to be copied is
-     * specified in the data range.
-     *
-     * @param dataRange
-     *     Range of type: {@link DataRange}
-     * @return {@link TornadoExecutionResult}
-     *
-     * @since v1.0.1
-     */
-    public TornadoExecutionResult transferToHost(DataRange dataRange) {
-        tornadoProfilerResult.getExecutor().partialTransferToHost(dataRange);
-        return this;
-    }
+  /**
+   * Partial data transfer from the device to the host. This is applied for all immutable
+   * task-graphs within an executor. This indicates the runtime to not to copy-out the data en every
+   * iteration and transfer the data under demand. The sub-region to be copied is specified in the
+   * data range.
+   *
+   * @param dataRange Range of type: {@link DataRange}
+   * @return {@link TornadoExecutionResult}
+   * @since v1.0.1
+   */
+  public TornadoExecutionResult transferToHost(DataRange dataRange) {
+    tornadoProfilerResult.getExecutor().partialTransferToHost(dataRange);
+    return this;
+  }
 
-    /**
-     * It returns true if all task-graphs associated to the executor finished
-     * execution.
-     *
-     * @return boolean
-     *
-     * @since 0.15.0
-     */
-    public boolean isReady() {
-        return tornadoProfilerResult.getExecutor().isFinished();
-    }
-
+  /**
+   * It returns true if all task-graphs associated to the executor finished execution.
+   *
+   * @return boolean
+   * @since 0.15.0
+   */
+  public boolean isReady() {
+    return tornadoProfilerResult.getExecutor().isFinished();
+  }
 }

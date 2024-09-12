@@ -29,9 +29,8 @@ import org.graalvm.compiler.replacements.SnippetCounter.Group;
  */
 public class DummySnippetFactory implements SnippetCounter.Group.Factory {
 
-    @Override
-    public Group createSnippetCounterGroup(String name) {
-        return new SnippetCounter.Group(name);
-    }
-
+  @Override
+  public Group createSnippetCounterGroup(String name) {
+    return new SnippetCounter.Group(name);
+  }
 }

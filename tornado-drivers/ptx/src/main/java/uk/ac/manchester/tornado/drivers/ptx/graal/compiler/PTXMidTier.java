@@ -35,7 +35,6 @@ import org.graalvm.compiler.phases.common.GuardLoweringPhase;
 import org.graalvm.compiler.phases.common.IterativeConditionalEliminationPhase;
 import org.graalvm.compiler.phases.common.MidTierLoweringPhase;
 import org.graalvm.compiler.phases.common.ReassociationPhase;
-
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.guards.BoundCheckEliminationPhase;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.guards.ExceptionCheckingElimination;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.memalloc.TornadoPanamaSegmentsHeaderPhase;
@@ -43,39 +42,39 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.phases.TornadoFloatingReadRepl
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoMidTier;
 
 public class PTXMidTier extends TornadoMidTier {
-    public PTXMidTier(OptionValues options) {
-        appendPhase(new ExceptionCheckingElimination());
+  public PTXMidTier(OptionValues options) {
+    appendPhase(new ExceptionCheckingElimination());
 
-        CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
+    CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
 
-        appendPhase(canonicalizer);
+    appendPhase(canonicalizer);
 
-        appendPhase((new BoundCheckEliminationPhase()));
-        appendPhase(new ExceptionCheckingElimination());
+    appendPhase((new BoundCheckEliminationPhase()));
+    appendPhase(new ExceptionCheckingElimination());
 
-        if (OptFloatingReads.getValue(options)) {
-            appendPhase(new TornadoFloatingReadReplacement(canonicalizer));
-        }
-
-        appendPhase(canonicalizer);
-
-        if (ConditionalElimination.getValue(options)) {
-            appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, true));
-        }
-        appendPhase(new TornadoPanamaSegmentsHeaderPhase());
-
-        appendPhase(new GuardLoweringPhase());
-
-        appendPhase(canonicalizer);
-
-        appendPhase(new MidTierLoweringPhase(canonicalizer));
-
-        appendPhase(new FrameStateAssignmentPhase());
-
-        if (ReassociateExpressions.getValue(options)) {
-            appendPhase(new ReassociationPhase(canonicalizer));
-        }
-
-        appendPhase(canonicalizer);
+    if (OptFloatingReads.getValue(options)) {
+      appendPhase(new TornadoFloatingReadReplacement(canonicalizer));
     }
+
+    appendPhase(canonicalizer);
+
+    if (ConditionalElimination.getValue(options)) {
+      appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, true));
+    }
+    appendPhase(new TornadoPanamaSegmentsHeaderPhase());
+
+    appendPhase(new GuardLoweringPhase());
+
+    appendPhase(canonicalizer);
+
+    appendPhase(new MidTierLoweringPhase(canonicalizer));
+
+    appendPhase(new FrameStateAssignmentPhase());
+
+    if (ReassociateExpressions.getValue(options)) {
+      appendPhase(new ReassociationPhase(canonicalizer));
+    }
+
+    appendPhase(canonicalizer);
+  }
 }

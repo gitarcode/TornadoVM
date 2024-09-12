@@ -24,6 +24,9 @@ package uk.ac.manchester.tornado.drivers.ptx.graal.nodes.vector;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimplemented;
 
+import jdk.vm.ci.meta.AllocatableValue;
+import jdk.vm.ci.meta.JavaConstant;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.NodeClass;
@@ -42,10 +45,6 @@ import org.graalvm.compiler.nodes.ValuePhiNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.AllocatableValue;
-import jdk.vm.ci.meta.JavaConstant;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXStampFactory;
 import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXNodeLIRBuilder;
@@ -58,203 +57,235 @@ import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkVectorValueNo
 @NodeInfo(nameTemplate = "{p#kind/s}")
 public class VectorValueNode extends FloatingNode implements LIRLowerable, MarkVectorValueNode {
 
-    public static final NodeClass<VectorValueNode> TYPE = NodeClass.create(VectorValueNode.class);
-    private final PTXKind kind;
-    @Input
-    NodeInputList<ValueNode> values;
-    @OptionalInput(InputType.Association)
-    private ValueNode origin;
+  public static final NodeClass<VectorValueNode> TYPE = NodeClass.create(VectorValueNode.class);
+  private final PTXKind kind;
+  @Input NodeInputList<ValueNode> values;
 
-    public VectorValueNode(PTXKind kind) {
-        super(TYPE, PTXStampFactory.getStampFor(kind));
-        this.kind = kind;
-        this.values = new NodeInputList<>(this, kind.getVectorLength());
+  @OptionalInput(InputType.Association)
+  private ValueNode origin;
+
+  public VectorValueNode(PTXKind kind) {
+    super(TYPE, PTXStampFactory.getStampFor(kind));
+    this.kind = kind;
+    this.values = new NodeInputList<>(this, kind.getVectorLength());
+  }
+
+  public void initialiseToDefaultValues(StructuredGraph graph) {
+    final ConstantNode defaultValue =
+        ConstantNode.forPrimitive(kind.getElementKind().getDefaultValue(), graph);
+    for (int i = 0; i < kind.getVectorLength(); i++) {
+      setElement(i, defaultValue);
     }
+  }
 
-    public void initialiseToDefaultValues(StructuredGraph graph) {
-        final ConstantNode defaultValue = ConstantNode.forPrimitive(kind.getElementKind().getDefaultValue(), graph);
-        for (int i = 0; i < kind.getVectorLength(); i++) {
-            setElement(i, defaultValue);
-        }
+  public PTXKind getPTXKind() {
+    return kind;
+  }
+
+  public ValueNode length() {
+    return ConstantNode.forInt(kind.getVectorLength());
+  }
+
+  public ValueNode getElement(int index) {
+    return values.get(index);
+  }
+
+  /**
+   * This method replaces the input of the current {@link VectorValueNode} that is at a specific
+   * index with a replacement node.
+   *
+   * @param replacement
+   * @param index
+   */
+  private void replaceInputAtIndex(Node replacement, int index) {
+    int i = 0;
+    for (Node input : this.inputs()) {
+      if (i++ == index) {
+        this.replaceFirstInput(input, replacement);
+        break;
+      }
     }
+  }
 
-    public PTXKind getPTXKind() {
-        return kind;
+  private boolean isInputValueAtIndexSet(int index) {
+    return values.get(index) != null;
+  }
+
+  /**
+   * This method sets a {@link ValueNode} as an input value of the current {@link VectorValueNode}
+   * at a specific index. If the input value has been already set (not null), the input that
+   * corresponds to the index is replaced by the argument value. Otherwise, the input value is set
+   * by the argument value.
+   *
+   * @param index
+   * @param value
+   */
+  public void setElement(int index, ValueNode value) {
+    if (isInputValueAtIndexSet(index)) {
+      replaceInputAtIndex(value, index);
+    } else {
+      values.set(index, value);
     }
+  }
 
-    public ValueNode length() {
-        return ConstantNode.forInt(kind.getVectorLength());
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    final LIRGeneratorTool tool = gen.getLIRGeneratorTool();
+    Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitVectorValue: values=%s", values);
 
-    public ValueNode getElement(int index) {
-        return values.get(index);
-    }
+    if (origin instanceof InvokeNode) {
+      gen.setResult(this, gen.operand(origin));
+    } else if (origin instanceof ValuePhiNode) {
 
-    /**
-     * This method replaces the input of the current {@link VectorValueNode} that is
-     * at a specific index with a replacement node.
-     *
-     * @param replacement
-     * @param index
-     */
-    private void replaceInputAtIndex(Node replacement, int index) {
-        int i = 0;
-        for (Node input : this.inputs()) {
-            if (i++ == index) {
-                this.replaceFirstInput(input, replacement);
-                break;
-            }
-        }
-    }
+      final ValuePhiNode phi = (ValuePhiNode) origin;
 
-    private boolean isInputValueAtIndexSet(int index) {
-        return values.get(index) != null;
-    }
+      final Value phiOperand = ((PTXNodeLIRBuilder) gen).operandForPhi(phi);
 
-    /**
-     * This method sets a {@link ValueNode} as an input value of the current
-     * {@link VectorValueNode} at a specific index. If the input value has been
-     * already set (not null), the input that corresponds to the index is replaced
-     * by the argument value. Otherwise, the input value is set by the argument
-     * value.
-     *
-     * @param index
-     * @param value
-     */
-    public void setElement(int index, ValueNode value) {
-        if (isInputValueAtIndexSet(index)) {
-            replaceInputAtIndex(value, index);
-        } else {
-            values.set(index, value);
-        }
-    }
+      final AllocatableValue result =
+          (gen.hasOperand(this))
+              ? (Variable) gen.operand(this)
+              : tool.newVariable(LIRKind.value(getPTXKind()));
+      tool.append(new PTXLIRStmt.AssignStmt(result, phiOperand));
+      gen.setResult(this, result);
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        final LIRGeneratorTool tool = gen.getLIRGeneratorTool();
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitVectorValue: values=%s", values);
+    } else if (origin instanceof ParameterNode) {
+      gen.setResult(this, gen.operand(origin));
+    } else if (origin == null) {
 
-        if (origin instanceof InvokeNode) {
-            gen.setResult(this, gen.operand(origin));
-        } else if (origin instanceof ValuePhiNode) {
+      final AllocatableValue result = tool.newVariable(LIRKind.value(getPTXKind()));
 
-            final ValuePhiNode phi = (ValuePhiNode) origin;
+      /*
+       * two cases: 1. when the state of the vector has elements assigned individually
+       * 2. when this vector is assigned by a vector operation
+       */
+      final int numValues = values.count();
+      final ValueNode firstValue = values.first();
 
-            final Value phiOperand = ((PTXNodeLIRBuilder) gen).operandForPhi(phi);
-
-            final AllocatableValue result = (gen.hasOperand(this)) ? (Variable) gen.operand(this) : tool.newVariable(LIRKind.value(getPTXKind()));
-            tool.append(new PTXLIRStmt.AssignStmt(result, phiOperand));
-            gen.setResult(this, result);
-
-        } else if (origin instanceof ParameterNode) {
-            gen.setResult(this, gen.operand(origin));
-        } else if (origin == null) {
-
-            final AllocatableValue result = tool.newVariable(LIRKind.value(getPTXKind()));
-
-            /*
-             * two cases: 1. when the state of the vector has elements assigned individually
-             * 2. when this vector is assigned by a vector operation
-             */
-            final int numValues = values.count();
-            final ValueNode firstValue = values.first();
-
-            if (firstValue instanceof VectorValueNode || firstValue instanceof VectorOp) {
-                tool.append(new PTXLIRStmt.AssignStmt(result, gen.operand(values.first())));
-                gen.setResult(this, result);
-            } else if (numValues > 0 && gen.hasOperand(firstValue)) {
-                generateVectorAssign(gen, tool, result);
-            } else {
-                gen.setResult(this, result);
-            }
-
-        }
-    }
-
-    private Value getParam(NodeLIRBuilderTool gen, LIRGeneratorTool tool, int index) {
-        final ValueNode valueNode = values.get(index);
-        if ((valueNode instanceof VectorLoadElementNode || valueNode instanceof VectorAddHalfNode) && kind.isHalf()) {
-            return emitHalfFloatAssign(valueNode, tool, gen);
-        }
-        return (valueNode == null) ? new ConstantValue(LIRKind.value(kind), JavaConstant.defaultForKind(kind.getElementKind().asJavaKind())) : tool.emitMove(gen.operand(valueNode));
-    }
-
-    private Variable emitHalfFloatAssign(ValueNode vectorValue, LIRGeneratorTool tool, NodeLIRBuilderTool gen) {
-        Variable result = tool.newVariable(LIRKind.value(PTXKind.B16));
-        Value vectorField = gen.operand(vectorValue);
-        tool.emitMove(result, vectorField);
-        return result;
-    }
-
-    private void generateVectorAssign(NodeLIRBuilderTool gen, LIRGeneratorTool tool, AllocatableValue result) {
-
-        PTXLIROp assignExpr = null;
-        Value s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15;
-
-        // check if first parameter is a vector
-        s0 = getParam(gen, tool, 0);
-        if (kind.getVectorLength() >= 2) {
-            if (((PTXKind) s0.getPlatformKind()).isVector()) {
-                gen.setResult(this, s0);
-                return;
-            }
-        }
-
-        switch (kind.getVectorLength()) {
-            case 2: {
-                s1 = getParam(gen, tool, 1);
-                assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1);
-                break;
-            }
-            case 3: {
-                s1 = getParam(gen, tool, 1);
-                s2 = getParam(gen, tool, 2);
-                assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1, s2);
-                break;
-            }
-            case 4: {
-                s1 = getParam(gen, tool, 1);
-                s2 = getParam(gen, tool, 2);
-                s3 = getParam(gen, tool, 3);
-                assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1, s2, s3);
-                break;
-            }
-            case 8: {
-                s1 = getParam(gen, tool, 1);
-                s2 = getParam(gen, tool, 2);
-                s3 = getParam(gen, tool, 3);
-                s4 = getParam(gen, tool, 4);
-                s5 = getParam(gen, tool, 5);
-                s6 = getParam(gen, tool, 6);
-                s7 = getParam(gen, tool, 7);
-                assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1, s2, s3, s4, s5, s6, s7);
-                break;
-            }
-            case 16: {
-                s1 = getParam(gen, tool, 1);
-                s2 = getParam(gen, tool, 2);
-                s3 = getParam(gen, tool, 3);
-                s4 = getParam(gen, tool, 4);
-                s5 = getParam(gen, tool, 5);
-                s6 = getParam(gen, tool, 6);
-                s7 = getParam(gen, tool, 7);
-                s8 = getParam(gen, tool, 8);
-                s9 = getParam(gen, tool, 9);
-                s10 = getParam(gen, tool, 10);
-                s11 = getParam(gen, tool, 11);
-                s12 = getParam(gen, tool, 12);
-                s13 = getParam(gen, tool, 13);
-                s14 = getParam(gen, tool, 14);
-                s15 = getParam(gen, tool, 15);
-                assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15);
-                break;
-            }
-            default:
-                unimplemented("new vector length = " + kind.getVectorLength());
-        }
-
-        tool.append(new PTXLIRStmt.AssignStmt(result, assignExpr));
-
+      if (firstValue instanceof VectorValueNode || firstValue instanceof VectorOp) {
+        tool.append(new PTXLIRStmt.AssignStmt(result, gen.operand(values.first())));
         gen.setResult(this, result);
+      } else if (numValues > 0 && gen.hasOperand(firstValue)) {
+        generateVectorAssign(gen, tool, result);
+      } else {
+        gen.setResult(this, result);
+      }
     }
+  }
+
+  private Value getParam(NodeLIRBuilderTool gen, LIRGeneratorTool tool, int index) {
+    final ValueNode valueNode = values.get(index);
+    if ((valueNode instanceof VectorLoadElementNode || valueNode instanceof VectorAddHalfNode)
+        && kind.isHalf()) {
+      return emitHalfFloatAssign(valueNode, tool, gen);
+    }
+    return (valueNode == null)
+        ? new ConstantValue(
+            LIRKind.value(kind), JavaConstant.defaultForKind(kind.getElementKind().asJavaKind()))
+        : tool.emitMove(gen.operand(valueNode));
+  }
+
+  private Variable emitHalfFloatAssign(
+      ValueNode vectorValue, LIRGeneratorTool tool, NodeLIRBuilderTool gen) {
+    Variable result = tool.newVariable(LIRKind.value(PTXKind.B16));
+    Value vectorField = gen.operand(vectorValue);
+    tool.emitMove(result, vectorField);
+    return result;
+  }
+
+  private void generateVectorAssign(
+      NodeLIRBuilderTool gen, LIRGeneratorTool tool, AllocatableValue result) {
+
+    PTXLIROp assignExpr = null;
+    Value s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15;
+
+    // check if first parameter is a vector
+    s0 = getParam(gen, tool, 0);
+    if (kind.getVectorLength() >= 2) {
+      if (((PTXKind) s0.getPlatformKind()).isVector()) {
+        gen.setResult(this, s0);
+        return;
+      }
+    }
+
+    switch (kind.getVectorLength()) {
+      case 2:
+        {
+          s1 = getParam(gen, tool, 1);
+          assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1);
+          break;
+        }
+      case 3:
+        {
+          s1 = getParam(gen, tool, 1);
+          s2 = getParam(gen, tool, 2);
+          assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1, s2);
+          break;
+        }
+      case 4:
+        {
+          s1 = getParam(gen, tool, 1);
+          s2 = getParam(gen, tool, 2);
+          s3 = getParam(gen, tool, 3);
+          assignExpr = new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1, s2, s3);
+          break;
+        }
+      case 8:
+        {
+          s1 = getParam(gen, tool, 1);
+          s2 = getParam(gen, tool, 2);
+          s3 = getParam(gen, tool, 3);
+          s4 = getParam(gen, tool, 4);
+          s5 = getParam(gen, tool, 5);
+          s6 = getParam(gen, tool, 6);
+          s7 = getParam(gen, tool, 7);
+          assignExpr =
+              new PTXVectorAssign.AssignVectorExpr(getPTXKind(), s0, s1, s2, s3, s4, s5, s6, s7);
+          break;
+        }
+      case 16:
+        {
+          s1 = getParam(gen, tool, 1);
+          s2 = getParam(gen, tool, 2);
+          s3 = getParam(gen, tool, 3);
+          s4 = getParam(gen, tool, 4);
+          s5 = getParam(gen, tool, 5);
+          s6 = getParam(gen, tool, 6);
+          s7 = getParam(gen, tool, 7);
+          s8 = getParam(gen, tool, 8);
+          s9 = getParam(gen, tool, 9);
+          s10 = getParam(gen, tool, 10);
+          s11 = getParam(gen, tool, 11);
+          s12 = getParam(gen, tool, 12);
+          s13 = getParam(gen, tool, 13);
+          s14 = getParam(gen, tool, 14);
+          s15 = getParam(gen, tool, 15);
+          assignExpr =
+              new PTXVectorAssign.AssignVectorExpr(
+                  getPTXKind(),
+                  s0,
+                  s1,
+                  s2,
+                  s3,
+                  s4,
+                  s5,
+                  s6,
+                  s7,
+                  s8,
+                  s9,
+                  s10,
+                  s11,
+                  s12,
+                  s13,
+                  s14,
+                  s15);
+          break;
+        }
+      default:
+        unimplemented("new vector length = " + kind.getVectorLength());
+    }
+
+    tool.append(new PTXLIRStmt.AssignStmt(result, assignExpr));
+
+    gen.setResult(this, result);
+  }
 }

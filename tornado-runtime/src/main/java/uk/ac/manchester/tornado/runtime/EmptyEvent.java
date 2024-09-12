@@ -28,72 +28,69 @@ import uk.ac.manchester.tornado.api.enums.TornadoExecutionStatus;
 
 public class EmptyEvent implements Event {
 
-    private final String name;
+  private final String name;
 
-    private EmptyEvent(String name) {
-        this.name = name;
-    }
+  private EmptyEvent(String name) {
+    this.name = name;
+  }
 
-    public EmptyEvent() {
-        this("Empty Event");
-    }
+  public EmptyEvent() {
+    this("Empty Event");
+  }
 
-    @Override
-    public String getName() {
-        return name;
-    }
+  @Override
+  public String getName() {
+    return name;
+  }
 
-    @Override
-    public long getElapsedTime() {
-        return 0;
-    }
+  @Override
+  public long getElapsedTime() {
+    return 0;
+  }
 
-    @Override
-    public long getDriverDispatchTime() {
-        return 0;
-    }
+  @Override
+  public long getDriverDispatchTime() {
+    return 0;
+  }
 
-    @Override
-    public double getElapsedTimeInSeconds() {
-        return 0;
-    }
+  @Override
+  public double getElapsedTimeInSeconds() {
+    return 0;
+  }
 
-    @Override
-    public TornadoExecutionStatus getStatus() {
-        return TornadoExecutionStatus.COMPLETE;
-    }
+  @Override
+  public TornadoExecutionStatus getStatus() {
+    return TornadoExecutionStatus.COMPLETE;
+  }
 
-    @Override
-    public double getTotalTimeInSeconds() {
-        return 0;
-    }
+  @Override
+  public double getTotalTimeInSeconds() {
+    return 0;
+  }
 
-    @Override
-    public void waitOn() {
-    }
+  @Override
+  public void waitOn() {}
 
-    @Override
-    public long getQueuedTime() {
-        return 0;
-    }
+  @Override
+  public long getQueuedTime() {
+    return 0;
+  }
 
-    @Override
-    public long getSubmitTime() {
-        return 0;
-    }
+  @Override
+  public long getSubmitTime() {
+    return 0;
+  }
 
-    @Override
-    public long getStartTime() {
-        return 0;
-    }
+  @Override
+  public long getStartTime() {
+    return 0;
+  }
 
-    @Override
-    public long getEndTime() {
-        return 0;
-    }
+  @Override
+  public long getEndTime() {
+    return 0;
+  }
 
-    @Override
-    public void waitForEvents(long executionPlanId) {
-
-    }
+  @Override
+  public void waitForEvents(long executionPlanId) {}
 }

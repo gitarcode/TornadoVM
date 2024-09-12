@@ -25,7 +25,6 @@ package uk.ac.manchester.tornado.drivers.opencl.mm;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoMemoryException;
 import uk.ac.manchester.tornado.api.exceptions.TornadoOutOfMemoryException;
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
@@ -34,99 +33,127 @@ import uk.ac.manchester.tornado.drivers.opencl.OCLDeviceContext;
 
 public class AtomicsBuffer implements XPUBuffer {
 
-    private int[] atomicsList;
-    private static final int OFFSET = 0;
-    private final OCLDeviceContext deviceContext;
-    private long setSubRegionSize;
+  private int[] atomicsList;
+  private static final int OFFSET = 0;
+  private final OCLDeviceContext deviceContext;
+  private long setSubRegionSize;
 
-    public AtomicsBuffer(int[] arr, OCLDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
-        this.atomicsList = arr;
-        deviceContext.getMemoryManager().allocateAtomicRegion();
+  public AtomicsBuffer(int[] arr, OCLDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+    this.atomicsList = arr;
+    deviceContext.getMemoryManager().allocateAtomicRegion();
+  }
+
+  @Override
+  public long toBuffer() {
+    throw new TornadoRuntimeException("Not implemented");
+  }
+
+  @Override
+  public void setBuffer(XPUBufferWrapper bufferWrapper) {
+    throw new TornadoRuntimeException("Not implemented");
+  }
+
+  @Override
+  public long getBufferOffset() {
+    return 0;
+  }
+
+  @Override
+  public void read(long executionPlanId, Object reference) {
+    throw new TornadoRuntimeException("Not implemented");
+  }
+
+  @Override
+  public int read(
+      long executionPlanId,
+      Object reference,
+      long hostOffset,
+      long partialReadSize,
+      int[] events,
+      boolean useDeps) {
+    throw new TornadoRuntimeException("Not implemented");
+  }
+
+  @Override
+  public void write(long executionPlanId, Object reference) {
+    throw new TornadoRuntimeException("Not implemented");
+  }
+
+  @Override
+  public int enqueueRead(
+      long executionPlanId, Object reference, long hostOffset, int[] events, boolean useDeps) {
+    return deviceContext.readBuffer(
+        executionPlanId,
+        deviceContext.getMemoryManager().toAtomicAddress(),
+        OFFSET,
+        4 * atomicsList.length,
+        atomicsList,
+        0,
+        events);
+  }
+
+  @Override
+  public List<Integer> enqueueWrite(
+      long executionPlanId,
+      Object reference,
+      long batchSize,
+      long hostOffset,
+      int[] events,
+      boolean useDeps) {
+    // Non-blocking write
+    if (atomicsList.length == 0) {
+      return null;
     }
+    return new ArrayList<>(
+        deviceContext.enqueueWriteBuffer(
+            executionPlanId,
+            deviceContext.getMemoryManager().toAtomicAddress(),
+            OFFSET,
+            4 * atomicsList.length,
+            atomicsList,
+            0,
+            events));
+  }
 
-    @Override
-    public long toBuffer() {
-        throw new TornadoRuntimeException("Not implemented");
-    }
+  @Override
+  public void allocate(Object reference, long batchSize)
+      throws TornadoOutOfMemoryException, TornadoMemoryException {
+    deviceContext.getMemoryManager().allocateAtomicRegion();
+  }
 
-    @Override
-    public void setBuffer(XPUBufferWrapper bufferWrapper) {
-        throw new TornadoRuntimeException("Not implemented");
-    }
+  @Override
+  public void markAsFreeBuffer() throws TornadoMemoryException {
+    deviceContext.getMemoryManager().deallocateAtomicRegion();
+  }
 
-    @Override
-    public long getBufferOffset() {
-        return 0;
-    }
+  @Override
+  public long size() {
+    return atomicsList.length * 4;
+  }
 
-    @Override
-    public void read(long executionPlanId, Object reference) {
-        throw new TornadoRuntimeException("Not implemented");
-    }
+  @Override
+  public void setSizeSubRegion(long batchSize) {
+    this.setSubRegionSize = batchSize;
+  }
 
-    @Override
-    public int read(long executionPlanId, Object reference, long hostOffset, long partialReadSize, int[] events, boolean useDeps) {
-        throw new TornadoRuntimeException("Not implemented");
-    }
+  @Override
+  public long getSizeSubRegionSize() {
+    return setSubRegionSize;
+  }
 
-    @Override
-    public void write(long executionPlanId, Object reference) {
-        throw new TornadoRuntimeException("Not implemented");
-    }
+  @Override
+  public int[] getIntBuffer() {
+    return atomicsList;
+  }
 
-    @Override
-    public int enqueueRead(long executionPlanId, Object reference, long hostOffset, int[] events, boolean useDeps) {
-        return deviceContext.readBuffer(executionPlanId, deviceContext.getMemoryManager().toAtomicAddress(), OFFSET, 4 * atomicsList.length, atomicsList, 0, events);
-    }
+  @Override
+  public void setIntBuffer(int[] arr) {
+    this.atomicsList = arr;
+  }
 
-    @Override
-    public List<Integer> enqueueWrite(long executionPlanId, Object reference, long batchSize, long hostOffset, int[] events, boolean useDeps) {
-        // Non-blocking write
-        if (atomicsList.length == 0) {
-            return null;
-        }
-        return new ArrayList<>(deviceContext.enqueueWriteBuffer(executionPlanId, deviceContext.getMemoryManager().toAtomicAddress(), OFFSET, 4 * atomicsList.length, atomicsList, 0, events));
-    }
-
-    @Override
-    public void allocate(Object reference, long batchSize) throws TornadoOutOfMemoryException, TornadoMemoryException {
-        deviceContext.getMemoryManager().allocateAtomicRegion();
-    }
-
-    @Override
-    public void markAsFreeBuffer() throws TornadoMemoryException {
-        deviceContext.getMemoryManager().deallocateAtomicRegion();
-    }
-
-    @Override
-    public long size() {
-        return atomicsList.length * 4;
-    }
-
-    @Override
-    public void setSizeSubRegion(long batchSize) {
-        this.setSubRegionSize = batchSize;
-    }
-
-    @Override
-    public long getSizeSubRegionSize() {
-        return setSubRegionSize;
-    }
-
-    @Override
-    public int[] getIntBuffer() {
-        return atomicsList;
-    }
-
-    @Override
-    public void setIntBuffer(int[] arr) {
-        this.atomicsList = arr;
-    }
-
-    @Override
-    public long deallocate() {
-        return deviceContext.getBufferProvider().deallocate();
-    }
-
+  @Override
+  public long deallocate() {
+    return deviceContext.getBufferProvider().deallocate();
+  }
 }

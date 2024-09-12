@@ -28,44 +28,41 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.Lowerable;
 import org.graalvm.compiler.nodes.spi.LoweringTool;
-
 import uk.ac.manchester.tornado.api.KernelContext;
 
 /**
- * The {@link ThreadIdFixedWithNextNode} is used to replace the FieldNodes that
- * correspond to the {@link KernelContext}. In essence, these fields are:
- * threadIdx, threadIdy and threadIdz.
+ * The {@link ThreadIdFixedWithNextNode} is used to replace the FieldNodes that correspond to the
+ * {@link KernelContext}. In essence, these fields are: threadIdx, threadIdy and threadIdz.
  *
- * During lowering, this node is replaced with a FloatingNode that corresponds
- * to a TornadoVM backend (OpenCL, PTX). That replacement is performed in
- * OCLLoweringProvider, or PTXLoweringProvider, and drives the
- * {@link ThreadIdFixedWithNextNode} to extend FixedWithNextNode in order to be
- * replaced by a FloatingNode.
+ * <p>During lowering, this node is replaced with a FloatingNode that corresponds to a TornadoVM
+ * backend (OpenCL, PTX). That replacement is performed in OCLLoweringProvider, or
+ * PTXLoweringProvider, and drives the {@link ThreadIdFixedWithNextNode} to extend FixedWithNextNode
+ * in order to be replaced by a FloatingNode.
  */
 @NodeInfo(shortName = "GlobalThreadId")
 public class ThreadIdFixedWithNextNode extends FixedWithNextNode implements Lowerable {
 
-    public static final NodeClass<ThreadIdFixedWithNextNode> TYPE = NodeClass.create(ThreadIdFixedWithNextNode.class);
-    private final int dimension;
-    @Input
-    ValueNode object;
+  public static final NodeClass<ThreadIdFixedWithNextNode> TYPE =
+      NodeClass.create(ThreadIdFixedWithNextNode.class);
+  private final int dimension;
+  @Input ValueNode object;
 
-    public ThreadIdFixedWithNextNode(ValueNode index, int dimension) {
-        super(TYPE, StampFactory.forUnsignedInteger(32));
-        this.object = index;
-        this.dimension = dimension;
-    }
+  public ThreadIdFixedWithNextNode(ValueNode index, int dimension) {
+    super(TYPE, StampFactory.forUnsignedInteger(32));
+    this.object = index;
+    this.dimension = dimension;
+  }
 
-    public ValueNode object() {
-        return this.object;
-    }
+  public ValueNode object() {
+    return this.object;
+  }
 
-    public int getDimension() {
-        return dimension;
-    }
+  public int getDimension() {
+    return dimension;
+  }
 
-    @Override
-    public void lower(LoweringTool loweringTool) {
-        loweringTool.getLowerer().lower(this, loweringTool);
-    }
+  @Override
+  public void lower(LoweringTool loweringTool) {
+    loweringTool.getLowerer().lower(this, loweringTool);
+  }
 }

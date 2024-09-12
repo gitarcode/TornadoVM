@@ -30,10 +30,10 @@ import org.graalvm.compiler.nodes.ValueNode;
 @NodeInfo(nameTemplate = "Offset")
 public class ParallelOffsetNode extends AbstractParallelNode {
 
-    public static final NodeClass<ParallelOffsetNode> TYPE = NodeClass.create(ParallelOffsetNode.class);
+  public static final NodeClass<ParallelOffsetNode> TYPE =
+      NodeClass.create(ParallelOffsetNode.class);
 
-    public ParallelOffsetNode(int index, ValueNode offset) {
-        super(TYPE, index, offset);
-    }
-
+  public ParallelOffsetNode(int index, ValueNode offset) {
+    super(TYPE, index, offset);
+  }
 }

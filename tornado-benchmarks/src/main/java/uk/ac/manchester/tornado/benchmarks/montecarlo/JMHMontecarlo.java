@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.montecarlo;
 import static uk.ac.manchester.tornado.benchmarks.ComputeKernels.monteCarlo;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -38,7 +37,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -47,66 +45,65 @@ import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.montecarlo.JMHMontecarlo
  * </code>
  */
 public class JMHMontecarlo {
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        private int size = Integer.parseInt(System.getProperty("x", "8192"));
-        private FloatArray output;
-        private TornadoExecutionPlan executionPlan;
+    private int size = Integer.parseInt(System.getProperty("x", "8192"));
+    private FloatArray output;
+    private TornadoExecutionPlan executionPlan;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            output = new FloatArray(size);
-            TaskGraph taskGraph = new TaskGraph("benchmark") //
-                    .task("montecarlo", ComputeKernels::monteCarlo, output, size) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-            executionPlan.withWarmUp();
-        }
+    @Setup(Level.Trial)
+    public void doSetup() {
+      output = new FloatArray(size);
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .task("montecarlo", ComputeKernels::monteCarlo, output, size) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+      executionPlan.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void montecarloJava(BenchmarkSetup state) {
-        monteCarlo(state.output, state.size);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void montecarloJava(BenchmarkSetup state) {
+    monteCarlo(state.output, state.size);
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void montecarloTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executionPlan;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void montecarloTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executionPlan;
+    executor.execute();
+    blackhole.consume(executor);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHMontecarlo.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.SECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHMontecarlo.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.SECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

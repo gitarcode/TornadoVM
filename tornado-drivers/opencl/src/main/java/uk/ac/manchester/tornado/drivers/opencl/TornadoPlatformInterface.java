@@ -25,15 +25,15 @@ package uk.ac.manchester.tornado.drivers.opencl;
 
 public interface TornadoPlatformInterface {
 
-    void cleanup();
+  void cleanup();
 
-    OCLContextInterface createContext();
+  OCLContextInterface createContext();
 
-    String getName();
+  String getName();
 
-    String getVendor();
+  String getVendor();
 
-    String getVersion();
+  String getVersion();
 
-    boolean isSPIRVSupported();
+  boolean isSPIRVSupported();
 }

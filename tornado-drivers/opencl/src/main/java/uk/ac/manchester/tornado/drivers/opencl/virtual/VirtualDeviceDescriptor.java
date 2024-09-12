@@ -28,49 +28,56 @@ import uk.ac.manchester.tornado.drivers.opencl.enums.OCLDeviceType;
 
 public class VirtualDeviceDescriptor {
 
-    private final String deviceName;
-    private final boolean doubleFPSupport;
-    private final long[] maxWorkItemSizes;
-    private final int deviceAddressBits;
-    private final OCLDeviceType deviceType;
-    private final String deviceExtensions;
-    private final int availableProcessors;
+  private final String deviceName;
+  private final boolean doubleFPSupport;
+  private final long[] maxWorkItemSizes;
+  private final int deviceAddressBits;
+  private final OCLDeviceType deviceType;
+  private final String deviceExtensions;
+  private final int availableProcessors;
 
-    public VirtualDeviceDescriptor(String deviceName, boolean doubleFPSupport, long[] maxWorkItemSizes, int deviceAddressBits, OCLDeviceType deviceType, String deviceExtensions, int availableProcessors) {
-        this.deviceName = deviceName;
-        this.doubleFPSupport = doubleFPSupport;
-        this.maxWorkItemSizes = maxWorkItemSizes;
-        this.deviceAddressBits = deviceAddressBits;
-        this.deviceType = deviceType;
-        this.deviceExtensions = deviceExtensions;
-        this.availableProcessors = availableProcessors;
-    }
+  public VirtualDeviceDescriptor(
+      String deviceName,
+      boolean doubleFPSupport,
+      long[] maxWorkItemSizes,
+      int deviceAddressBits,
+      OCLDeviceType deviceType,
+      String deviceExtensions,
+      int availableProcessors) {
+    this.deviceName = deviceName;
+    this.doubleFPSupport = doubleFPSupport;
+    this.maxWorkItemSizes = maxWorkItemSizes;
+    this.deviceAddressBits = deviceAddressBits;
+    this.deviceType = deviceType;
+    this.deviceExtensions = deviceExtensions;
+    this.availableProcessors = availableProcessors;
+  }
 
-    public String getDeviceName() {
-        return deviceName;
-    }
+  public String getDeviceName() {
+    return deviceName;
+  }
 
-    public long[] getMaxWorkItemSizes() {
-        return maxWorkItemSizes;
-    }
+  public long[] getMaxWorkItemSizes() {
+    return maxWorkItemSizes;
+  }
 
-    public boolean getDoubleFPSupport() {
-        return doubleFPSupport;
-    }
+  public boolean getDoubleFPSupport() {
+    return doubleFPSupport;
+  }
 
-    public OCLDeviceType deviceType() {
-        return deviceType;
-    }
+  public OCLDeviceType deviceType() {
+    return deviceType;
+  }
 
-    public int getDeviceAddressBits() {
-        return deviceAddressBits;
-    }
+  public int getDeviceAddressBits() {
+    return deviceAddressBits;
+  }
 
-    public String getDeviceExtensions() {
-        return deviceExtensions;
-    }
+  public String getDeviceExtensions() {
+    return deviceExtensions;
+  }
 
-    public int getAvailableProcessors() {
-        return availableProcessors;
-    }
+  public int getAvailableProcessors() {
+    return availableProcessors;
+  }
 }

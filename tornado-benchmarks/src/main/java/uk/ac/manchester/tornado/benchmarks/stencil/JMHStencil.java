@@ -22,7 +22,6 @@ import static uk.ac.manchester.tornado.benchmarks.stencil.Stencil.stencil3d;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -40,7 +39,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -48,92 +46,91 @@ import uk.ac.manchester.tornado.api.enums.DataTransferMode;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.stencil.JMHStencil
  * </code>
  */
 public class JMHStencil {
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        private final int size = Integer.parseInt(System.getProperty("x", "1048576"));
-        int sz;
-        int n;
-        private final float FAC = 1 / 26;
-        private FloatArray a0;
-        private FloatArray a1;
-        private FloatArray ainit;
+    private final int size = Integer.parseInt(System.getProperty("x", "1048576"));
+    int sz;
+    int n;
+    private final float FAC = 1 / 26;
+    private FloatArray a0;
+    private FloatArray a1;
+    private FloatArray ainit;
 
-        private TornadoExecutionPlan executor;
+    private TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            sz = (int) Math.cbrt(size / 8) / 2;
-            n = sz - 2;
-            a0 = new FloatArray(sz * sz * sz);
-            a1 = new FloatArray(sz * sz * sz);
-            ainit = new FloatArray(sz * sz * sz);
+    @Setup(Level.Trial)
+    public void doSetup() {
+      sz = (int) Math.cbrt(size / 8) / 2;
+      n = sz - 2;
+      a0 = new FloatArray(sz * sz * sz);
+      a1 = new FloatArray(sz * sz * sz);
+      ainit = new FloatArray(sz * sz * sz);
 
-            a1.init(0);
+      a1.init(0);
 
-            final Random rand = new Random(7);
-            for (int i = 1; i < n + 1; i++) {
-                for (int j = 1; j < n + 1; j++) {
-                    for (int k = 1; k < n + 1; k++) {
-                        ainit.set((i * sz * sz) + (j * sz) + k, rand.nextFloat());
-                    }
-                }
-            }
-            copy(sz, ainit, a0);
-            TaskGraph taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, a0, a1) //
-                    .task("stencil", Stencil::stencil3d, n, sz, a0, a1, FAC) //
-                    .task("copy", Stencil::copy, sz, a1, a0) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, a0);
-
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
+      final Random rand = new Random(7);
+      for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
+          for (int k = 1; k < n + 1; k++) {
+            ainit.set((i * sz * sz) + (j * sz) + k, rand.nextFloat());
+          }
         }
-    }
+      }
+      copy(sz, ainit, a0);
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, a0, a1) //
+              .task("stencil", Stencil::stencil3d, n, sz, a0, a1, FAC) //
+              .task("copy", Stencil::copy, sz, a1, a0) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, a0);
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void stencilJava(BenchmarkSetup state) {
-        stencil3d(state.n, state.sz, state.a0, state.a1, state.FAC);
-        copy(state.sz, state.a0, state.a1);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void stencilTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void stencilJava(BenchmarkSetup state) {
+    stencil3d(state.n, state.sz, state.a0, state.a1, state.FAC);
+    copy(state.sz, state.a0, state.a1);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHStencil.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void stencilTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
+
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHStencil.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

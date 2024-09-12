@@ -19,23 +19,40 @@ package uk.ac.manchester.tornado.api.types.collections;
 
 import java.lang.foreign.MemorySegment;
 import java.nio.Buffer;
-
 import uk.ac.manchester.tornado.api.types.common.PrimitiveStorage;
 
-public sealed
+public sealed interface TornadoCollectionInterface<T extends Buffer> //
+    extends PrimitiveStorage<T> //
+    permits VectorDouble,
+        VectorDouble2,
+        VectorDouble3,
+        VectorDouble4,
+        VectorDouble8,
+        VectorDouble16, //
+        VectorFloat,
+        VectorFloat2,
+        VectorFloat3,
+        VectorFloat4,
+        VectorFloat8,
+        VectorFloat16, //
+        VectorInt,
+        VectorInt2,
+        VectorInt3,
+        VectorInt4,
+        VectorInt8,
+        VectorInt16, //
+        VectorHalf,
+        VectorHalf2,
+        VectorHalf3,
+        VectorHalf4,
+        VectorHalf8,
+        VectorHalf16 {
 
-interface TornadoCollectionInterface<T extends Buffer> //
-        extends PrimitiveStorage<T>  //
-permits VectorDouble, VectorDouble2, VectorDouble3, VectorDouble4, VectorDouble8, VectorDouble16, //
-VectorFloat, VectorFloat2, VectorFloat3, VectorFloat4, VectorFloat8, VectorFloat16, //
-VectorInt, VectorInt2, VectorInt3, VectorInt4, VectorInt8, VectorInt16, //
-VectorHalf, VectorHalf2, VectorHalf3, VectorHalf4, VectorHalf8, VectorHalf16 {
+  long getNumBytes();
 
-    long getNumBytes();
+  long getNumBytesWithHeader();
 
-    long getNumBytesWithHeader();
+  MemorySegment getSegment();
 
-    MemorySegment getSegment();
-
-    MemorySegment getSegmentWithHeader();
+  MemorySegment getSegmentWithHeader();
 }

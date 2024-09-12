@@ -23,6 +23,9 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal;
 
+import jdk.vm.ci.code.CodeCacheProvider;
+import jdk.vm.ci.meta.ConstantReflectionProvider;
+import jdk.vm.ci.meta.MetaAccessProvider;
 import org.graalvm.compiler.api.replacements.SnippetReflectionProvider;
 import org.graalvm.compiler.core.common.spi.ConstantFieldProvider;
 import org.graalvm.compiler.core.common.spi.ForeignCallsProvider;
@@ -35,35 +38,43 @@ import org.graalvm.compiler.nodes.spi.StampProvider;
 import org.graalvm.compiler.phases.util.Providers;
 import org.graalvm.compiler.word.WordTypes;
 
-import jdk.vm.ci.code.CodeCacheProvider;
-import jdk.vm.ci.meta.ConstantReflectionProvider;
-import jdk.vm.ci.meta.MetaAccessProvider;
-
 public class OCLProviders extends Providers {
 
-    private final OCLSuitesProvider suites;
+  private final OCLSuitesProvider suites;
 
-    public OCLProviders(MetaAccessProvider metaAccess, //
-            CodeCacheProvider codeCache, //
-            ConstantReflectionProvider constantReflection, //
-            ConstantFieldProvider constantFieldProvider, //
-            ForeignCallsProvider foreignCalls, //
-            LoweringProvider lowerer, //
-            Replacements replacements, //
-            StampProvider stampProvider, //
-            PlatformConfigurationProvider platformConfigurationProvider, //
-            MetaAccessExtensionProvider metaAccessExtensionProvider, //
-            SnippetReflectionProvider snippetReflection, //
-            WordTypes wordTypes, //
-            LoopsDataProvider loopsDataProvider, //
-            OCLSuitesProvider suitesProvider) {
-        super(metaAccess, codeCache, constantReflection, constantFieldProvider, foreignCalls, lowerer, replacements, stampProvider, platformConfigurationProvider, metaAccessExtensionProvider,
-                snippetReflection, wordTypes, loopsDataProvider);
-        this.suites = suitesProvider;
-    }
+  public OCLProviders(
+      MetaAccessProvider metaAccess, //
+      CodeCacheProvider codeCache, //
+      ConstantReflectionProvider constantReflection, //
+      ConstantFieldProvider constantFieldProvider, //
+      ForeignCallsProvider foreignCalls, //
+      LoweringProvider lowerer, //
+      Replacements replacements, //
+      StampProvider stampProvider, //
+      PlatformConfigurationProvider platformConfigurationProvider, //
+      MetaAccessExtensionProvider metaAccessExtensionProvider, //
+      SnippetReflectionProvider snippetReflection, //
+      WordTypes wordTypes, //
+      LoopsDataProvider loopsDataProvider, //
+      OCLSuitesProvider suitesProvider) {
+    super(
+        metaAccess,
+        codeCache,
+        constantReflection,
+        constantFieldProvider,
+        foreignCalls,
+        lowerer,
+        replacements,
+        stampProvider,
+        platformConfigurationProvider,
+        metaAccessExtensionProvider,
+        snippetReflection,
+        wordTypes,
+        loopsDataProvider);
+    this.suites = suitesProvider;
+  }
 
-    public OCLSuitesProvider getSuitesProvider() {
-        return suites;
-    }
-
+  public OCLSuitesProvider getSuitesProvider() {
+    return suites;
+  }
 }

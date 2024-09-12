@@ -23,6 +23,4 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.nodes.vector;
 
-public interface VectorOp {
-
-}
+public interface VectorOp {}

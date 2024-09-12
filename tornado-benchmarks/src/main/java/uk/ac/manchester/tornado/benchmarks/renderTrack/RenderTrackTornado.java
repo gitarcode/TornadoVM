@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.benchmarks.renderTrack;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -31,92 +30,92 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner renderTrack
  * </code>
  */
 public class RenderTrackTornado extends BenchmarkDriver {
 
-    private int size;
-    private ImageFloat3 input;
-    private ImageByte3 output;
+  private int size;
+  private ImageFloat3 input;
+  private ImageByte3 output;
 
-    public RenderTrackTornado(int size, int iterations) {
-        super(iterations);
-        this.size = size;
+  public RenderTrackTornado(int size, int iterations) {
+    super(iterations);
+    this.size = size;
+  }
+
+  @Override
+  public void setUp() {
+    output = new ImageByte3(size, size);
+    input = new ImageFloat3(size, size);
+    Random r = new Random();
+    for (int i = 0; i < input.X(); i++) {
+      for (int j = 0; j < input.Y(); j++) {
+        float value = (float) r.nextInt(10) * -1;
+        input.set(i, j, new Float3(i, j, value));
+      }
     }
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
+            .task("renderTrack", ComputeKernels::renderTrack, output, input) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
-    @Override
-    public void setUp() {
-        output = new ImageByte3(size, size);
-        input = new ImageFloat3(size, size);
-        Random r = new Random();
-        for (int i = 0; i < input.X(); i++) {
-            for (int j = 0; j < input.Y(); j++) {
-                float value = (float) r.nextInt(10) * -1;
-                input.set(i, j, new Float3(i, j, value));
-            }
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
+
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    input = null;
+    output = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
+
+  private static boolean validate(ImageFloat3 input, ImageByte3 outputTornado) {
+    ImageByte3 validationOutput = new ImageByte3(outputTornado.X(), outputTornado.Y());
+    ComputeKernels.renderTrack(validationOutput, input);
+    for (int i = 0; i < validationOutput.Y(); i++) {
+      for (int j = 0; j < validationOutput.X(); j++) {
+        if ((validationOutput.get(i, j).getX() != outputTornado.get(i, j).getX())
+            || (validationOutput.get(i, j).getY() != outputTornado.get(i, j).getY())
+            || (validationOutput.get(i, j).getZ() != outputTornado.get(i, j).getZ())) {
+          return false;
         }
-        taskGraph = new TaskGraph("benchmark")//
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .task("renderTrack", ComputeKernels::renderTrack, output, input) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+      }
     }
+    return true;
+  }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        input = null;
-        output = null;
-        executionPlan.resetDevice();
-        super.tearDown();
+  @Override
+  public boolean validate(TornadoDevice device) {
+    ImageByte3 outputTornado = new ImageByte3(size, size);
+    ImageFloat3 inputValidation = new ImageFloat3(size, size);
+    Random r = new Random();
+    for (int i = 0; i < inputValidation.X(); i++) {
+      for (int j = 0; j < inputValidation.Y(); j++) {
+        float value = (float) r.nextInt(10) * -1;
+        inputValidation.set(i, j, new Float3(i, j, value));
+      }
     }
+    TaskGraph s0 =
+        new TaskGraph("s0") //
+            .task("t0", ComputeKernels::renderTrack, outputTornado, inputValidation) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, outputTornado);
 
-    private static boolean validate(ImageFloat3 input, ImageByte3 outputTornado) {
-        ImageByte3 validationOutput = new ImageByte3(outputTornado.X(), outputTornado.Y());
-        ComputeKernels.renderTrack(validationOutput, input);
-        for (int i = 0; i < validationOutput.Y(); i++) {
-            for (int j = 0; j < validationOutput.X(); j++) {
-                if ((validationOutput.get(i, j).getX() != outputTornado.get(i, j).getX()) || (validationOutput.get(i, j).getY() != outputTornado.get(i, j).getY()) || (validationOutput.get(i, j)
-                        .getZ() != outputTornado.get(i, j).getZ())) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
+    ImmutableTaskGraph immutableTaskGraph = s0.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    executor.withDevice(device).execute();
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        ImageByte3 outputTornado = new ImageByte3(size, size);
-        ImageFloat3 inputValidation = new ImageFloat3(size, size);
-        Random r = new Random();
-        for (int i = 0; i < inputValidation.X(); i++) {
-            for (int j = 0; j < inputValidation.Y(); j++) {
-                float value = (float) r.nextInt(10) * -1;
-                inputValidation.set(i, j, new Float3(i, j, value));
-            }
-        }
-        TaskGraph s0 = new TaskGraph("s0")//
-                .task("t0", ComputeKernels::renderTrack, outputTornado, inputValidation) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, outputTornado);
+    return validate(inputValidation, outputTornado);
+  }
 
-        ImmutableTaskGraph immutableTaskGraph = s0.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
-        executor.withDevice(device).execute();
-
-        return validate(inputValidation, outputTornado);
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 }

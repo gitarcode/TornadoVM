@@ -23,6 +23,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
@@ -30,23 +31,19 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.java.AccessIndexedNode;
 import org.graalvm.compiler.nodes.spi.Lowerable;
 
-import jdk.vm.ci.meta.JavaKind;
-
 @NodeInfo(shortName = "Atomic Add")
 public class AtomicAddNode extends AccessIndexedNode implements Lowerable {
 
-    public static final NodeClass<AtomicAddNode> TYPE = NodeClass.create(AtomicAddNode.class);
+  public static final NodeClass<AtomicAddNode> TYPE = NodeClass.create(AtomicAddNode.class);
 
-    @Input
-    ValueNode value;
+  @Input ValueNode value;
 
-    public AtomicAddNode(ValueNode array, ValueNode index, JavaKind elementKind, ValueNode value) {
-        super(TYPE, StampFactory.forVoid(), array, index, null, elementKind);
-        this.value = value;
-    }
+  public AtomicAddNode(ValueNode array, ValueNode index, JavaKind elementKind, ValueNode value) {
+    super(TYPE, StampFactory.forVoid(), array, index, null, elementKind);
+    this.value = value;
+  }
 
-    public ValueNode value() {
-        return value;
-    }
-
+  public ValueNode value() {
+    return value;
+  }
 }

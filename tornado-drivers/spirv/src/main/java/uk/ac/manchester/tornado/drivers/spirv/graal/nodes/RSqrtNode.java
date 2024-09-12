@@ -24,6 +24,7 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.gen.ArithmeticLIRGeneratorTool;
@@ -32,33 +33,31 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.lir.SPIRVArithmeticTool;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkFloatingPointIntrinsicsNode;
 
 @NodeInfo(shortName = "SPIRV-RSQRT")
-public class RSqrtNode extends FloatingNode implements ArithmeticLIRLowerable, MarkFloatingPointIntrinsicsNode {
+public class RSqrtNode extends FloatingNode
+    implements ArithmeticLIRLowerable, MarkFloatingPointIntrinsicsNode {
 
-    public static final NodeClass<RSqrtNode> TYPE = NodeClass.create(RSqrtNode.class);
+  public static final NodeClass<RSqrtNode> TYPE = NodeClass.create(RSqrtNode.class);
 
-    @Input
-    ValueNode value;
+  @Input ValueNode value;
 
-    public RSqrtNode(ValueNode x) {
-        super(TYPE, StampFactory.forKind(x.getStackKind()));
-        this.value = x;
-    }
+  public RSqrtNode(ValueNode x) {
+    super(TYPE, StampFactory.forKind(x.getStackKind()));
+    this.value = x;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool gen) {
-        Value operand = builder.operand(value);
-        SPIRVArithmeticTool spirvArithmeticTool = (SPIRVArithmeticTool) gen;
-        builder.setResult(this, spirvArithmeticTool.emitRSQRT(operand));
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool gen) {
+    Value operand = builder.operand(value);
+    SPIRVArithmeticTool spirvArithmeticTool = (SPIRVArithmeticTool) gen;
+    builder.setResult(this, spirvArithmeticTool.emitRSQRT(operand));
+  }
 
-    @Override
-    public String getOperation() {
-        return "sqrt";
-    }
+  @Override
+  public String getOperation() {
+    return "sqrt";
+  }
 }

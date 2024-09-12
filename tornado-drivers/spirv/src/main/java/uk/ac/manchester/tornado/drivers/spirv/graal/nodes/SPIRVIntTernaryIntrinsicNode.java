@@ -24,6 +24,8 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.core.common.type.StampFactory;
@@ -39,9 +41,6 @@ import org.graalvm.compiler.nodes.calc.TernaryNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.api.math.TornadoMath;
 import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.lir.SPIRVArithmeticTool;
@@ -50,95 +49,112 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkIntIntrinsicNode;
 
 @NodeInfo(nameTemplate = "{p#operation/s}")
-public class SPIRVIntTernaryIntrinsicNode extends TernaryNode implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
+public class SPIRVIntTernaryIntrinsicNode extends TernaryNode
+    implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
 
-    public static final NodeClass<SPIRVIntTernaryIntrinsicNode> TYPE = NodeClass.create(SPIRVIntTernaryIntrinsicNode.class);
-    protected final Operation operation;
+  public static final NodeClass<SPIRVIntTernaryIntrinsicNode> TYPE =
+      NodeClass.create(SPIRVIntTernaryIntrinsicNode.class);
+  protected final Operation operation;
 
-    protected SPIRVIntTernaryIntrinsicNode(ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
-        super(TYPE, StampFactory.forKind(kind), x, y, z);
-        this.operation = op;
+  protected SPIRVIntTernaryIntrinsicNode(
+      ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
+    super(TYPE, StampFactory.forKind(kind), x, y, z);
+    this.operation = op;
+  }
+
+  public static ValueNode create(
+      ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
+    ValueNode c = tryConstantFold(x, y, z, op, kind);
+    if (c != null) {
+      return c;
     }
+    return new SPIRVIntTernaryIntrinsicNode(x, y, z, op, kind);
+  }
 
-    public static ValueNode create(ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
-        ValueNode c = tryConstantFold(x, y, z, op, kind);
-        if (c != null) {
-            return c;
-        }
-        return new SPIRVIntTernaryIntrinsicNode(x, y, z, op, kind);
+  private static long doCompute(long x, long y, long z, Operation op) {
+    throw new TornadoInternalError("unknown op %s", op);
+  }
+
+  private static int doCompute(int x, int y, int z, Operation op) {
+    if (op == Operation.CLAMP) {
+      return TornadoMath.clamp(x, y, z);
     }
+    throw new TornadoInternalError("unknown op %s", op);
+  }
 
-    private static long doCompute(long x, long y, long z, Operation op) {
-        throw new TornadoInternalError("unknown op %s", op);
+  protected static ValueNode tryConstantFold(
+      ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
+    ConstantNode result = null;
+
+    if (x.isConstant() && y.isConstant() && z.isConstant()) {
+      if (kind == JavaKind.Int) {
+        int ret =
+            doCompute(
+                x.asJavaConstant().asInt(),
+                y.asJavaConstant().asInt(),
+                z.asJavaConstant().asInt(),
+                op);
+        result = ConstantNode.forInt(ret);
+      } else if (kind == JavaKind.Long) {
+        long ret =
+            doCompute(
+                x.asJavaConstant().asLong(),
+                y.asJavaConstant().asLong(),
+                z.asJavaConstant().asInt(),
+                op);
+        result = ConstantNode.forLong(ret);
+      }
     }
+    return result;
+  }
 
-    private static int doCompute(int x, int y, int z, Operation op) {
-        if (op == Operation.CLAMP) {
-            return TornadoMath.clamp(x, y, z);
-        }
-        throw new TornadoInternalError("unknown op %s", op);
+  public Operation operation() {
+    return operation;
+  }
+
+  @Override
+  public String getOperation() {
+    return operation.toString();
+  }
+
+  @Override
+  public Stamp foldStamp(Stamp stampX, Stamp stampY, Stamp stampZ) {
+    return stamp(NodeView.DEFAULT);
+  }
+
+  @Override
+  public Node canonical(CanonicalizerTool tool, ValueNode forX, ValueNode forY, ValueNode forZ) {
+    ValueNode c = tryConstantFold(x, y, z, operation(), getStackKind());
+    if (c != null) {
+      return c;
     }
+    return this;
+  }
 
-    protected static ValueNode tryConstantFold(ValueNode x, ValueNode y, ValueNode z, Operation op, JavaKind kind) {
-        ConstantNode result = null;
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGeneratorTool) {
 
-        if (x.isConstant() && y.isConstant() && z.isConstant()) {
-            if (kind == JavaKind.Int) {
-                int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), z.asJavaConstant().asInt(), op);
-                result = ConstantNode.forInt(ret);
-            } else if (kind == JavaKind.Long) {
-                long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), z.asJavaConstant().asInt(), op);
-                result = ConstantNode.forLong(ret);
-            }
-        }
-        return result;
-    }
+    SPIRVBuiltinTool gen = ((SPIRVArithmeticTool) lirGeneratorTool).getGen().getSpirvBuiltinTool();
 
-    public Operation operation() {
-        return operation;
-    }
-
-    @Override
-    public String getOperation() {
-        return operation.toString();
-    }
-
-    @Override
-    public Stamp foldStamp(Stamp stampX, Stamp stampY, Stamp stampZ) {
-        return stamp(NodeView.DEFAULT);
-    }
-
-    @Override
-    public Node canonical(CanonicalizerTool tool, ValueNode forX, ValueNode forY, ValueNode forZ) {
-        ValueNode c = tryConstantFold(x, y, z, operation(), getStackKind());
-        if (c != null) {
-            return c;
-        }
-        return this;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGeneratorTool) {
-
-        SPIRVBuiltinTool gen = ((SPIRVArithmeticTool) lirGeneratorTool).getGen().getSpirvBuiltinTool();
-
-        Value x = builder.operand(getX());
-        Value y = builder.operand(getY());
-        Value z = builder.operand(getZ());
-        LIRKind lirKind = builder.getLIRGeneratorTool().getLIRKind(stamp);
-        Variable result = builder.getLIRGeneratorTool().newVariable(lirKind);
-        Value expr = switch (operation()) {
-            case CLAMP -> gen.genIntClamp(result, x, y, z);
-            default -> throw new RuntimeException("Ternary Intrinsic not supported: " + operation);
+    Value x = builder.operand(getX());
+    Value y = builder.operand(getY());
+    Value z = builder.operand(getZ());
+    LIRKind lirKind = builder.getLIRGeneratorTool().getLIRKind(stamp);
+    Variable result = builder.getLIRGeneratorTool().newVariable(lirKind);
+    Value expr =
+        switch (operation()) {
+          case CLAMP -> gen.genIntClamp(result, x, y, z);
+          default -> throw new RuntimeException("Ternary Intrinsic not supported: " + operation);
         };
 
-        builder.getLIRGeneratorTool().append(new SPIRVLIRStmt.AssignStmt(result, expr));
-        builder.setResult(this, result);
+    builder.getLIRGeneratorTool().append(new SPIRVLIRStmt.AssignStmt(result, expr));
+    builder.setResult(this, result);
+  }
 
-    }
-
-    public enum Operation {
-        CLAMP, MAD_HI, MAD_SAT, MAD24
-    }
-
+  public enum Operation {
+    CLAMP,
+    MAD_HI,
+    MAD_SAT,
+    MAD24
+  }
 }

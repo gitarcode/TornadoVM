@@ -25,7 +25,7 @@ import static uk.ac.manchester.tornado.runtime.graal.compiler.TornadoCodeGenerat
 
 import java.util.HashMap;
 import java.util.Map;
-
+import jdk.vm.ci.meta.ResolvedJavaField;
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.iterators.NodePredicate;
 import org.graalvm.compiler.nodes.StructuredGraph;
@@ -34,63 +34,72 @@ import org.graalvm.compiler.nodes.java.LoadFieldNode;
 import org.graalvm.compiler.nodes.java.NewInstanceNode;
 import org.graalvm.compiler.nodes.java.StoreFieldNode;
 import org.graalvm.compiler.phases.BasePhase;
-
-import jdk.vm.ci.meta.ResolvedJavaField;
 import uk.ac.manchester.tornado.api.internal.annotations.Vector;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoHighTierContext;
 
 public class TornadoValueTypeReplacement extends BasePhase<TornadoHighTierContext> {
 
-    private static final NodePredicate valueTypeFilter = new NodePredicate() {
+  private static final NodePredicate valueTypeFilter =
+      new NodePredicate() {
         @Override
         public boolean apply(Node node) {
-            return ((NewInstanceNode) node).instanceClass().getAnnotation(Vector.class) != null;
+          return ((NewInstanceNode) node).instanceClass().getAnnotation(Vector.class) != null;
         }
-    };
+      };
 
-    private void simplify(NewInstanceNode newInstance) {
-        debug("simplify: node=%s", newInstance.toString());
+  private void simplify(NewInstanceNode newInstance) {
+    debug("simplify: node=%s", newInstance.toString());
 
-        /*
-         * make dict
-         */
-        final Map<ResolvedJavaField, ValueNode> fieldToValue = new HashMap<>();
-        newInstance.usages().filter(StoreFieldNode.class).forEach((store) -> {
-            fieldToValue.put(store.field(), store.value());
-            store.clearInputs();
-            store.graph().removeFixed(store);
-        });
+    /*
+     * make dict
+     */
+    final Map<ResolvedJavaField, ValueNode> fieldToValue = new HashMap<>();
+    newInstance
+        .usages()
+        .filter(StoreFieldNode.class)
+        .forEach(
+            (store) -> {
+              fieldToValue.put(store.field(), store.value());
+              store.clearInputs();
+              store.graph().removeFixed(store);
+            });
 
-        if (fieldToValue.isEmpty()) {
-            return;
-        }
+    if (fieldToValue.isEmpty()) {
+      return;
+    }
 
-        // print dict
-        for (ResolvedJavaField field : fieldToValue.keySet()) {
-            debug("simplify: field=%s -> value=%s", field.getName(), fieldToValue.get(field).toString());
-        }
+    // print dict
+    for (ResolvedJavaField field : fieldToValue.keySet()) {
+      debug("simplify: field=%s -> value=%s", field.getName(), fieldToValue.get(field).toString());
+    }
 
-        /*
-         * contract fields
-         */
-        newInstance.graph().getNodes().filter(LoadFieldNode.class).forEach((load) -> {
-            if (load.object() == newInstance) {
+    /*
+     * contract fields
+     */
+    newInstance
+        .graph()
+        .getNodes()
+        .filter(LoadFieldNode.class)
+        .forEach(
+            (load) -> {
+              if (load.object() == newInstance) {
                 debug("simplify: load field=%s", load.field().getName());
-                debug("simplify: load field=%s -> value=%s", load.field().getName(), fieldToValue.get(load.field()).toString());
+                debug(
+                    "simplify: load field=%s -> value=%s",
+                    load.field().getName(), fieldToValue.get(load.field()).toString());
                 load.replaceAtUsages(fieldToValue.get(load.field()));
                 load.graph().removeFixed(load);
+              }
+            });
+  }
 
-            }
-        });
-    }
+  public void execute(StructuredGraph graph, TornadoHighTierContext context) {
+    run(graph, context);
+  }
 
-    public void execute(StructuredGraph graph, TornadoHighTierContext context) {
-        run(graph, context);
-    }
-
-    @Override
-    protected void run(StructuredGraph graph, TornadoHighTierContext context) {
-        graph.getNodes().filter(NewInstanceNode.class).filter(valueTypeFilter).forEach(this::simplify);
-        graph.maybeCompress();
-    }
+  @Override
+  protected void run(StructuredGraph graph, TornadoHighTierContext context) {
+    graph.getNodes().filter(NewInstanceNode.class).filter(valueTypeFilter).forEach(this::simplify);
+    graph.maybeCompress();
+  }
 }

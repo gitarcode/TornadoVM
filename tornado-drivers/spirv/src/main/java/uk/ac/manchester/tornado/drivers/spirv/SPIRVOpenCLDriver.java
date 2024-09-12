@@ -25,36 +25,35 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.manchester.tornado.drivers.opencl.OpenCL;
 import uk.ac.manchester.tornado.drivers.opencl.TornadoPlatformInterface;
 
 public class SPIRVOpenCLDriver implements SPIRVDispatcher {
 
-    private final List<SPIRVPlatform> spirvOpenCLPlatforms;
+  private final List<SPIRVPlatform> spirvOpenCLPlatforms;
 
-    public SPIRVOpenCLDriver() {
-        int numOpenCLPlatforms = OpenCL.getNumPlatforms();
-        spirvOpenCLPlatforms = new ArrayList<>();
+  public SPIRVOpenCLDriver() {
+    int numOpenCLPlatforms = OpenCL.getNumPlatforms();
+    spirvOpenCLPlatforms = new ArrayList<>();
 
-        // From all OpenCL platforms, we inspect which one/s contain device/s that support
-        // SPIR-V >= 1.2
-        for (int platformIndex = 0; platformIndex < numOpenCLPlatforms; platformIndex++) {
-            TornadoPlatformInterface oclPlatform = OpenCL.getPlatform(platformIndex);
-            if (oclPlatform.isSPIRVSupported()) {
-                // We only add the platforms that support SPIR-V
-                spirvOpenCLPlatforms.add(new SPIRVOpenCLPlatform(platformIndex, oclPlatform));
-            }
-        }
+    // From all OpenCL platforms, we inspect which one/s contain device/s that support
+    // SPIR-V >= 1.2
+    for (int platformIndex = 0; platformIndex < numOpenCLPlatforms; platformIndex++) {
+      TornadoPlatformInterface oclPlatform = OpenCL.getPlatform(platformIndex);
+      if (oclPlatform.isSPIRVSupported()) {
+        // We only add the platforms that support SPIR-V
+        spirvOpenCLPlatforms.add(new SPIRVOpenCLPlatform(platformIndex, oclPlatform));
+      }
     }
+  }
 
-    @Override
-    public int getNumPlatforms() {
-        return spirvOpenCLPlatforms.size();
-    }
+  @Override
+  public int getNumPlatforms() {
+    return spirvOpenCLPlatforms.size();
+  }
 
-    @Override
-    public SPIRVPlatform getPlatform(int index) {
-        return spirvOpenCLPlatforms.get(index);
-    }
+  @Override
+  public SPIRVPlatform getPlatform(int index) {
+    return spirvOpenCLPlatforms.get(index);
+  }
 }

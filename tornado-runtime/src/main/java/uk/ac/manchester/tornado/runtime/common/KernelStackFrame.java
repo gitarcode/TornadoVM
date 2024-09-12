@@ -28,37 +28,36 @@ import java.util.List;
 
 public interface KernelStackFrame {
 
-    // Marks an argument of type KernelContext being passed explicitly as a parameter.
-    class KernelContextArgument {
+  // Marks an argument of type KernelContext being passed explicitly as a parameter.
+  class KernelContextArgument {}
+
+  class CallArgument {
+    private final Object value;
+    private final boolean isReferenceType;
+
+    public CallArgument(Object value, boolean isReferenceType) {
+      this.value = value;
+      this.isReferenceType = isReferenceType;
     }
 
-    class CallArgument {
-        private final Object value;
-        private final boolean isReferenceType;
-
-        public CallArgument(Object value, boolean isReferenceType) {
-            this.value = value;
-            this.isReferenceType = isReferenceType;
-        }
-
-        public Object getValue() {
-            return value;
-        }
-
-        public boolean isReferenceType() {
-            return isReferenceType;
-        }
+    public Object getValue() {
+      return value;
     }
 
-    void reset();
+    public boolean isReferenceType() {
+      return isReferenceType;
+    }
+  }
 
-    List<CallArgument> getCallArguments();
+  void reset();
 
-    void addCallArgument(Object value, boolean isReferenceType);
+  List<CallArgument> getCallArguments();
 
-    void setKernelContext(HashMap<Integer, Integer> map);
+  void addCallArgument(Object value, boolean isReferenceType);
 
-    boolean isValid();
+  void setKernelContext(HashMap<Integer, Integer> map);
 
-    void invalidate();
+  boolean isValid();
+
+  void invalidate();
 }

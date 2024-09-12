@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.dgemm;
 import static uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays.dgemm;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
@@ -31,80 +30,77 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner dgemm
  * </code>
  */
 public class DgemmTornado extends BenchmarkDriver {
 
-    private final int m;
-    private final int n;
-    private DoubleArray a;
-    private DoubleArray b;
-    private DoubleArray c;
+  private final int m;
+  private final int n;
+  private DoubleArray a;
+  private DoubleArray b;
+  private DoubleArray c;
 
-    public DgemmTornado(int iterations, int m, int n) {
-        super(iterations);
-        this.m = m;
-        this.n = n;
+  public DgemmTornado(int iterations, int m, int n) {
+    super(iterations);
+    this.m = m;
+    this.n = n;
+  }
+
+  @Override
+  public void setUp() {
+    a = new DoubleArray(m * n);
+    b = new DoubleArray(m * n);
+    c = new DoubleArray(m * n);
+
+    final Random random = new Random();
+
+    for (int i = 0; i < m; i++) {
+      a.set(i * (m + 1), 1);
     }
 
-    @Override
-    public void setUp() {
-        a = new DoubleArray(m * n);
-        b = new DoubleArray(m * n);
-        c = new DoubleArray(m * n);
-
-        final Random random = new Random();
-
-        for (int i = 0; i < m; i++) {
-            a.set(i * (m + 1), 1);
-        }
-
-        for (int i = 0; i < m * n; i++) {
-            b.set(i, random.nextFloat());
-        }
-
-        taskGraph = new TaskGraph("benchmark");
-        taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                .task("dgemm", LinearAlgebraArrays::dgemm, m, n, n, a, b, c) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-        executionPlan = new TornadoExecutionPlan(taskGraph.snapshot());
-        executionPlan.withWarmUp();
+    for (int i = 0; i < m * n; i++) {
+      b.set(i, random.nextFloat());
     }
 
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
+    taskGraph = new TaskGraph("benchmark");
+    taskGraph
+        .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
+        .task("dgemm", LinearAlgebraArrays::dgemm, m, n, n, a, b, c) //
+        .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+    executionPlan = new TornadoExecutionPlan(taskGraph.snapshot());
+    executionPlan.withWarmUp();
+  }
 
-        a = null;
-        b = null;
-        c = null;
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
 
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
+    a = null;
+    b = null;
+    c = null;
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 
-        final DoubleArray result = new DoubleArray(m * n);
+  @Override
+  public boolean validate(TornadoDevice device) {
 
-        runBenchmark(device);
-        executionPlan.clearProfiles();
+    final DoubleArray result = new DoubleArray(m * n);
 
-        dgemm(m, n, m, a, b, result);
+    runBenchmark(device);
+    executionPlan.clearProfiles();
 
-        final double ulp = TornadoMath.findULPDistance(c, result);
-        return ulp < MAX_ULP;
-    }
+    dgemm(m, n, m, a, b, result);
 
+    final double ulp = TornadoMath.findULPDistance(c, result);
+    return ulp < MAX_ULP;
+  }
 }

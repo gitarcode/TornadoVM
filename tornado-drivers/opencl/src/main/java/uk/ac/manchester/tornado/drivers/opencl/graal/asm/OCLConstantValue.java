@@ -24,25 +24,24 @@
 package uk.ac.manchester.tornado.drivers.opencl.graal.asm;
 
 import org.graalvm.compiler.core.common.LIRKind;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIROp;
 
 public class OCLConstantValue extends OCLLIROp {
 
-    private final String value;
+  private final String value;
 
-    public OCLConstantValue(String value) {
-        super(LIRKind.Illegal);
-        this.value = value;
-    }
+  public OCLConstantValue(String value) {
+    super(LIRKind.Illegal);
+    this.value = value;
+  }
 
-    @Override
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-        asm.emit(value);
-    }
+  @Override
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+    asm.emit(value);
+  }
 
-    public String getValue() {
-        return value;
-    }
+  public String getValue() {
+    return value;
+  }
 }

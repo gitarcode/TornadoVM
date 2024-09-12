@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes.vector;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.graph.Node;
@@ -33,8 +34,6 @@ import org.graalvm.compiler.nodes.calc.BinaryNode;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLStamp;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLStampFactory;
@@ -46,42 +45,46 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 @NodeInfo(shortName = "+")
 public class VectorAddNode extends BinaryNode implements LIRLowerable, VectorOp {
 
-    public static final NodeClass<VectorAddNode> TYPE = NodeClass.create(VectorAddNode.class);
+  public static final NodeClass<VectorAddNode> TYPE = NodeClass.create(VectorAddNode.class);
 
-    public VectorAddNode(OCLKind kind, ValueNode x, ValueNode y) {
-        super(TYPE, OCLStampFactory.getStampFor(kind), x, y);
+  public VectorAddNode(OCLKind kind, ValueNode x, ValueNode y) {
+    super(TYPE, OCLStampFactory.getStampFor(kind), x, y);
+  }
+
+  @Override
+  public Stamp foldStamp(Stamp stampX, Stamp stampY) {
+    Stamp currentStamp = stamp(NodeView.DEFAULT);
+    if (currentStamp instanceof OCLStamp) {
+      return currentStamp;
     }
+    return (stampX instanceof OCLStamp) ? stampX.join(stampY) : stampY.join(stampX);
+  }
 
-    @Override
-    public Stamp foldStamp(Stamp stampX, Stamp stampY) {
-        Stamp currentStamp = stamp(NodeView.DEFAULT);
-        if (currentStamp instanceof OCLStamp) {
-            return currentStamp;
-        }
-        return (stampX instanceof OCLStamp) ? stampX.join(stampY) : stampY.join(stampX);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
+    final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
-        final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
+    final Value input1 = gen.operand(x);
+    final Value input2 = gen.operand(y);
 
-        final Value input1 = gen.operand(x);
-        final Value input2 = gen.operand(y);
+    Logger.traceBuildLIR(Logger.BACKEND.OpenCL, "emitVectorAdd: %s + %s", input1, input2);
+    gen.getLIRGeneratorTool()
+        .append(
+            new AssignStmt(
+                result,
+                new OCLBinary.Expr(
+                    OCLBinaryOp.ADD, gen.getLIRGeneratorTool().getLIRKind(stamp), input1, input2)));
+    gen.setResult(this, result);
+  }
 
-        Logger.traceBuildLIR(Logger.BACKEND.OpenCL, "emitVectorAdd: %s + %s", input1, input2);
-        gen.getLIRGeneratorTool().append(new AssignStmt(result, new OCLBinary.Expr(OCLBinaryOp.ADD, gen.getLIRGeneratorTool().getLIRKind(stamp), input1, input2)));
-        gen.setResult(this, result);
-    }
+  @Override
+  public Node canonical(CanonicalizerTool ct, ValueNode t, ValueNode t1) {
+    return this;
+  }
 
-    @Override
-    public Node canonical(CanonicalizerTool ct, ValueNode t, ValueNode t1) {
-        return this;
-    }
-
-    @Override
-    public ValueNode canonical(CanonicalizerTool ct) {
-        return this;
-    }
-
+  @Override
+  public ValueNode canonical(CanonicalizerTool ct) {
+    return this;
+  }
 }

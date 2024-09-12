@@ -21,6 +21,9 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal;
 
+import jdk.vm.ci.code.CodeCacheProvider;
+import jdk.vm.ci.meta.ConstantReflectionProvider;
+import jdk.vm.ci.meta.MetaAccessProvider;
 import org.graalvm.compiler.api.replacements.SnippetReflectionProvider;
 import org.graalvm.compiler.core.common.spi.ConstantFieldProvider;
 import org.graalvm.compiler.core.common.spi.ForeignCallsProvider;
@@ -32,35 +35,44 @@ import org.graalvm.compiler.nodes.spi.Replacements;
 import org.graalvm.compiler.nodes.spi.StampProvider;
 import org.graalvm.compiler.phases.util.Providers;
 import org.graalvm.compiler.word.WordTypes;
-
-import jdk.vm.ci.code.CodeCacheProvider;
-import jdk.vm.ci.meta.ConstantReflectionProvider;
-import jdk.vm.ci.meta.MetaAccessProvider;
 import uk.ac.manchester.tornado.runtime.graal.compiler.TornadoSuitesProvider;
 
 public class PTXProviders extends Providers {
-    private final TornadoSuitesProvider suites;
+  private final TornadoSuitesProvider suites;
 
-    public PTXProviders(MetaAccessProvider metaAccess, //
-            CodeCacheProvider codeCache, //
-            ConstantReflectionProvider constantReflection, //
-            ConstantFieldProvider constantFieldProvider, //
-            ForeignCallsProvider foreignCalls, //
-            LoweringProvider lowerer, //
-            Replacements replacements, //
-            StampProvider stampProvider, //
-            PlatformConfigurationProvider platformConfigurationProvider, //
-            MetaAccessExtensionProvider metaAccessExtensionProvider, //
-            SnippetReflectionProvider snippetReflection, //
-            WordTypes wordTypes, //
-            LoopsDataProvider loopsDataProvider, //
-            PTXSuitesProvider suitesProvider) {
-        super(metaAccess, codeCache, constantReflection, constantFieldProvider, foreignCalls, lowerer, replacements, stampProvider, platformConfigurationProvider, metaAccessExtensionProvider,
-                snippetReflection, wordTypes, loopsDataProvider);
-        this.suites = suitesProvider;
-    }
+  public PTXProviders(
+      MetaAccessProvider metaAccess, //
+      CodeCacheProvider codeCache, //
+      ConstantReflectionProvider constantReflection, //
+      ConstantFieldProvider constantFieldProvider, //
+      ForeignCallsProvider foreignCalls, //
+      LoweringProvider lowerer, //
+      Replacements replacements, //
+      StampProvider stampProvider, //
+      PlatformConfigurationProvider platformConfigurationProvider, //
+      MetaAccessExtensionProvider metaAccessExtensionProvider, //
+      SnippetReflectionProvider snippetReflection, //
+      WordTypes wordTypes, //
+      LoopsDataProvider loopsDataProvider, //
+      PTXSuitesProvider suitesProvider) {
+    super(
+        metaAccess,
+        codeCache,
+        constantReflection,
+        constantFieldProvider,
+        foreignCalls,
+        lowerer,
+        replacements,
+        stampProvider,
+        platformConfigurationProvider,
+        metaAccessExtensionProvider,
+        snippetReflection,
+        wordTypes,
+        loopsDataProvider);
+    this.suites = suitesProvider;
+  }
 
-    public TornadoSuitesProvider getSuitesProvider() {
-        return suites;
-    }
+  public TornadoSuitesProvider getSuitesProvider() {
+    return suites;
+  }
 }

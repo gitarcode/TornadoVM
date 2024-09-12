@@ -20,14 +20,13 @@
  */
 package uk.ac.manchester.tornado.drivers.providers;
 
-import org.graalvm.compiler.word.WordTypes;
-
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.MetaAccessProvider;
+import org.graalvm.compiler.word.WordTypes;
 
 public class TornadoWordTypes extends WordTypes {
 
-    public TornadoWordTypes(MetaAccessProvider metaAccess, JavaKind wordKind) {
-        super(metaAccess, wordKind);
-    }
+  public TornadoWordTypes(MetaAccessProvider metaAccess, JavaKind wordKind) {
+    super(metaAccess, wordKind);
+  }
 }

@@ -32,42 +32,54 @@ import uk.ac.manchester.tornado.runtime.common.TornadoInstalledCode;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class PTXInstalledCode extends InstalledCode implements TornadoInstalledCode {
-    private final PTXModule module;
-    private final PTXDeviceContext deviceContext;
-    private boolean valid;
+  private final PTXModule module;
+  private final PTXDeviceContext deviceContext;
+  private boolean valid;
 
-    public PTXInstalledCode(String name, PTXModule module, PTXDeviceContext deviceContext) {
-        super(name);
-        this.module = module;
-        this.deviceContext = deviceContext;
-        valid = true;
-    }
+  public PTXInstalledCode(String name, PTXModule module, PTXDeviceContext deviceContext) {
+    super(name);
+    this.module = module;
+    this.deviceContext = deviceContext;
+    valid = true;
+  }
 
-    @Override
-    public int launchWithDependencies(long executionPlanId, KernelStackFrame callWrapper, XPUBuffer atomicSpace, TaskDataContext meta, long batchThreads, int[] waitEvents) {
-        unimplemented("launch with deps");
-        return 0;
-    }
+  @Override
+  public int launchWithDependencies(
+      long executionPlanId,
+      KernelStackFrame callWrapper,
+      XPUBuffer atomicSpace,
+      TaskDataContext meta,
+      long batchThreads,
+      int[] waitEvents) {
+    unimplemented("launch with deps");
+    return 0;
+  }
 
-    @Override
-    public int launchWithoutDependencies(long executionPlanId, KernelStackFrame callWrapper, XPUBuffer atomicSpace, TaskDataContext meta, long batchThreads) {
-        return deviceContext.enqueueKernelLaunch(executionPlanId, module, callWrapper, meta, batchThreads);
-    }
+  @Override
+  public int launchWithoutDependencies(
+      long executionPlanId,
+      KernelStackFrame callWrapper,
+      XPUBuffer atomicSpace,
+      TaskDataContext meta,
+      long batchThreads) {
+    return deviceContext.enqueueKernelLaunch(
+        executionPlanId, module, callWrapper, meta, batchThreads);
+  }
 
-    public String getGeneratedSourceCode() {
-        return new String(module.getSource());
-    }
+  public String getGeneratedSourceCode() {
+    return new String(module.getSource());
+  }
 
-    @Override
-    public boolean isValid() {
-        return valid;
-    }
+  @Override
+  public boolean isValid() {
+    return valid;
+  }
 
-    @Override
-    public void invalidate() {
-        if (valid) {
-            module.unload();
-            valid = false;
-        }
+  @Override
+  public void invalidate() {
+    if (valid) {
+      module.unload();
+      valid = false;
     }
+  }
 }

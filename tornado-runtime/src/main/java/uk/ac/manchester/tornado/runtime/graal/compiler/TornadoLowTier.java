@@ -24,5 +24,4 @@ package uk.ac.manchester.tornado.runtime.graal.compiler;
 import org.graalvm.compiler.phases.PhaseSuite;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoLowTierContext;
 
-public abstract class TornadoLowTier extends PhaseSuite<TornadoLowTierContext> {
-}
+public abstract class TornadoLowTier extends PhaseSuite<TornadoLowTierContext> {}

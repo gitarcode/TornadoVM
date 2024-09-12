@@ -25,27 +25,27 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 public class SPIRVOCLModule implements SPIRVModule {
 
-    private final long kernelPointer;
-    private final String entryPoint;
-    private final String pathToSPIRVBinary;
+  private final long kernelPointer;
+  private final String entryPoint;
+  private final String pathToSPIRVBinary;
 
-    public SPIRVOCLModule(long kernel, String entryPoint, String pathToSPIRVBinary) {
-        this.kernelPointer = kernel;
-        this.entryPoint = entryPoint;
-        this.pathToSPIRVBinary = pathToSPIRVBinary;
-    }
+  public SPIRVOCLModule(long kernel, String entryPoint, String pathToSPIRVBinary) {
+    this.kernelPointer = kernel;
+    this.entryPoint = entryPoint;
+    this.pathToSPIRVBinary = pathToSPIRVBinary;
+  }
 
-    public long getKernelPointer() {
-        return kernelPointer;
-    }
+  public long getKernelPointer() {
+    return kernelPointer;
+  }
 
-    @Override
-    public String getEntryPoint() {
-        return entryPoint;
-    }
+  @Override
+  public String getEntryPoint() {
+    return entryPoint;
+  }
 
-    @Override
-    public String getPathToSPIRVBinary() {
-        return pathToSPIRVBinary;
-    }
+  @Override
+  public String getPathToSPIRVBinary() {
+    return pathToSPIRVBinary;
+  }
 }

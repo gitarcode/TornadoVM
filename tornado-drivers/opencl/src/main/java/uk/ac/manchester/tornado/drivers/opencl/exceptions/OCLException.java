@@ -25,9 +25,9 @@ package uk.ac.manchester.tornado.drivers.opencl.exceptions;
 
 public class OCLException extends Exception {
 
-    private static final long serialVersionUID = -4352679042882073520L;
+  private static final long serialVersionUID = -4352679042882073520L;
 
-    public OCLException(final String message) {
-        super(message);
-    }
+  public OCLException(final String message) {
+    super(message);
+  }
 }

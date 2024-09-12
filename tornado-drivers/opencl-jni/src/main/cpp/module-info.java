@@ -1,2 +1,1 @@
-module tornado.drivers.opencl.jni {
-}
+module tornado.drivers.opencl.jni {}

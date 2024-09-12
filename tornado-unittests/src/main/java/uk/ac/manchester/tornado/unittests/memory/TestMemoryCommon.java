@@ -22,13 +22,12 @@ import uk.ac.manchester.tornado.unittests.common.TornadoTestBase;
 
 public class TestMemoryCommon extends TornadoTestBase {
 
-    /**
-     * Set the number of elements to select ~300MB per array.
-     */
-    static final int NUM_ELEMENTS = 78643200;   // 314MB for an array of Integers
-    static IntArray a = new IntArray(NUM_ELEMENTS);
-    static IntArray b = new IntArray(NUM_ELEMENTS);
-    static IntArray c = new IntArray(NUM_ELEMENTS);
+  /** Set the number of elements to select ~300MB per array. */
+  static final int NUM_ELEMENTS = 78643200; // 314MB for an array of Integers
 
-    static int value = 10000000;
+  static IntArray a = new IntArray(NUM_ELEMENTS);
+  static IntArray b = new IntArray(NUM_ELEMENTS);
+  static IntArray c = new IntArray(NUM_ELEMENTS);
+
+  static int value = 10000000;
 }

@@ -30,6 +30,7 @@ import static org.graalvm.compiler.core.common.GraalOptions.PartialEscapeAnalysi
 import static org.graalvm.compiler.core.phases.HighTier.Options.Inline;
 import static org.graalvm.compiler.phases.common.DeadCodeEliminationPhase.Optionality.Optional;
 
+import jdk.vm.ci.meta.MetaAccessProvider;
 import org.graalvm.compiler.loop.phases.ConvertDeoptimizeToGuardPhase;
 import org.graalvm.compiler.loop.phases.LoopFullUnrollPhase;
 import org.graalvm.compiler.nodes.loop.DefaultLoopPolicies;
@@ -43,8 +44,6 @@ import org.graalvm.compiler.phases.common.RemoveValueProxyPhase;
 import org.graalvm.compiler.phases.common.inlining.InliningPhase;
 import org.graalvm.compiler.phases.schedule.SchedulePhase;
 import org.graalvm.compiler.virtual.phases.ea.PartialEscapePhase;
-
-import jdk.vm.ci.meta.MetaAccessProvider;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.analysis.TornadoShapeAnalysis;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.guards.ExceptionSuppression;
 import uk.ac.manchester.tornado.drivers.common.compiler.phases.guards.TornadoValueTypeCleanup;
@@ -64,72 +63,79 @@ import uk.ac.manchester.tornado.runtime.graal.phases.sketcher.TornadoPartialInli
 
 public class PTXHighTier extends TornadoHighTier {
 
-    public PTXHighTier(OptionValues options, CanonicalizerPhase.CustomSimplification customCanonicalizer, MetaAccessProvider metaAccessProvider) {
-        super(customCanonicalizer);
+  public PTXHighTier(
+      OptionValues options,
+      CanonicalizerPhase.CustomSimplification customCanonicalizer,
+      MetaAccessProvider metaAccessProvider) {
+    super(customCanonicalizer);
 
-        CanonicalizerPhase canonicalizer = createCanonicalizerPhase(options, customCanonicalizer);
+    CanonicalizerPhase canonicalizer = createCanonicalizerPhase(options, customCanonicalizer);
+    appendPhase(canonicalizer);
+
+    if (Inline.getValue(options)) {
+      TornadoInliningPolicy inliningPolicy =
+          (TornadoOptions.FULL_INLINING)
+              ? new TornadoFullInliningPolicy()
+              : new TornadoPartialInliningPolicy();
+      appendPhase(new InliningPhase(inliningPolicy, canonicalizer));
+      appendPhase(new DeadCodeEliminationPhase(Optional));
+      if (ConditionalElimination.getValue(options)) {
         appendPhase(canonicalizer);
-
-        if (Inline.getValue(options)) {
-            TornadoInliningPolicy inliningPolicy = (TornadoOptions.FULL_INLINING) ? new TornadoFullInliningPolicy() : new TornadoPartialInliningPolicy();
-            appendPhase(new InliningPhase(inliningPolicy, canonicalizer));
-            appendPhase(new DeadCodeEliminationPhase(Optional));
-            if (ConditionalElimination.getValue(options)) {
-                appendPhase(canonicalizer);
-                appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
-            }
-        }
-
-        appendPhase(new TornadoTaskSpecialisation(canonicalizer));
-        appendPhase(new TornadoBatchGlobalIndexOffset());
-        appendPhase(canonicalizer);
-        appendPhase(new DeadCodeEliminationPhase(Optional));
-
-        appendPhase(canonicalizer);
-
-        appendPhase(new TornadoNewArrayDevirtualizationReplacement());
-
-        appendPhase(new TornadoHalfFloatReplacement());
-
-        if (PartialEscapeAnalysis.getValue(options)) {
-            appendPhase(new PartialEscapePhase(true, canonicalizer, options));
-        }
-
-        appendPhase(new TornadoPrivateArrayPiRemoval());
-
-        appendPhase(new TornadoValueTypeCleanup());
-
-        if (OptConvertDeoptsToGuards.getValue(options)) {
-            appendPhase(new ConvertDeoptimizeToGuardPhase(canonicalizer));
-        }
-
-        appendPhase(new TornadoShapeAnalysis());
-        appendPhase(canonicalizer);
-        appendPhase(new TornadoParallelScheduler());
-        appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.EARLIEST));
-
-        LoopPolicies loopPolicies = new DefaultLoopPolicies();
-        appendPhase(new LoopFullUnrollPhase(canonicalizer, loopPolicies));
-
-        appendPhase(canonicalizer);
-        appendPhase(new RemoveValueProxyPhase(canonicalizer));
-        appendPhase(canonicalizer);
-        appendPhase(new DeadCodeEliminationPhase(Optional));
-
-        appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.EARLIEST));
-        appendPhase(new HighTierLoweringPhase(canonicalizer));
-
-        // After the first Lowering, Tornado replaces reductions with snippets
-        // that contains method calls to barriers.
-        appendPhase(new TornadoPTXIntrinsicsReplacements(metaAccessProvider));
-
-        appendPhase(new TornadoLocalMemoryAllocation());
-
-        appendPhase(new ExceptionSuppression());
+        appendPhase(new IterativeConditionalEliminationPhase(canonicalizer, false));
+      }
     }
 
-    private CanonicalizerPhase createCanonicalizerPhase(OptionValues options, CanonicalizerPhase.CustomSimplification customCanonicalizer) {
-        CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
-        return canonicalizer.copyWithCustomSimplification(customCanonicalizer);
+    appendPhase(new TornadoTaskSpecialisation(canonicalizer));
+    appendPhase(new TornadoBatchGlobalIndexOffset());
+    appendPhase(canonicalizer);
+    appendPhase(new DeadCodeEliminationPhase(Optional));
+
+    appendPhase(canonicalizer);
+
+    appendPhase(new TornadoNewArrayDevirtualizationReplacement());
+
+    appendPhase(new TornadoHalfFloatReplacement());
+
+    if (PartialEscapeAnalysis.getValue(options)) {
+      appendPhase(new PartialEscapePhase(true, canonicalizer, options));
     }
+
+    appendPhase(new TornadoPrivateArrayPiRemoval());
+
+    appendPhase(new TornadoValueTypeCleanup());
+
+    if (OptConvertDeoptsToGuards.getValue(options)) {
+      appendPhase(new ConvertDeoptimizeToGuardPhase(canonicalizer));
+    }
+
+    appendPhase(new TornadoShapeAnalysis());
+    appendPhase(canonicalizer);
+    appendPhase(new TornadoParallelScheduler());
+    appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.EARLIEST));
+
+    LoopPolicies loopPolicies = new DefaultLoopPolicies();
+    appendPhase(new LoopFullUnrollPhase(canonicalizer, loopPolicies));
+
+    appendPhase(canonicalizer);
+    appendPhase(new RemoveValueProxyPhase(canonicalizer));
+    appendPhase(canonicalizer);
+    appendPhase(new DeadCodeEliminationPhase(Optional));
+
+    appendPhase(new SchedulePhase(SchedulePhase.SchedulingStrategy.EARLIEST));
+    appendPhase(new HighTierLoweringPhase(canonicalizer));
+
+    // After the first Lowering, Tornado replaces reductions with snippets
+    // that contains method calls to barriers.
+    appendPhase(new TornadoPTXIntrinsicsReplacements(metaAccessProvider));
+
+    appendPhase(new TornadoLocalMemoryAllocation());
+
+    appendPhase(new ExceptionSuppression());
+  }
+
+  private CanonicalizerPhase createCanonicalizerPhase(
+      OptionValues options, CanonicalizerPhase.CustomSimplification customCanonicalizer) {
+    CanonicalizerPhase canonicalizer = CanonicalizerPhase.create();
+    return canonicalizer.copyWithCustomSimplification(customCanonicalizer);
+  }
 }

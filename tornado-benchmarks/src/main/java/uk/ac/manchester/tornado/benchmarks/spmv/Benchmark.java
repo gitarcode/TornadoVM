@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.benchmarks.spmv;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.BenchmarkRunner;
@@ -27,54 +26,53 @@ import uk.ac.manchester.tornado.matrix.SparseMatrixUtils.CSRMatrix;
 
 public class Benchmark extends BenchmarkRunner {
 
-    private CSRMatrix<FloatArray> matrix;
-    private String path;
+  private CSRMatrix<FloatArray> matrix;
+  private String path;
 
-    public static void initData(final FloatArray v) {
-        final Random rand = new Random();
-        rand.setSeed(7);
-        for (int i = 0; i < v.getSize(); i++) {
-            v.set(i, rand.nextFloat() * 100.0f);
-        }
+  public static void initData(final FloatArray v) {
+    final Random rand = new Random();
+    rand.setSeed(7);
+    for (int i = 0; i < v.getSize(); i++) {
+      v.set(i, rand.nextFloat() * 100.0f);
     }
+  }
 
-    @Override
-    public void parseArgs(String[] args) {
-        if (args.length == 2) {
-            iterations = Integer.parseInt(args[0]);
-            final String fullPath = args[1];
-            path = fullPath.substring(fullPath.lastIndexOf("/") + 1);
-            matrix = SparseMatrixUtils.loadMatrixF(fullPath);
-        } else {
-            path = System.getProperty("spmv.matrix", "/bcsstk32.mtx");
-            matrix = SparseMatrixUtils.loadMatrixF(Benchmark.class.getResourceAsStream(path));
-            iterations = Integer.parseInt(System.getProperty("spmv.iterations", "1400"));
-        }
+  @Override
+  public void parseArgs(String[] args) {
+    if (args.length == 2) {
+      iterations = Integer.parseInt(args[0]);
+      final String fullPath = args[1];
+      path = fullPath.substring(fullPath.lastIndexOf("/") + 1);
+      matrix = SparseMatrixUtils.loadMatrixF(fullPath);
+    } else {
+      path = System.getProperty("spmv.matrix", "/bcsstk32.mtx");
+      matrix = SparseMatrixUtils.loadMatrixF(Benchmark.class.getResourceAsStream(path));
+      iterations = Integer.parseInt(System.getProperty("spmv.iterations", "1400"));
     }
+  }
 
-    @Override
-    protected String getName() {
-        return "spmv";
-    }
+  @Override
+  protected String getName() {
+    return "spmv";
+  }
 
-    @Override
-    protected String getIdString() {
-        return String.format("%s-%d-%d-%s", getName(), iterations, matrix.size, path);
-    }
+  @Override
+  protected String getIdString() {
+    return String.format("%s-%d-%d-%s", getName(), iterations, matrix.size, path);
+  }
 
-    @Override
-    protected String getConfigString() {
-        return String.format("matrix=%s", path);
-    }
+  @Override
+  protected String getConfigString() {
+    return String.format("matrix=%s", path);
+  }
 
-    @Override
-    protected BenchmarkDriver getJavaDriver() {
-        return new SpmvJava(iterations, matrix);
-    }
+  @Override
+  protected BenchmarkDriver getJavaDriver() {
+    return new SpmvJava(iterations, matrix);
+  }
 
-    @Override
-    protected BenchmarkDriver getTornadoDriver() {
-        return new SpmvTornado(iterations, matrix);
-    }
-
+  @Override
+  protected BenchmarkDriver getTornadoDriver() {
+    return new SpmvTornado(iterations, matrix);
+  }
 }

@@ -33,32 +33,37 @@ import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 @NodeInfo
 public class FPGAWorkGroupSizeNode extends FixedWithNextNode implements LIRLowerable {
 
-    @Successor
-    LoopBeginNode loopBegin;
-    @Input
-    LocalWorkGroupDimensionsNode localWorkNode;
-    public static final NodeClass<FPGAWorkGroupSizeNode> TYPE = NodeClass.create(FPGAWorkGroupSizeNode.class);
+  @Successor LoopBeginNode loopBegin;
+  @Input LocalWorkGroupDimensionsNode localWorkNode;
+  public static final NodeClass<FPGAWorkGroupSizeNode> TYPE =
+      NodeClass.create(FPGAWorkGroupSizeNode.class);
 
-    public static final String FPGA_THREAD_ATTRIBUTE_PREFIX = "__attribute__((reqd_work_group_size(";
-    public static final String FPGA_THREAD_ATTRIBUTE_SUFFIX = ")))";
+  public static final String FPGA_THREAD_ATTRIBUTE_PREFIX = "__attribute__((reqd_work_group_size(";
+  public static final String FPGA_THREAD_ATTRIBUTE_SUFFIX = ")))";
 
-    public FPGAWorkGroupSizeNode(LocalWorkGroupDimensionsNode localWork) {
-        super(TYPE, StampFactory.forVoid());
-        this.localWorkNode = localWork;
-    }
+  public FPGAWorkGroupSizeNode(LocalWorkGroupDimensionsNode localWork) {
+    super(TYPE, StampFactory.forVoid());
+    this.localWorkNode = localWork;
+  }
 
-    /**
-     * This an empty implementation for generating LIR for this node. This is due to
-     * a fix template used during code generation for this node.
-     */
-    @Override
-    public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
-    }
+  /**
+   * This an empty implementation for generating LIR for this node. This is due to a fix template
+   * used during code generation for this node.
+   */
+  @Override
+  public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {}
 
-    public String createThreadAttribute() {
-        String fpgaThreadAttribute;
-        fpgaThreadAttribute = FPGA_THREAD_ATTRIBUTE_PREFIX + localWorkNode.getXToString() + ", " + localWorkNode.getYToString() + ", " + localWorkNode.getZToString() + FPGA_THREAD_ATTRIBUTE_SUFFIX;
+  public String createThreadAttribute() {
+    String fpgaThreadAttribute;
+    fpgaThreadAttribute =
+        FPGA_THREAD_ATTRIBUTE_PREFIX
+            + localWorkNode.getXToString()
+            + ", "
+            + localWorkNode.getYToString()
+            + ", "
+            + localWorkNode.getZToString()
+            + FPGA_THREAD_ATTRIBUTE_SUFFIX;
 
-        return fpgaThreadAttribute;
-    }
+    return fpgaThreadAttribute;
+  }
 }

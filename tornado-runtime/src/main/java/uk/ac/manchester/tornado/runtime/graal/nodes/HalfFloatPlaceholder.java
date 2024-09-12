@@ -21,32 +21,30 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.ValueNode;
 
-import jdk.vm.ci.meta.JavaKind;
-
 @NodeInfo
 public class HalfFloatPlaceholder extends ValueNode {
 
-    public static final NodeClass<HalfFloatPlaceholder> TYPE = NodeClass.create(HalfFloatPlaceholder.class);
+  public static final NodeClass<HalfFloatPlaceholder> TYPE =
+      NodeClass.create(HalfFloatPlaceholder.class);
 
-    @Input
-    private ValueNode input;
+  @Input private ValueNode input;
 
-    public HalfFloatPlaceholder(ValueNode input) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.input = input;
-    }
+  public HalfFloatPlaceholder(ValueNode input) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.input = input;
+  }
 
-    public ValueNode getInput() {
-        return this.input;
-    }
+  public ValueNode getInput() {
+    return this.input;
+  }
 
-    public void setInput(ValueNode input) {
-        this.input = input;
-    }
-
+  public void setInput(ValueNode input) {
+    this.input = input;
+  }
 }

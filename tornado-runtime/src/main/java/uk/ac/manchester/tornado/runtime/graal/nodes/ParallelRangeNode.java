@@ -32,27 +32,28 @@ import org.graalvm.compiler.nodes.calc.FloatingNode;
 @NodeInfo(nameTemplate = "Range")
 public class ParallelRangeNode extends AbstractParallelNode {
 
-    public static final NodeClass<ParallelRangeNode> TYPE = NodeClass.create(ParallelRangeNode.class);
+  public static final NodeClass<ParallelRangeNode> TYPE = NodeClass.create(ParallelRangeNode.class);
 
-    @Input(InputType.Association)
-    private FloatingNode offset;
-    @Input(InputType.Association)
-    private FloatingNode stride;
+  @Input(InputType.Association)
+  private FloatingNode offset;
 
-    public ParallelRangeNode(int index, ValueNode range, ParallelOffsetNode offset, ParallelStrideNode stride) {
-        super(TYPE, index, range);
-        this.offset = offset;
-        this.stride = stride;
-    }
+  @Input(InputType.Association)
+  private FloatingNode stride;
 
-    public ParallelOffsetNode offset() {
-        assert offset instanceof ParallelOffsetNode;
-        return (ParallelOffsetNode) offset;
-    }
+  public ParallelRangeNode(
+      int index, ValueNode range, ParallelOffsetNode offset, ParallelStrideNode stride) {
+    super(TYPE, index, range);
+    this.offset = offset;
+    this.stride = stride;
+  }
 
-    public ParallelStrideNode stride() {
-        assert stride instanceof ParallelStrideNode;
-        return (ParallelStrideNode) stride;
-    }
+  public ParallelOffsetNode offset() {
+    assert offset instanceof ParallelOffsetNode;
+    return (ParallelOffsetNode) offset;
+  }
 
+  public ParallelStrideNode stride() {
+    assert stride instanceof ParallelStrideNode;
+    return (ParallelStrideNode) stride;
+  }
 }

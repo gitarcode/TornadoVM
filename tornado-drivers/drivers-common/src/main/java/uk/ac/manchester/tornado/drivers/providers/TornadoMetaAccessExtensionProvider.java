@@ -22,33 +22,32 @@ package uk.ac.manchester.tornado.drivers.providers;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimplemented;
 
-import org.graalvm.compiler.core.common.spi.MetaAccessExtensionProvider;
-
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.JavaType;
 import jdk.vm.ci.meta.ResolvedJavaMethod;
 import jdk.vm.ci.meta.ResolvedJavaType;
+import org.graalvm.compiler.core.common.spi.MetaAccessExtensionProvider;
 
 public class TornadoMetaAccessExtensionProvider implements MetaAccessExtensionProvider {
 
-    @Override
-    public JavaKind getStorageKind(JavaType type) {
-        return type.getJavaKind();
-    }
+  @Override
+  public JavaKind getStorageKind(JavaType type) {
+    return type.getJavaKind();
+  }
 
-    @Override
-    public boolean canConstantFoldDynamicAllocation(ResolvedJavaType type) {
-        unimplemented();
-        return false;
-    }
+  @Override
+  public boolean canConstantFoldDynamicAllocation(ResolvedJavaType type) {
+    unimplemented();
+    return false;
+  }
 
-    @Override
-    public boolean isGuaranteedSafepoint(ResolvedJavaMethod method, boolean isDirect) {
-        return false;
-    }
+  @Override
+  public boolean isGuaranteedSafepoint(ResolvedJavaMethod method, boolean isDirect) {
+    return false;
+  }
 
-    @Override
-    public boolean canVirtualize(ResolvedJavaType instanceType) {
-        return true;
-    }
+  @Override
+  public boolean canVirtualize(ResolvedJavaType instanceType) {
+    return true;
+  }
 }

@@ -38,32 +38,32 @@ import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
 @NodeInfo(shortName = "atomic_add")
 public class OCLAtomicAddLIR extends FixedNode implements LIRLowerable {
 
-    public static final NodeClass<OCLAtomicAddLIR> TYPE = NodeClass.create(OCLAtomicAddLIR.class);
+  public static final NodeClass<OCLAtomicAddLIR> TYPE = NodeClass.create(OCLAtomicAddLIR.class);
 
-    public static final String ATOMIC_ADD = "atomic_add";
+  public static final String ATOMIC_ADD = "atomic_add";
 
-    @Input protected AddressNode address;
+  @Input protected AddressNode address;
 
-    @Input protected ValueNode value;
+  @Input protected ValueNode value;
 
-    public OCLAtomicAddLIR(AddressNode address, Stamp stamp, ValueNode value) {
-        super(TYPE, stamp);
-        this.address = address;
-        this.value = value;
-    }
+  public OCLAtomicAddLIR(AddressNode address, Stamp stamp, ValueNode value) {
+    super(TYPE, stamp);
+    this.address = address;
+    this.value = value;
+  }
 
-    public AddressNode getAddress() {
-        return address;
-    }
+  public AddressNode getAddress() {
+    return address;
+  }
 
-    public ValueNode getValue() {
-        return value;
-    }
+  public ValueNode getValue() {
+    return value;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        LIRKind lirKind = LIRKind.value(gen.getLIRGeneratorTool().target().arch.getWordKind());
-        final Variable variable = gen.getLIRGeneratorTool().newVariable(lirKind);
-        gen.setResult(this, variable);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    LIRKind lirKind = LIRKind.value(gen.getLIRGeneratorTool().target().arch.getWordKind());
+    final Variable variable = gen.getLIRGeneratorTool().newVariable(lirKind);
+    gen.setResult(this, variable);
+  }
 }

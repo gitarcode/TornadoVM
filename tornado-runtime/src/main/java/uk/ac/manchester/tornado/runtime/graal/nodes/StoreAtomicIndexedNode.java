@@ -25,6 +25,7 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
@@ -37,80 +38,88 @@ import org.graalvm.compiler.nodes.spi.Lowerable;
 import org.graalvm.compiler.nodes.spi.Virtualizable;
 import org.graalvm.compiler.nodes.spi.VirtualizerTool;
 
-import jdk.vm.ci.meta.JavaKind;
-
 @NodeInfo(nameTemplate = "AtomicIndexedStore")
-public final class StoreAtomicIndexedNode extends AccessIndexedNode implements StateSplit, Lowerable, Virtualizable {
+public final class StoreAtomicIndexedNode extends AccessIndexedNode
+    implements StateSplit, Lowerable, Virtualizable {
 
-    public static final NodeClass<StoreAtomicIndexedNode> TYPE = NodeClass.create(StoreAtomicIndexedNode.class);
+  public static final NodeClass<StoreAtomicIndexedNode> TYPE =
+      NodeClass.create(StoreAtomicIndexedNode.class);
 
-    //@formatter:off
-    @Input ValueNode value;
-    @Input ValueNode accumulator;
-    @Input ValueNode inputArray;
-    @Input StoreAtomicIndexedNodeExtension storeAtomicExtraNode;
-    //@formatter:on
+  // @formatter:off
+  @Input ValueNode value;
+  @Input ValueNode accumulator;
+  @Input ValueNode inputArray;
+  @Input StoreAtomicIndexedNodeExtension storeAtomicExtraNode;
 
-    @Override
-    public FrameState stateAfter() {
-        return storeAtomicExtraNode.getStateAfter();
-    }
+  // @formatter:on
 
-    @Override
-    public void setStateAfter(FrameState x) {
-        assert x == null || x.isAlive() : "frame state must be in a graph";
-        updateUsages(storeAtomicExtraNode.getStateAfter(), x);
-        storeAtomicExtraNode.setStateAfter(x);
-    }
+  @Override
+  public FrameState stateAfter() {
+    return storeAtomicExtraNode.getStateAfter();
+  }
 
-    @Override
-    public boolean hasSideEffect() {
-        return true;
-    }
+  @Override
+  public void setStateAfter(FrameState x) {
+    assert x == null || x.isAlive() : "frame state must be in a graph";
+    updateUsages(storeAtomicExtraNode.getStateAfter(), x);
+    storeAtomicExtraNode.setStateAfter(x);
+  }
 
-    public ValueNode value() {
-        return value;
-    }
+  @Override
+  public boolean hasSideEffect() {
+    return true;
+  }
 
-    public StoreAtomicIndexedNode(ValueNode outputArray, ValueNode index, JavaKind elementKind, GuardingNode boundsCheck, ValueNode value, ValueNode accumulator, ValueNode inputArray,
-            StoreAtomicIndexedNodeExtension extension) {
-        super(TYPE, StampFactory.forVoid(), outputArray, index, boundsCheck, elementKind);
-        this.value = value;
-        this.accumulator = accumulator;
-        this.inputArray = inputArray;
-        this.storeAtomicExtraNode = extension;
-    }
+  public ValueNode value() {
+    return value;
+  }
 
-    @Override
-    public void virtualize(VirtualizerTool tool) {
-        throw new RuntimeException("StoreAtomic Virtual Node not supported yet");
-    }
+  public StoreAtomicIndexedNode(
+      ValueNode outputArray,
+      ValueNode index,
+      JavaKind elementKind,
+      GuardingNode boundsCheck,
+      ValueNode value,
+      ValueNode accumulator,
+      ValueNode inputArray,
+      StoreAtomicIndexedNodeExtension extension) {
+    super(TYPE, StampFactory.forVoid(), outputArray, index, boundsCheck, elementKind);
+    this.value = value;
+    this.accumulator = accumulator;
+    this.inputArray = inputArray;
+    this.storeAtomicExtraNode = extension;
+  }
 
-    public FrameState getState() {
-        return storeAtomicExtraNode.getStateAfter();
-    }
+  @Override
+  public void virtualize(VirtualizerTool tool) {
+    throw new RuntimeException("StoreAtomic Virtual Node not supported yet");
+  }
 
-    public ValueNode getAccumulator() {
-        return accumulator;
-    }
+  public FrameState getState() {
+    return storeAtomicExtraNode.getStateAfter();
+  }
 
-    public ValueNode getStartNode() {
-        return storeAtomicExtraNode.getStartNode();
-    }
+  public ValueNode getAccumulator() {
+    return accumulator;
+  }
 
-    public ValueNode getInputArray() {
-        return inputArray;
-    }
+  public ValueNode getStartNode() {
+    return storeAtomicExtraNode.getStartNode();
+  }
 
-    public void setOptionalOperation(ValueNode node) {
-        storeAtomicExtraNode.setExtraOperation(node);
-    }
+  public ValueNode getInputArray() {
+    return inputArray;
+  }
 
-    public ValueNode getExtraOperation() {
-        return storeAtomicExtraNode.getExtraOperation();
-    }
+  public void setOptionalOperation(ValueNode node) {
+    storeAtomicExtraNode.setExtraOperation(node);
+  }
 
-    public StoreAtomicIndexedNodeExtension getStoreAtomicExtraNode() {
-        return storeAtomicExtraNode;
-    }
+  public ValueNode getExtraOperation() {
+    return storeAtomicExtraNode.getExtraOperation();
+  }
+
+  public StoreAtomicIndexedNodeExtension getStoreAtomicExtraNode() {
+    return storeAtomicExtraNode;
+  }
 }

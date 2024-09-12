@@ -30,25 +30,28 @@ import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroDevice;
 
 public class SPIRVLevelZeroCommandQueue extends CommandQueue {
 
-    private LevelZeroCommandQueue commandQueue;
-    private LevelZeroCommandList commandList;
-    private LevelZeroDevice device;
+  private LevelZeroCommandQueue commandQueue;
+  private LevelZeroCommandList commandList;
+  private LevelZeroDevice device;
 
-    public SPIRVLevelZeroCommandQueue(LevelZeroCommandQueue commandQueue, LevelZeroCommandList commandList, LevelZeroDevice device) {
-        this.commandQueue = commandQueue;
-        this.commandList = commandList;
-        this.device = device;
-    }
+  public SPIRVLevelZeroCommandQueue(
+      LevelZeroCommandQueue commandQueue,
+      LevelZeroCommandList commandList,
+      LevelZeroDevice device) {
+    this.commandQueue = commandQueue;
+    this.commandList = commandList;
+    this.device = device;
+  }
 
-    public LevelZeroCommandQueue getCommandQueue() {
-        return commandQueue;
-    }
+  public LevelZeroCommandQueue getCommandQueue() {
+    return commandQueue;
+  }
 
-    public LevelZeroCommandList getCommandList() {
-        return commandList;
-    }
+  public LevelZeroCommandList getCommandList() {
+    return commandList;
+  }
 
-    public LevelZeroDevice getDevice() {
-        return device;
-    }
+  public LevelZeroDevice getDevice() {
+    return device;
+  }
 }

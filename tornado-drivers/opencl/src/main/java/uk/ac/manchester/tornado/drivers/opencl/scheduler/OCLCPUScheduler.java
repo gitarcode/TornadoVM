@@ -28,27 +28,25 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class OCLCPUScheduler extends OCLKernelScheduler {
 
-    public OCLCPUScheduler(final OCLDeviceContext context) {
-        super(context);
+  public OCLCPUScheduler(final OCLDeviceContext context) {
+    super(context);
+  }
+
+  @Override
+  public void calculateGlobalWork(final TaskDataContext meta, long batchThreads) {
+    long[] maxItems = deviceContext.getDevice().getDeviceMaxWorkItemSizes();
+
+    final long[] globalWork = meta.getGlobalWork();
+    for (int i = 0; i < meta.getDims(); i++) {
+      globalWork[i] = i == 0 ? (long) (deviceContext.getDevice().getDeviceMaxComputeUnits()) : 1;
     }
+  }
 
-    @Override
-    public void calculateGlobalWork(final TaskDataContext meta, long batchThreads) {
-        long[] maxItems = deviceContext.getDevice().getDeviceMaxWorkItemSizes();
+  @Override
+  public void calculateLocalWork(final TaskDataContext meta) {
+    meta.setLocalWorkToNull();
+  }
 
-        final long[] globalWork = meta.getGlobalWork();
-        for (int i = 0; i < meta.getDims(); i++) {
-            globalWork[i] = i == 0 ? (long) (deviceContext.getDevice().getDeviceMaxComputeUnits()) : 1;
-        }
-    }
-
-    @Override
-    public void calculateLocalWork(final TaskDataContext meta) {
-        meta.setLocalWorkToNull();
-    }
-
-    @Override
-    public void checkAndAdaptLocalWork(TaskDataContext meta) {
-    }
-
+  @Override
+  public void checkAndAdaptLocalWork(TaskDataContext meta) {}
 }

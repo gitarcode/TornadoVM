@@ -23,12 +23,11 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.lir;
 
+import jdk.vm.ci.meta.AllocatableValue;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.LIRInstruction;
 import org.graalvm.compiler.lir.Variable;
-
-import jdk.vm.ci.meta.AllocatableValue;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.beehivespirvtoolkit.lib.instructions.SPIRVOpExtInst;
 import uk.ac.manchester.beehivespirvtoolkit.lib.instructions.operands.SPIRVId;
 import uk.ac.manchester.beehivespirvtoolkit.lib.instructions.operands.SPIRVLiteralExtInstInteger;
@@ -39,75 +38,88 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.SPIRVCompilationRes
 
 public class SPIRVTernary {
 
-    /**
-     * Abstract operation which consumes two inputs
-     */
-    abstract static class TernaryConsumer extends SPIRVLIROp {
+  /** Abstract operation which consumes two inputs */
+  abstract static class TernaryConsumer extends SPIRVLIROp {
 
-        @LIRInstruction.Use
-        protected Value x;
-        @LIRInstruction.Use
-        protected Value y;
-        @LIRInstruction.Use
-        protected Value z;
+    @LIRInstruction.Use protected Value x;
+    @LIRInstruction.Use protected Value y;
+    @LIRInstruction.Use protected Value z;
 
-        protected TernaryConsumer(LIRKind lirKind, Value x, Value y, Value z) {
-            super(lirKind);
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
+    protected TernaryConsumer(LIRKind lirKind, Value x, Value y, Value z) {
+      super(lirKind);
+      this.x = x;
+      this.y = y;
+      this.z = z;
+    }
+  }
+
+  public static class TernaryIntrinsic extends TernaryConsumer {
+
+    private SPIRVUnary.Intrinsic.OpenCLExtendedIntrinsic builtIn;
+
+    private Variable result;
+
+    public TernaryIntrinsic(
+        Variable result,
+        SPIRVUnary.Intrinsic.OpenCLExtendedIntrinsic builtIn,
+        LIRKind lirKind,
+        Value x,
+        Value y,
+        Value z) {
+      super(lirKind, x, y, z);
+      this.builtIn = builtIn;
+      this.result = result;
     }
 
-    public static class TernaryIntrinsic extends TernaryConsumer {
-
-        private SPIRVUnary.Intrinsic.OpenCLExtendedIntrinsic builtIn;
-
-        private Variable result;
-
-        public TernaryIntrinsic(Variable result, SPIRVUnary.Intrinsic.OpenCLExtendedIntrinsic builtIn, LIRKind lirKind, Value x, Value y, Value z) {
-            super(lirKind, x, y, z);
-            this.builtIn = builtIn;
-            this.result = result;
+    protected SPIRVId obtainPhiValueIdIfNeeded(SPIRVAssembler asm) {
+      SPIRVId operationId;
+      if (!asm.isPhiMapEmpty() && asm.isResultInPhiMap(result)) {
+        operationId = asm.getPhiId(result);
+        while (operationId == null) {
+          // Nested IF, We Keep Looking into the trace
+          AllocatableValue v = asm.getPhiTraceValue(result);
+          operationId = asm.getPhiId((Variable) v);
         }
-
-        protected SPIRVId obtainPhiValueIdIfNeeded(SPIRVAssembler asm) {
-            SPIRVId operationId;
-            if (!asm.isPhiMapEmpty() && asm.isResultInPhiMap(result)) {
-                operationId = asm.getPhiId(result);
-                while (operationId == null) {
-                    // Nested IF, We Keep Looking into the trace
-                    AllocatableValue v = asm.getPhiTraceValue(result);
-                    operationId = asm.getPhiId((Variable) v);
-                }
-            } else {
-                operationId = asm.module.getNextId();
-            }
-            return operationId;
-        }
-
-        @Override
-        public void emit(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
-            LIRKind lirKind = getLIRKind();
-            SPIRVKind resultSPIRVKind = (SPIRVKind) lirKind.getPlatformKind();
-
-            SPIRVId typeOperation = asm.primitives.getTypePrimitive(resultSPIRVKind);
-
-            SPIRVId a = loadSPIRVId(crb, asm, x);
-            SPIRVId b = loadSPIRVId(crb, asm, y);
-            SPIRVId c = loadSPIRVId(crb, asm, z);
-
-            Logger.traceCodeGen(Logger.BACKEND.SPIRV, "emit SPIRVLiteralExtInstInteger (Ternary Intrinsic): " + builtIn.getName() + " (" + x + "," + y + "," + z + ")");
-
-            SPIRVId result = obtainPhiValueIdIfNeeded(asm);
-
-            SPIRVId set = asm.getOpenclImport();
-            SPIRVLiteralExtInstInteger intrinsic = new SPIRVLiteralExtInstInteger(builtIn.getValue(), builtIn.getName());
-            asm.currentBlockScope().add(new SPIRVOpExtInst(typeOperation, result, set, intrinsic, new SPIRVMultipleOperands<>(a, b, c)));
-
-            asm.registerLIRInstructionValue(this, result);
-
-        }
-
+      } else {
+        operationId = asm.module.getNextId();
+      }
+      return operationId;
     }
+
+    @Override
+    public void emit(SPIRVCompilationResultBuilder crb, SPIRVAssembler asm) {
+      LIRKind lirKind = getLIRKind();
+      SPIRVKind resultSPIRVKind = (SPIRVKind) lirKind.getPlatformKind();
+
+      SPIRVId typeOperation = asm.primitives.getTypePrimitive(resultSPIRVKind);
+
+      SPIRVId a = loadSPIRVId(crb, asm, x);
+      SPIRVId b = loadSPIRVId(crb, asm, y);
+      SPIRVId c = loadSPIRVId(crb, asm, z);
+
+      Logger.traceCodeGen(
+          Logger.BACKEND.SPIRV,
+          "emit SPIRVLiteralExtInstInteger (Ternary Intrinsic): "
+              + builtIn.getName()
+              + " ("
+              + x
+              + ","
+              + y
+              + ","
+              + z
+              + ")");
+
+      SPIRVId result = obtainPhiValueIdIfNeeded(asm);
+
+      SPIRVId set = asm.getOpenclImport();
+      SPIRVLiteralExtInstInteger intrinsic =
+          new SPIRVLiteralExtInstInteger(builtIn.getValue(), builtIn.getName());
+      asm.currentBlockScope()
+          .add(
+              new SPIRVOpExtInst(
+                  typeOperation, result, set, intrinsic, new SPIRVMultipleOperands<>(a, b, c)));
+
+      asm.registerLIRInstructionValue(this, result);
+    }
+  }
 }

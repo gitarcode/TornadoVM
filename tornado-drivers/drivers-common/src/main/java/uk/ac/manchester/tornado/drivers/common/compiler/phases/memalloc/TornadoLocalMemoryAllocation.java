@@ -24,69 +24,71 @@
 package uk.ac.manchester.tornado.drivers.common.compiler.phases.memalloc;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.iterators.NodeIterable;
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkLocalArray;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoHighTierContext;
 
 /**
- * 
- * It filters the nodes for the length of the FixedArray node for the local
- * memory and calculates an optimal local memory size based on driver info.
- * Then, it replaces the length with the optimal size.
- *
+ * It filters the nodes for the length of the FixedArray node for the local memory and calculates an
+ * optimal local memory size based on driver info. Then, it replaces the length with the optimal
+ * size.
  */
 public class TornadoLocalMemoryAllocation extends BasePhase<TornadoHighTierContext> {
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
+
+  @Override
+  protected void run(StructuredGraph graph, TornadoHighTierContext context) {
+
+    if (!context.hasMeta()) {
+      return;
     }
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoHighTierContext context) {
+    if ((context.getMeta().getDomain() != null)) {
+      if ((context.getMeta().getDomain().getDepth() != 0)) {
+        NodeIterable<Node> sumNodes = graph.getNodes();
 
-        if (!context.hasMeta()) {
-            return;
-        }
-
-        if ((context.getMeta().getDomain() != null)) {
-            if ((context.getMeta().getDomain().getDepth() != 0)) {
-                NodeIterable<Node> sumNodes = graph.getNodes();
-
-                for (Node n : sumNodes) {
-                    if (n instanceof MarkLocalArray) {
-                        ConstantNode newLengthNode = ConstantNode.forInt(calculateLocalMemAllocSize(context), graph);
-                        if (newLengthNode != n.inputs().first()) {
-                            n.inputs().first().replaceAndDelete(newLengthNode);
-                        }
-                    }
-                }
+        for (Node n : sumNodes) {
+          if (n instanceof MarkLocalArray) {
+            ConstantNode newLengthNode =
+                ConstantNode.forInt(calculateLocalMemAllocSize(context), graph);
+            if (newLengthNode != n.inputs().first()) {
+              n.inputs().first().replaceAndDelete(newLengthNode);
             }
+          }
         }
+      }
+    }
+  }
+
+  private int calculateLocalMemAllocSize(TornadoHighTierContext context) {
+    int maxBlockSize =
+        (int) context.getDeviceMapping().getPhysicalDevice().getDeviceMaxWorkItemSizes()[0];
+
+    if (context.getDeviceMapping().getPhysicalDevice().getDeviceMaxWorkItemSizes()[0]
+        == context.getMeta().getDomain().get(0).cardinality()) {
+      maxBlockSize /= 4;
     }
 
-    private int calculateLocalMemAllocSize(TornadoHighTierContext context) {
-        int maxBlockSize = (int) context.getDeviceMapping().getPhysicalDevice().getDeviceMaxWorkItemSizes()[0];
+    int value =
+        Math.min(
+            Math.max(maxBlockSize, context.getMeta().getOpenCLGpuBlock2DX()),
+            context.getMeta().getDomain().get(0).cardinality());
 
-        if (context.getDeviceMapping().getPhysicalDevice().getDeviceMaxWorkItemSizes()[0] == context.getMeta().getDomain().get(0).cardinality()) {
-            maxBlockSize /= 4;
-        }
-
-        int value = Math.min(Math.max(maxBlockSize, context.getMeta().getOpenCLGpuBlock2DX()), context.getMeta().getDomain().get(0).cardinality());
-
-        if (value == 0) {
-            return 0;
-        } else {
-            while (context.getMeta().getDomain().get(0).cardinality() % value != 0) {
-                value--;
-            }
-            return value;
-        }
+    if (value == 0) {
+      return 0;
+    } else {
+      while (context.getMeta().getDomain().get(0).cardinality() % value != 0) {
+        value--;
+      }
+      return value;
     }
+  }
 }

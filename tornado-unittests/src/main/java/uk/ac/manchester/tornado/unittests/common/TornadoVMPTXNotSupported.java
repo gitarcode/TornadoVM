@@ -20,8 +20,7 @@ package uk.ac.manchester.tornado.unittests.common;
 
 public class TornadoVMPTXNotSupported extends RuntimeException {
 
-    public TornadoVMPTXNotSupported(String message) {
-        super(message);
-    }
-
+  public TornadoVMPTXNotSupported(String message) {
+    super(message);
+  }
 }

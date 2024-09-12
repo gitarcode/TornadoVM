@@ -20,7 +20,6 @@
 package uk.ac.manchester.tornado.drivers.spirv.graal.phases;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.NodeView;
@@ -29,7 +28,6 @@ import org.graalvm.compiler.nodes.calc.SqrtNode;
 import org.graalvm.compiler.nodes.memory.ReadNode;
 import org.graalvm.compiler.nodes.memory.WriteNode;
 import org.graalvm.compiler.phases.Phase;
-
 import uk.ac.manchester.tornado.api.TornadoDeviceContext;
 import uk.ac.manchester.tornado.api.exceptions.TornadoDeviceFP64NotSupported;
 import uk.ac.manchester.tornado.drivers.spirv.graal.nodes.SPIRVFPBinaryIntrinsicNode;
@@ -37,68 +35,85 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.nodes.SPIRVFPUnaryIntrinsicN
 
 public class SPIRVFP64SupportPhase extends Phase {
 
-    private TornadoDeviceContext deviceContext;
+  private TornadoDeviceContext deviceContext;
 
-    public SPIRVFP64SupportPhase(TornadoDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
+  public SPIRVFP64SupportPhase(TornadoDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+  }
+
+  /**
+   * This method evaluates if a stamp is of type that requires double floating point precision, or
+   * not.
+   *
+   * @param stamp
+   * @return returns true if stamp is f64 or double
+   */
+  private boolean isStampFP64Type(Stamp stamp) {
+    return stamp.toString().contains("f64") || stamp.toString().toLowerCase().contains("double");
+  }
+
+  /**
+   * This method checks if a stamp requires double floating point precision or not. Additionally,
+   * the deviceContext is used to check if double precision is supported by the target device.
+   *
+   * <p>If the input stamp requires double precision and the target device does not support this
+   * feature, a {@link TornadoDeviceFP64NotSupported} exception is thrown.
+   *
+   * @param stamp a stamp of a node
+   */
+  private void checkStampForFP64Support(Stamp stamp) {
+    boolean isStampFP64Type = isStampFP64Type(stamp);
+    if (isStampFP64Type && !deviceContext.isFP64Supported()) {
+      throw new TornadoDeviceFP64NotSupported(
+          "The current SPIRV device (" + deviceContext.getDeviceName() + ") does not support FP64");
     }
+  }
 
-    /**
-     * This method evaluates if a stamp is of type that requires double floating
-     * point precision, or not.
-     *
-     * @param stamp
-     * @return returns true if stamp is f64 or double
-     */
-    private boolean isStampFP64Type(Stamp stamp) {
-        return stamp.toString().contains("f64") || stamp.toString().toLowerCase().contains("double");
-    }
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    /**
-     * This method checks if a stamp requires double floating point precision or
-     * not. Additionally, the deviceContext is used to check if double precision is
-     * supported by the target device.
-     *
-     * If the input stamp requires double precision and the target device does not
-     * support this feature, a {@link TornadoDeviceFP64NotSupported} exception is
-     * thrown.
-     *
-     * @param stamp
-     *            a stamp of a node
-     */
-    private void checkStampForFP64Support(Stamp stamp) {
-        boolean isStampFP64Type = isStampFP64Type(stamp);
-        if (isStampFP64Type && !deviceContext.isFP64Supported()) {
-            throw new TornadoDeviceFP64NotSupported("The current SPIRV device (" + deviceContext.getDeviceName() + ") does not support FP64");
-        }
-    }
+  @Override
+  protected void run(StructuredGraph graph) {
 
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+    graph
+        .getNodes()
+        .filter(WriteNode.class)
+        .forEach(
+            writeNode -> {
+              checkStampForFP64Support(writeNode.getAccessStamp(NodeView.DEFAULT));
+            });
 
-    @Override
-    protected void run(StructuredGraph graph) {
+    graph
+        .getNodes()
+        .filter(ReadNode.class)
+        .forEach(
+            readNode -> {
+              checkStampForFP64Support(readNode.getAccessStamp(NodeView.DEFAULT));
+            });
 
-        graph.getNodes().filter(WriteNode.class).forEach(writeNode -> {
-            checkStampForFP64Support(writeNode.getAccessStamp(NodeView.DEFAULT));
-        });
+    graph
+        .getNodes()
+        .filter(SPIRVFPUnaryIntrinsicNode.class)
+        .forEach(
+            node -> {
+              checkStampForFP64Support(node.stamp(NodeView.DEFAULT));
+            });
 
-        graph.getNodes().filter(ReadNode.class).forEach(readNode -> {
-            checkStampForFP64Support(readNode.getAccessStamp(NodeView.DEFAULT));
-        });
+    graph
+        .getNodes()
+        .filter(SPIRVFPBinaryIntrinsicNode.class)
+        .forEach(
+            node -> {
+              checkStampForFP64Support(node.stamp(NodeView.DEFAULT));
+            });
 
-        graph.getNodes().filter(SPIRVFPUnaryIntrinsicNode.class).forEach(node -> {
-            checkStampForFP64Support(node.stamp(NodeView.DEFAULT));
-        });
-
-        graph.getNodes().filter(SPIRVFPBinaryIntrinsicNode.class).forEach(node -> {
-            checkStampForFP64Support(node.stamp(NodeView.DEFAULT));
-        });
-
-        graph.getNodes().filter(SqrtNode.class).forEach(node -> {
-            checkStampForFP64Support(node.stamp(NodeView.DEFAULT));
-        });
-
-    }
+    graph
+        .getNodes()
+        .filter(SqrtNode.class)
+        .forEach(
+            node -> {
+              checkStampForFP64Support(node.stamp(NodeView.DEFAULT));
+            });
+  }
 }

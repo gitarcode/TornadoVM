@@ -30,74 +30,79 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.Canonicalizable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
-
 import uk.ac.manchester.tornado.drivers.ptx.graal.PTXStampFactory;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 
-/**
- * The {@code StoreIndexedNode} represents a write to an array element.
- */
+/** The {@code StoreIndexedNode} represents a write to an array element. */
 @NodeInfo(nameTemplate = "Store .s{p#lane}")
-public final class VectorStoreElementProxyNode extends FixedWithNextNode implements Canonicalizable {
+public final class VectorStoreElementProxyNode extends FixedWithNextNode
+    implements Canonicalizable {
 
-    public static final NodeClass<VectorStoreElementProxyNode> TYPE = NodeClass.create(VectorStoreElementProxyNode.class);
+  public static final NodeClass<VectorStoreElementProxyNode> TYPE =
+      NodeClass.create(VectorStoreElementProxyNode.class);
 
-    @Input
-    ValueNode value;
+  @Input ValueNode value;
 
-    @OptionalInput(InputType.Association)
-    ValueNode origin;
-    @OptionalInput(InputType.Association)
-    ValueNode laneOrigin;
+  @OptionalInput(InputType.Association)
+  ValueNode origin;
 
-    public ValueNode value() {
-        return value;
+  @OptionalInput(InputType.Association)
+  ValueNode laneOrigin;
+
+  public ValueNode value() {
+    return value;
+  }
+
+  private VectorStoreElementProxyNode(
+      NodeClass<? extends VectorStoreElementProxyNode> c,
+      PTXKind kind,
+      ValueNode origin,
+      ValueNode lane) {
+    super(c, PTXStampFactory.getStampFor(kind));
+    this.origin = origin;
+    this.laneOrigin = lane;
+  }
+
+  public boolean tryResolve() {
+    if (canResolve()) {
+      /*
+       * If we can resolve this node properly, this operation should be applied to the
+       * vector node and this node should be discarded.
+       */
+      final VectorValueNode vector = (VectorValueNode) origin;
+      vector.setElement(laneOrigin.asJavaConstant().asInt(), value);
+      clearInputs();
+      return true;
+    } else {
+      return false;
     }
+  }
 
-    private VectorStoreElementProxyNode(NodeClass<? extends VectorStoreElementProxyNode> c, PTXKind kind, ValueNode origin, ValueNode lane) {
-        super(c, PTXStampFactory.getStampFor(kind));
-        this.origin = origin;
-        this.laneOrigin = lane;
+  public VectorStoreElementProxyNode(
+      PTXKind kind, ValueNode origin, ValueNode lane, ValueNode value) {
+    this(TYPE, kind, origin, lane);
+    this.value = value;
+  }
 
+  @Override
+  public boolean inferStamp() {
+    return true;
+  }
+
+  public boolean canResolve() {
+    return ((origin != null && laneOrigin != null)
+        && origin instanceof VectorValueNode
+        && laneOrigin instanceof ConstantNode
+        && ((VectorValueNode) origin).getPTXKind().getVectorLength()
+            > laneOrigin.asJavaConstant().asInt());
+  }
+
+  @Override
+  public Node canonical(CanonicalizerTool ct) {
+    if (tryResolve()) {
+      return null;
+    } else {
+      return this;
     }
-
-    public boolean tryResolve() {
-        if (canResolve()) {
-            /*
-             * If we can resolve this node properly, this operation should be applied to the
-             * vector node and this node should be discarded.
-             */
-            final VectorValueNode vector = (VectorValueNode) origin;
-            vector.setElement(laneOrigin.asJavaConstant().asInt(), value);
-            clearInputs();
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public VectorStoreElementProxyNode(PTXKind kind, ValueNode origin, ValueNode lane, ValueNode value) {
-        this(TYPE, kind, origin, lane);
-        this.value = value;
-    }
-
-    @Override
-    public boolean inferStamp() {
-        return true;
-    }
-
-    public boolean canResolve() {
-        return ((origin != null && laneOrigin != null) && origin instanceof VectorValueNode && laneOrigin instanceof ConstantNode
-                && ((VectorValueNode) origin).getPTXKind().getVectorLength() > laneOrigin.asJavaConstant().asInt());
-    }
-
-    @Override
-    public Node canonical(CanonicalizerTool ct) {
-        if (tryResolve()) {
-            return null;
-        } else {
-            return this;
-        }
-    }
-
+  }
 }

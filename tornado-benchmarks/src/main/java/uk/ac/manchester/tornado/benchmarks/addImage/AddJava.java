@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.benchmarks.addImage;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.types.images.ImageFloat4;
 import uk.ac.manchester.tornado.api.types.vectors.Float4;
@@ -27,59 +26,57 @@ import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 public class AddJava extends BenchmarkDriver {
 
-    private final int numElementsX;
-    private final int numElementsY;
+  private final int numElementsX;
+  private final int numElementsY;
 
-    ImageFloat4 a;
-    ImageFloat4 b;
-    ImageFloat4 c;
+  ImageFloat4 a;
+  ImageFloat4 b;
+  ImageFloat4 c;
 
-    public AddJava(int iterations, int numElementsX, int numElementsY) {
-        super(iterations);
-        this.numElementsX = numElementsX;
-        this.numElementsY = numElementsY;
+  public AddJava(int iterations, int numElementsX, int numElementsY) {
+    super(iterations);
+    this.numElementsX = numElementsX;
+    this.numElementsY = numElementsY;
+  }
+
+  @Override
+  public void setUp() {
+    a = new ImageFloat4(numElementsX, numElementsY);
+    b = new ImageFloat4(numElementsX, numElementsY);
+    c = new ImageFloat4(numElementsX, numElementsY);
+
+    Random r = new Random(73);
+    for (int j = 0; j < numElementsY; j++) {
+      for (int i = 0; i < numElementsX; i++) {
+        a.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
+        b.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
+      }
     }
+  }
 
-    @Override
-    public void setUp() {
-        a = new ImageFloat4(numElementsX, numElementsY);
-        b = new ImageFloat4(numElementsX, numElementsY);
-        c = new ImageFloat4(numElementsX, numElementsY);
+  @Override
+  public void tearDown() {
+    a = null;
+    b = null;
+    c = null;
+    super.tearDown();
+  }
 
-        Random r = new Random(73);
-        for (int j = 0; j < numElementsY; j++) {
-            for (int i = 0; i < numElementsX; i++) {
-                a.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
-                b.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
-            }
-        }
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    GraphicsKernels.addImage(a, b, c);
+  }
 
-    @Override
-    public void tearDown() {
-        a = null;
-        b = null;
-        c = null;
-        super.tearDown();
-    }
+  @Override
+  public void barrier() {}
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        GraphicsKernels.addImage(a, b, c);
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void barrier() {
-
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

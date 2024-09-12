@@ -24,43 +24,43 @@ import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 public class DFTJava extends BenchmarkDriver {
 
-    private int size;
-    private DoubleArray inReal;
-    private DoubleArray inImag;
-    private DoubleArray outReal;
-    private DoubleArray outImag;
+  private int size;
+  private DoubleArray inReal;
+  private DoubleArray inImag;
+  private DoubleArray outReal;
+  private DoubleArray outImag;
 
-    public DFTJava(int iterations, int size) {
-        super(iterations);
-        this.size = size;
+  public DFTJava(int iterations, int size) {
+    super(iterations);
+    this.size = size;
+  }
+
+  @Override
+  public void setUp() {
+    inReal = new DoubleArray(size);
+    inImag = new DoubleArray(size);
+    outReal = new DoubleArray(size);
+    outImag = new DoubleArray(size);
+
+    for (int i = 0; i < size; i++) {
+      inReal.set(i, (1 / (double) (i + 2)));
+      inImag.set(i, (1 / (double) (i + 2)));
     }
+  }
 
-    @Override
-    public void setUp() {
-        inReal = new DoubleArray(size);
-        inImag = new DoubleArray(size);
-        outReal = new DoubleArray(size);
-        outImag = new DoubleArray(size);
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-        for (int i = 0; i < size; i++) {
-            inReal.set(i, (1 / (double) (i + 2)));
-            inImag.set(i, (1 / (double) (i + 2)));
-        }
-    }
+  @Override
+  public void tearDown() {
+    outImag = null;
+    outReal = null;
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    @Override
-    public void tearDown() {
-        outImag = null;
-        outReal = null;
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        ComputeKernels.computeDFT(inReal, inImag, outReal, outImag);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    ComputeKernels.computeDFT(inReal, inImag, outReal, outImag);
+  }
 }

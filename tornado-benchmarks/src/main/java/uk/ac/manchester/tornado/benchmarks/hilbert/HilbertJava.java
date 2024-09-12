@@ -24,26 +24,26 @@ import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 public class HilbertJava extends BenchmarkDriver {
 
-    private int size;
-    private FloatArray hilbertMatrix;
+  private int size;
+  private FloatArray hilbertMatrix;
 
-    public HilbertJava(int size, int iterations) {
-        super(iterations);
-        this.size = size;
-    }
+  public HilbertJava(int size, int iterations) {
+    super(iterations);
+    this.size = size;
+  }
 
-    @Override
-    public void setUp() {
-        hilbertMatrix = new FloatArray(size * size);
-    }
+  @Override
+  public void setUp() {
+    hilbertMatrix = new FloatArray(size * size);
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        ComputeKernels.hilbertComputation(hilbertMatrix, size, size);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    ComputeKernels.hilbertComputation(hilbertMatrix, size, size);
+  }
 }

@@ -17,135 +17,132 @@
  */
 package uk.ac.manchester.tornado.api.types.tensors;
 
+import static java.lang.foreign.ValueLayout.JAVA_BYTE;
+
+import java.lang.foreign.MemorySegment;
+import java.util.Arrays;
 import uk.ac.manchester.tornado.api.internal.annotations.SegmentElementSize;
 import uk.ac.manchester.tornado.api.types.arrays.ByteArray;
 import uk.ac.manchester.tornado.api.types.arrays.TornadoNativeArray;
 
-import java.lang.foreign.MemorySegment;
-import java.util.Arrays;
-
-import static java.lang.foreign.ValueLayout.JAVA_BYTE;
-
 @SegmentElementSize(size = 1)
 public final class TensorByte extends Tensor {
 
-    private static final int BYTE = 1;
-    /**
-     * The data type of the elements contained within the tensor.
-     */
-    private final DType dType;
-    private final Shape shape;
+  private static final int BYTE = 1;
 
-    private final ByteArray tensorStorage;
+  /** The data type of the elements contained within the tensor. */
+  private final DType dType;
 
-    /**
-     * The total number of elements in the tensor.
-     */
-    private int numberOfElements;
+  private final Shape shape;
 
-    /**
-     * The memory segment representing the tensor data in native memory.
-     */
+  private final ByteArray tensorStorage;
 
-    public TensorByte(Shape shape) {
-        super(DType.BOOL, shape);
-        this.shape = shape;
-        this.numberOfElements = shape.getSize();
-        this.dType = DType.BOOL;
-        this.tensorStorage = new ByteArray(numberOfElements);
+  /** The total number of elements in the tensor. */
+  private int numberOfElements;
+
+  /** The memory segment representing the tensor data in native memory. */
+  public TensorByte(Shape shape) {
+    super(DType.BOOL, shape);
+    this.shape = shape;
+    this.numberOfElements = shape.getSize();
+    this.dType = DType.BOOL;
+    this.tensorStorage = new ByteArray(numberOfElements);
+  }
+
+  public void init(byte value) {
+    for (int i = 0; i < getSize(); i++) {
+      tensorStorage.getSegmentWithHeader().setAtIndex(JAVA_BYTE, getBaseIndex() + i, value);
     }
+  }
 
-    public void init(byte value) {
-        for (int i = 0; i < getSize(); i++) {
-            tensorStorage.getSegmentWithHeader().setAtIndex(JAVA_BYTE, getBaseIndex() + i, value);
-        }
-    }
+  public void set(int index, byte value) {
+    tensorStorage.getSegmentWithHeader().setAtIndex(JAVA_BYTE, getBaseIndex() + index, value);
+  }
 
-    public void set(int index, byte value) {
-        tensorStorage.getSegmentWithHeader().setAtIndex(JAVA_BYTE, getBaseIndex() + index, value);
-    }
+  private long getBaseIndex() {
+    return (int) TornadoNativeArray.ARRAY_HEADER / BYTE;
+  }
 
-    private long getBaseIndex() {
-        return (int) TornadoNativeArray.ARRAY_HEADER / BYTE;
-    }
+  /**
+   * Gets the float value stored at the specified index of the {@link ByteArray} instance.
+   *
+   * @param index The index of which to retrieve the float value.
+   * @return
+   */
+  public byte get(int index) {
+    return tensorStorage.getSegmentWithHeader().getAtIndex(JAVA_BYTE, getBaseIndex() + index);
+  }
 
-    /**
-     * Gets the float value stored at the specified index of the {@link ByteArray} instance.
-     *
-     * @param index
-     *     The index of which to retrieve the float value.
-     * @return
-     */
-    public byte get(int index) {
-        return tensorStorage.getSegmentWithHeader().getAtIndex(JAVA_BYTE, getBaseIndex() + index);
-    }
+  @Override
+  public int getSize() {
+    return numberOfElements;
+  }
 
-    @Override
-    public int getSize() {
-        return numberOfElements;
-    }
+  @Override
+  public MemorySegment getSegment() {
+    return tensorStorage.getSegment();
+  }
 
-    @Override
-    public MemorySegment getSegment() {
-        return tensorStorage.getSegment();
-    }
+  @Override
+  public MemorySegment getSegmentWithHeader() {
+    return tensorStorage.getSegmentWithHeader();
+  }
 
-    @Override
-    public MemorySegment getSegmentWithHeader() {
-        return tensorStorage.getSegmentWithHeader();
-    }
+  @Override
+  public long getNumBytesOfSegmentWithHeader() {
+    return tensorStorage.getNumBytesOfSegmentWithHeader();
+  }
 
-    @Override
-    public long getNumBytesOfSegmentWithHeader() {
-        return tensorStorage.getNumBytesOfSegmentWithHeader();
-    }
+  @Override
+  public long getNumBytesOfSegment() {
+    return tensorStorage.getNumBytesOfSegment();
+  }
 
-    @Override
-    public long getNumBytesOfSegment() {
-        return tensorStorage.getNumBytesOfSegment();
-    }
+  @Override
+  protected void clear() {
+    init((byte) 0);
+  }
 
-    @Override
-    protected void clear() {
-        init((byte) 0);
-    }
+  @Override
+  public int getElementSize() {
+    return BYTE;
+  }
 
-    @Override
-    public int getElementSize() {
-        return BYTE;
-    }
+  @Override
+  public Shape getShape() {
+    return this.shape;
+  }
 
-    @Override
-    public Shape getShape() {
-        return this.shape;
-    }
+  @Override
+  public String getDTypeAsString() {
+    return dType.toString();
+  }
 
-    @Override
-    public String getDTypeAsString() {
-        return dType.toString();
-    }
+  @Override
+  public DType getDType() {
+    return dType;
+  }
 
-    @Override
-    public DType getDType() {
-        return dType;
+  /**
+   * Concatenates multiple {@link TensorByte} instances into a single {@link TensorByte}.
+   *
+   * @param arrays Variable number of {@link TensorByte} objects to be concatenated.
+   * @return A new {@link TensorByte} instance containing all the elements of the input arrays,
+   *     concatenated in the order they were provided.
+   */
+  public static TensorByte concat(TensorByte... arrays) {
+    int newSize = Arrays.stream(arrays).mapToInt(TensorByte::getSize).sum();
+    TensorByte concatArray = new TensorByte(new Shape(newSize));
+    long currentPositionBytes = 0;
+    for (TensorByte array : arrays) {
+      MemorySegment.copy(
+          array.getSegment(),
+          0,
+          concatArray.getSegment(),
+          currentPositionBytes,
+          array.getNumBytesOfSegment());
+      currentPositionBytes += array.getNumBytesOfSegment();
     }
-
-    /**
-     * Concatenates multiple {@link TensorByte} instances into a single {@link TensorByte}.
-     *
-     * @param arrays
-     *     Variable number of {@link TensorByte} objects to be concatenated.
-     * @return A new {@link TensorByte} instance containing all the elements of the input arrays,
-     *     concatenated in the order they were provided.
-     */
-    public static TensorByte concat(TensorByte... arrays) {
-        int newSize = Arrays.stream(arrays).mapToInt(TensorByte::getSize).sum();
-        TensorByte concatArray = new TensorByte(new Shape(newSize));
-        long currentPositionBytes = 0;
-        for (TensorByte array : arrays) {
-            MemorySegment.copy(array.getSegment(), 0, concatArray.getSegment(), currentPositionBytes, array.getNumBytesOfSegment());
-            currentPositionBytes += array.getNumBytesOfSegment();
-        }
-        return concatArray;
-    }
+    return concatArray;
+  }
 }

@@ -19,18 +19,16 @@ package uk.ac.manchester.tornado.api.types.volumes;
 
 import java.lang.foreign.MemorySegment;
 import java.nio.Buffer;
-
 import uk.ac.manchester.tornado.api.types.common.PrimitiveStorage;
 
 public sealed interface TornadoVolumesInterface<T extends Buffer> //
-        extends PrimitiveStorage<T> permits VolumeShort2 {
+    extends PrimitiveStorage<T> permits VolumeShort2 {
 
-    long getNumBytes();
+  long getNumBytes();
 
-    long getNumBytesWithHeader();
+  long getNumBytesWithHeader();
 
-    MemorySegment getSegment();
+  MemorySegment getSegment();
 
-    MemorySegment getSegmentWithHeader();
-
+  MemorySegment getSegmentWithHeader();
 }

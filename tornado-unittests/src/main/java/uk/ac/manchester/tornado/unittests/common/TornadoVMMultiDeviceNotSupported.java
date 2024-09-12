@@ -18,7 +18,7 @@
 package uk.ac.manchester.tornado.unittests.common;
 
 public class TornadoVMMultiDeviceNotSupported extends RuntimeException {
-    public TornadoVMMultiDeviceNotSupported(String message) {
-        super(message);
-    }
+  public TornadoVMMultiDeviceNotSupported(String message) {
+    super(message);
+  }
 }

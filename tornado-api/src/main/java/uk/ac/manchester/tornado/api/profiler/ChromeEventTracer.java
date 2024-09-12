@@ -21,99 +21,108 @@ import java.io.File;
 import java.util.Map;
 
 public class ChromeEventTracer {
-    /**
-     * The filename for ChromeEventTracer to write json file.
-     */
-    public static final String CHROME_EVENT_TRACER_FILENAME_KEY = "tornado.chrome.event.tracer.filename";
-    public static final String CHROME_EVENT_TRACER_FILENAME = System.getProperties().getProperty(CHROME_EVENT_TRACER_FILENAME_KEY, "chrome.json");
-    public static final String CHROME_EVENT_TRACER_ENABLED_KEY = "tornado.chrome.event.tracer.enabled";
-    public static final ChromeEventJSonWriter json = new ChromeEventJSonWriter();
+  /** The filename for ChromeEventTracer to write json file. */
+  public static final String CHROME_EVENT_TRACER_FILENAME_KEY =
+      "tornado.chrome.event.tracer.filename";
 
-    static {
-        if (isEnabled()) {
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> json.write(new File(getChromeEventTracerFileName()))));
-        }
+  public static final String CHROME_EVENT_TRACER_FILENAME =
+      System.getProperties().getProperty(CHROME_EVENT_TRACER_FILENAME_KEY, "chrome.json");
+  public static final String CHROME_EVENT_TRACER_ENABLED_KEY =
+      "tornado.chrome.event.tracer.enabled";
+  public static final ChromeEventJSonWriter json = new ChromeEventJSonWriter();
+
+  static {
+    if (isEnabled()) {
+      Runtime.getRuntime()
+          .addShutdownHook(new Thread(() -> json.write(new File(getChromeEventTracerFileName()))));
     }
+  }
 
-    public ChromeEventTracer() {
+  public ChromeEventTracer() {}
 
+  public static String getChromeEventTracerFileName() {
+    return System.getProperties().getProperty(CHROME_EVENT_TRACER_FILENAME_KEY, "chrome.json");
+  }
+
+  /**
+   * Option to enable chrome event format for profiler. It can be disabled at any point during
+   * runtime.
+   *
+   * @return boolean.
+   */
+  public static boolean isChromeEventTracerEnabled() {
+    return Boolean.getBoolean(CHROME_EVENT_TRACER_ENABLED_KEY);
+  }
+
+  public static ChromeEventTracer create() {
+    return new ChromeEventTracer();
+  }
+
+  public static boolean isEnabled() {
+    return isChromeEventTracerEnabled();
+  }
+
+  public static void enqueueWriteIfEnabled(String tag, long bytes, long startNs, long endNs) {
+    if (isEnabled()) {
+      json.x(tag, "write", startNs, endNs, () -> json.kv("bytes", bytes));
     }
+  }
 
-    public static String getChromeEventTracerFileName() {
-        return System.getProperties().getProperty(CHROME_EVENT_TRACER_FILENAME_KEY, "chrome.json");
+  public static void enqueueReadIfEnabled(String tag, long bytes, long startNs, long endNs) {
+    if (isEnabled()) {
+      json.x(tag, "read", startNs, endNs, () -> json.kv("bytes", bytes));
     }
+  }
 
-    /**
-     * Option to enable chrome event format for profiler. It can be disabled at any
-     * point during runtime.
-     *
-     * @return boolean.
-     */
-    public static boolean isChromeEventTracerEnabled() {
-        return Boolean.getBoolean(CHROME_EVENT_TRACER_ENABLED_KEY);
+  public static void enqueueNDRangeKernelIfEnabled(String tag, long startNs, long endNs) {
+    if (isEnabled()) {
+      json.x(tag, "NDRangeKernel", startNs, endNs, null);
     }
+  }
 
-    public static ChromeEventTracer create() {
-        return new ChromeEventTracer();
+  public static void enqueueTaskIfEnabled(String tag, long startNs, long endNs) {
+    if (isEnabled()) {
+      json.x(tag, "exec", startNs, endNs, null);
     }
+  }
 
-    public static boolean isEnabled() {
-        return isChromeEventTracerEnabled();
+  public static void trace(String tag, Runnable r) {
+    long startNs = System.nanoTime();
+    r.run();
+    if (isEnabled()) {
+      json.x(tag, "trace", startNs, System.nanoTime(), null);
     }
+  }
 
-    public static void enqueueWriteIfEnabled(String tag, long bytes, long startNs, long endNs) {
-        if (isEnabled()) {
-            json.x(tag, "write", startNs, endNs, () -> json.kv("bytes", bytes));
-        }
+  public static <T> T trace(String tag, Builder<T> b) {
+    long startNs = System.nanoTime();
+    T value = b.build();
+    if (isEnabled()) {
+      json.x(tag, "trace", startNs, System.nanoTime(), null);
     }
+    return value;
+  }
 
-    public static void enqueueReadIfEnabled(String tag, long bytes, long startNs, long endNs) {
-        if (isEnabled()) {
-            json.x(tag, "read", startNs, endNs, () -> json.kv("bytes", bytes));
-        }
-    }
-
-    public static void enqueueNDRangeKernelIfEnabled(String tag, long startNs, long endNs) {
-        if (isEnabled()) {
-            json.x(tag, "NDRangeKernel", startNs, endNs, null);
-        }
-    }
-
-    public static void enqueueTaskIfEnabled(String tag, long startNs, long endNs) {
-        if (isEnabled()) {
-            json.x(tag, "exec", startNs, endNs, null);
-        }
-    }
-
-    public static void trace(String tag, Runnable r) {
-        long startNs = System.nanoTime();
-        r.run();
-        if (isEnabled()) {
-            json.x(tag, "trace", startNs, System.nanoTime(), null);
-        }
-    }
-
-    public static <T> T trace(String tag, Builder<T> b) {
-        long startNs = System.nanoTime();
-        T value = b.build();
-        if (isEnabled()) {
-            json.x(tag, "trace", startNs, System.nanoTime(), null);
-        }
-        return value;
-    }
-
-    public static void opencltimes(int localId, long queuedNs, long submitNs, long startNs, long endNs, Map<String, ?> meta) {
-        json.x("queued", null, queuedNs, endNs, meta == null ? null : () -> {
-            for (String k : meta.keySet()) {
+  public static void opencltimes(
+      int localId, long queuedNs, long submitNs, long startNs, long endNs, Map<String, ?> meta) {
+    json.x(
+        "queued",
+        null,
+        queuedNs,
+        endNs,
+        meta == null
+            ? null
+            : () -> {
+              for (String k : meta.keySet()) {
                 json.kv(k, (String) meta.get(k));
-            }
-        });
-        json.x("submit", null, submitNs, endNs, null);
-        json.x("start", null, startNs, endNs, null);
-        // order queue submit start end
-    }
+              }
+            });
+    json.x("submit", null, submitNs, endNs, null);
+    json.x("start", null, startNs, endNs, null);
+    // order queue submit start end
+  }
 
-    public interface Builder<T> {
-        T build();
-    }
+  public interface Builder<T> {
+    T build();
+  }
 }

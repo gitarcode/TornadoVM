@@ -21,6 +21,8 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.phases;
 
+import java.util.ArrayList;
+import java.util.Optional;
 import jdk.vm.ci.meta.Constant;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.RawConstant;
@@ -41,66 +43,66 @@ import org.graalvm.compiler.phases.BasePhase;
 import uk.ac.manchester.tornado.runtime.common.BatchCompilationConfig;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoHighTierContext;
 
-import java.util.ArrayList;
-import java.util.Optional;
-
 /**
- * This phase is only used for batch processing. If the loop index is written in the output
- * buffer, this phase will offset the value to be written based on the number of the batch.
- * <p> E.g.
- *     {@code output.set(i, i)} will be transformed to {@code output.set(i, i + batchNumber * batchSize)}
- * </p>
+ * This phase is only used for batch processing. If the loop index is written in the output buffer,
+ * this phase will offset the value to be written based on the number of the batch.
+ *
+ * <p>E.g. {@code output.set(i, i)} will be transformed to {@code output.set(i, i + batchNumber *
+ * batchSize)}
  */
 public class TornadoBatchGlobalIndexOffset extends BasePhase<TornadoHighTierContext> {
 
-    private long batchSize;
-    private int batchNumber;
+  private long batchSize;
+  private int batchNumber;
 
-    @Override
-    public Optional<BasePhase.NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
+  @Override
+  public Optional<BasePhase.NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
+
+  protected void run(StructuredGraph graph, TornadoHighTierContext context) {
+    BatchCompilationConfig batchCompilationConfig = context.getBatchCompilationConfig();
+    batchSize = batchCompilationConfig.getBatchSize();
+    // This phase is only applied for batch processing.
+    if (batchSize == 0) {
+      return;
     }
 
-    protected void run(StructuredGraph graph, TornadoHighTierContext context) {
-        BatchCompilationConfig batchCompilationConfig = context.getBatchCompilationConfig();
-        batchSize = batchCompilationConfig.getBatchSize();
-        // This phase is only applied for batch processing.
-        if (batchSize == 0) {
-            return;
+    batchNumber = batchCompilationConfig.getBatchNumber();
+
+    for (ValuePhiNode phiNode : graph.getNodes().filter(ValuePhiNode.class)) {
+      ArrayList<ValueNode> indexUsages = new ArrayList<>();
+      for (Node phiNodeUsage : phiNode.usages()) {
+        if (isIndexUsedInJavaWrite(phiNodeUsage)) {
+          indexUsages.add((ValueNode) phiNodeUsage);
         }
+      }
+      for (ValueNode phiIndexUsage : indexUsages) {
+        Constant batchNumberConstant = new RawConstant(batchNumber * batchSize);
+        ConstantNode batchNumberNode =
+            new ConstantNode(batchNumberConstant, StampFactory.forKind(JavaKind.Int));
+        graph.addWithoutUnique(batchNumberNode);
 
-        batchNumber = batchCompilationConfig.getBatchNumber();
-
-        for (ValuePhiNode phiNode : graph.getNodes().filter(ValuePhiNode.class)) {
-            ArrayList<ValueNode> indexUsages = new ArrayList<>();
-            for (Node phiNodeUsage : phiNode.usages()) {
-                if (isIndexUsedInJavaWrite(phiNodeUsage)) {
-                    indexUsages.add((ValueNode) phiNodeUsage);
-                }
-            }
-            for (ValueNode phiIndexUsage : indexUsages) {
-                Constant batchNumberConstant = new RawConstant(batchNumber * batchSize);
-                ConstantNode batchNumberNode = new ConstantNode(batchNumberConstant, StampFactory.forKind(JavaKind.Int));
-                graph.addWithoutUnique(batchNumberNode);
-
-                AddNode addOffsets = new AddNode(batchNumberNode, phiNode);
-                graph.addWithoutUnique(addOffsets);
-                phiIndexUsage.replaceFirstInput(phiNode, addOffsets);
-            }
-        }
-
+        AddNode addOffsets = new AddNode(batchNumberNode, phiNode);
+        graph.addWithoutUnique(addOffsets);
+        phiIndexUsage.replaceFirstInput(phiNode, addOffsets);
+      }
     }
+  }
 
-    private static boolean isIndexUsedInJavaWrite(Node indexUsage) {
-        if (indexUsage instanceof OffsetAddressNode || indexUsage instanceof FrameState || indexUsage instanceof LoadIndexedNode || indexUsage instanceof JavaReadNode) {
-            return false;
-        } else if (indexUsage instanceof JavaWriteNode) {
-            return true;
-        } else {
-            for (Node usage : indexUsage.usages()) {
-                return isIndexUsedInJavaWrite(usage);
-            }
-        }
-        return false;
+  private static boolean isIndexUsedInJavaWrite(Node indexUsage) {
+    if (indexUsage instanceof OffsetAddressNode
+        || indexUsage instanceof FrameState
+        || indexUsage instanceof LoadIndexedNode
+        || indexUsage instanceof JavaReadNode) {
+      return false;
+    } else if (indexUsage instanceof JavaWriteNode) {
+      return true;
+    } else {
+      for (Node usage : indexUsage.usages()) {
+        return isIndexUsedInJavaWrite(usage);
+      }
     }
+    return false;
+  }
 }

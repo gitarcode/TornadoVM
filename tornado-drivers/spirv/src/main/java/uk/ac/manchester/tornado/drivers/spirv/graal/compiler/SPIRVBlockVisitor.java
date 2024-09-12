@@ -26,43 +26,40 @@ package uk.ac.manchester.tornado.drivers.spirv.graal.compiler;
 
 import org.graalvm.compiler.nodes.cfg.ControlFlowGraph;
 import org.graalvm.compiler.nodes.cfg.HIRBlock;
-
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.spirv.graal.asm.SPIRVAssembler;
 
 public class SPIRVBlockVisitor implements ControlFlowGraph.RecursiveVisitor<HIRBlock> {
 
-    private final SPIRVCompilationResultBuilder crb;
-    private SPIRVAssembler assembler;
+  private final SPIRVCompilationResultBuilder crb;
+  private SPIRVAssembler assembler;
 
-    public SPIRVBlockVisitor(SPIRVCompilationResultBuilder resultBuilder) {
-        this.crb = resultBuilder;
-        this.assembler = resultBuilder.getAssembler();
+  public SPIRVBlockVisitor(SPIRVCompilationResultBuilder resultBuilder) {
+    this.crb = resultBuilder;
+    this.assembler = resultBuilder.getAssembler();
+  }
+
+  @Override
+  public HIRBlock enter(HIRBlock b) {
+    Logger.traceCodeGen(Logger.BACKEND.SPIRV, "Entering block: " + b);
+    if (!b.isLoopHeader() && b.getPredecessorCount() != 0) {
+      // Do not generate a label for the first block. This was already generated in
+      // the SPIR-V preamble because we need the declaration of all variables.
+      assembler.emitBlockLabelIfNotPresent(b, assembler.getFunctionScope());
     }
-
-    @Override
-    public HIRBlock enter(HIRBlock b) {
-        Logger.traceCodeGen(Logger.BACKEND.SPIRV, "Entering block: " + b);
-        if (!b.isLoopHeader() && b.getPredecessorCount() != 0) {
-            // Do not generate a label for the first block. This was already generated in
-            // the SPIR-V preamble because we need the declaration of all variables.
-            assembler.emitBlockLabelIfNotPresent(b, assembler.getFunctionScope());
-        }
-        if (!b.isLoopHeader()) {
-            String blockName = assembler.composeUniqueLabelName(b.toString());
-            assembler.pushScope(assembler.getBlockTable().get(blockName));
-        }
-        crb.emitBlock(b);
-        return null;
+    if (!b.isLoopHeader()) {
+      String blockName = assembler.composeUniqueLabelName(b.toString());
+      assembler.pushScope(assembler.getBlockTable().get(blockName));
     }
+    crb.emitBlock(b);
+    return null;
+  }
 
-    @Override
-    public void exit(HIRBlock b, HIRBlock value) {
+  @Override
+  public void exit(HIRBlock b, HIRBlock value) {}
 
-    }
-
-    public void exit(HIRBlock b) {
-        Logger.traceCodeGen(Logger.BACKEND.SPIRV, "EXIT BLOCK: " + b);
-        assembler.popScope();
-    }
+  public void exit(HIRBlock b) {
+    Logger.traceCodeGen(Logger.BACKEND.SPIRV, "EXIT BLOCK: " + b);
+    assembler.popScope();
+  }
 }

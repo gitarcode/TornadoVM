@@ -18,31 +18,30 @@
 package uk.ac.manchester.tornado.api.common;
 
 /**
- * Enum used to specify the accesses of parameters passed on
- * {@link uk.ac.manchester.tornado.api.common.TornadoFunctions.Task}. Note that
- * we use the {@link #position} field in the
- * {@link uk.ac.manchester.tornado.runtime.sketcher.TornadoSketcher#mergeAccessses}
- * method to combine different accesses.
+ * Enum used to specify the accesses of parameters passed on {@link
+ * uk.ac.manchester.tornado.api.common.TornadoFunctions.Task}. Note that we use the {@link
+ * #position} field in the {@link
+ * uk.ac.manchester.tornado.runtime.sketcher.TornadoSketcher#mergeAccessses} method to combine
+ * different accesses.
  */
 public enum Access {
 
-    // @formatter:off
-    NONE((byte) 0b00),        // Undefined
-    READ_ONLY((byte) 0b01),   // Read only
-    WRITE_ONLY((byte) 0b10),  // Write only
-    READ_WRITE((byte) 0b11);  // Read-write
-    // @formatter:on
+  // @formatter:off
+  NONE((byte) 0b00), // Undefined
+  READ_ONLY((byte) 0b01), // Read only
+  WRITE_ONLY((byte) 0b10), // Write only
+  READ_WRITE((byte) 0b11); // Read-write
+  // @formatter:on
 
-    public final byte position;
+  public final byte position;
 
-    Access(byte position) {
-        this.position = position;
-    }
+  Access(byte position) {
+    this.position = position;
+  }
 
-    private static final Access[] accessesArray = Access.values();
+  private static final Access[] accessesArray = Access.values();
 
-    public static Access[] asArray() {
-        return accessesArray;
-    }
-
+  public static Access[] asArray() {
+    return accessesArray;
+  }
 }

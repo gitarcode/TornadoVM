@@ -28,34 +28,37 @@ import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroModule;
 
 public class SPIRVLevelZeroModule implements SPIRVModule {
 
-    private final LevelZeroModule levelZeroModule;
-    private final LevelZeroKernel kernel;
-    private final String entryPoint;
-    private final String pathToSPIRVBinary;
+  private final LevelZeroModule levelZeroModule;
+  private final LevelZeroKernel kernel;
+  private final String entryPoint;
+  private final String pathToSPIRVBinary;
 
-    public SPIRVLevelZeroModule(LevelZeroModule levelZeroModule, LevelZeroKernel kernel, String entryPoint, String pathToSPIRVBinary) {
-        this.levelZeroModule = levelZeroModule;
-        this.kernel = kernel;
-        this.entryPoint = entryPoint;
-        this.pathToSPIRVBinary = pathToSPIRVBinary;
-    }
+  public SPIRVLevelZeroModule(
+      LevelZeroModule levelZeroModule,
+      LevelZeroKernel kernel,
+      String entryPoint,
+      String pathToSPIRVBinary) {
+    this.levelZeroModule = levelZeroModule;
+    this.kernel = kernel;
+    this.entryPoint = entryPoint;
+    this.pathToSPIRVBinary = pathToSPIRVBinary;
+  }
 
-    public LevelZeroModule getLevelZeroModule() {
-        return levelZeroModule;
-    }
+  public LevelZeroModule getLevelZeroModule() {
+    return levelZeroModule;
+  }
 
-    public LevelZeroKernel getKernel() {
-        return kernel;
-    }
+  public LevelZeroKernel getKernel() {
+    return kernel;
+  }
 
-    @Override
-    public String getEntryPoint() {
-        return entryPoint;
-    }
+  @Override
+  public String getEntryPoint() {
+    return entryPoint;
+  }
 
-    @Override
-    public String getPathToSPIRVBinary() {
-        return pathToSPIRVBinary;
-    }
-
+  @Override
+  public String getPathToSPIRVBinary() {
+    return pathToSPIRVBinary;
+  }
 }

@@ -19,15 +19,14 @@
 package uk.ac.manchester.tornado.unittests.tools.Exceptions;
 
 /**
- * This exception should be thrown if the current system configuration is not
- * suitable for running the test.
+ * This exception should be thrown if the current system configuration is not suitable for running
+ * the test.
  *
- * Created by Dmitry Alexandrov
+ * <p>Created by Dmitry Alexandrov
  */
 public class UnsupportedConfigurationException extends RuntimeException {
 
-    public UnsupportedConfigurationException(String message) {
-        super(message);
-    }
-
+  public UnsupportedConfigurationException(String message) {
+    super(message);
+  }
 }

@@ -19,6 +19,5 @@ package uk.ac.manchester.tornado.api.memory;
 
 public interface TornadoMemoryProvider {
 
-    long getHeapSize();
-
+  long getHeapSize();
 }

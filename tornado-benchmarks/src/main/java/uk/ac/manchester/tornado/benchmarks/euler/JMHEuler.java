@@ -18,7 +18,6 @@
 package uk.ac.manchester.tornado.benchmarks.euler;
 
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -36,7 +35,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -45,87 +43,103 @@ import uk.ac.manchester.tornado.api.types.arrays.LongArray;
 import uk.ac.manchester.tornado.benchmarks.ComputeKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.euler.JMHEuler
  * </code>
  */
 public class JMHEuler {
 
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        private int size = Integer.parseInt(System.getProperty("x", "128"));
-        LongArray input;
-        LongArray outputA;
-        LongArray outputB;
-        LongArray outputC;
-        LongArray outputD;
-        LongArray outputE;
-        private TornadoExecutionPlan executor;
+    private int size = Integer.parseInt(System.getProperty("x", "128"));
+    LongArray input;
+    LongArray outputA;
+    LongArray outputB;
+    LongArray outputC;
+    LongArray outputD;
+    LongArray outputE;
+    private TornadoExecutionPlan executor;
 
-        private LongArray init(int size) {
-            LongArray input = new LongArray(size);
-            for (int i = 0; i < size; i++) {
-                input.set(i, ((long) i * i * i * i * i));
-            }
-            return input;
-        }
-
-        @Setup(Level.Trial)
-        public void doSetup() {
-            input = init(size);
-            outputA = new LongArray(size);
-            outputB = new LongArray(size);
-            outputC = new LongArray(size);
-            outputD = new LongArray(size);
-            outputE = new LongArray(size);
-            TaskGraph taskGraph = new TaskGraph("s0") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                    .task("s0", ComputeKernels::euler, size, input, outputA, outputB, outputC, outputD, outputE) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, outputA, outputB, outputC, outputD, outputE);
-
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
-        }
+    private LongArray init(int size) {
+      LongArray input = new LongArray(size);
+      for (int i = 0; i < size; i++) {
+        input.set(i, ((long) i * i * i * i * i));
+      }
+      return input;
     }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void eulerJava(BenchmarkSetup state) {
-        ComputeKernels.euler(state.size, state.input, state.outputA, state.outputB, state.outputC, state.outputD, state.outputE);
-    }
+    @Setup(Level.Trial)
+    public void doSetup() {
+      input = init(size);
+      outputA = new LongArray(size);
+      outputB = new LongArray(size);
+      outputC = new LongArray(size);
+      outputD = new LongArray(size);
+      outputE = new LongArray(size);
+      TaskGraph taskGraph =
+          new TaskGraph("s0") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
+              .task(
+                  "s0",
+                  ComputeKernels::euler,
+                  size,
+                  input,
+                  outputA,
+                  outputB,
+                  outputC,
+                  outputD,
+                  outputE) //
+              .transferToHost(
+                  DataTransferMode.EVERY_EXECUTION, outputA, outputB, outputC, outputD, outputE);
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void eulerTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHEuler.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void eulerJava(BenchmarkSetup state) {
+    ComputeKernels.euler(
+        state.size,
+        state.input,
+        state.outputA,
+        state.outputB,
+        state.outputC,
+        state.outputD,
+        state.outputE);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void eulerTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
+
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHEuler.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

@@ -19,5 +19,5 @@ package uk.ac.manchester.tornado.examples.reductions;
 
 public class ConfigurationReduce {
 
-    public static final int MAX_ITERATIONS = 101;
+  public static final int MAX_ITERATIONS = 101;
 }

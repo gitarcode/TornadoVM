@@ -21,6 +21,8 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -31,9 +33,6 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.memory.address.AddressNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLArchitecture;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
@@ -42,23 +41,22 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLUnary;
 @NodeInfo
 public class ReadHalfFloatNode extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<ReadHalfFloatNode> TYPE = NodeClass.create(ReadHalfFloatNode.class);
+  public static final NodeClass<ReadHalfFloatNode> TYPE = NodeClass.create(ReadHalfFloatNode.class);
 
-    @Input
-    private AddressNode addressNode;
+  @Input private AddressNode addressNode;
 
-    public ReadHalfFloatNode(AddressNode addressNode) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.addressNode = addressNode;
-    }
+  public ReadHalfFloatNode(AddressNode addressNode) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.addressNode = addressNode;
+  }
 
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(LIRKind.value(OCLKind.HALF));
-        Value addressValue = generator.operand(addressNode);
-        OCLArchitecture.OCLMemoryBase base = ((OCLUnary.MemoryAccess) addressValue).getBase();
-        OCLUnary.OCLAddressCast cast = new OCLUnary.OCLAddressCast(base, LIRKind.value(OCLKind.HALF));
-        tool.append(new OCLLIRStmt.LoadStmt(result, cast, (OCLUnary.MemoryAccess) addressValue));
-        generator.setResult(this, result);
-    }
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(LIRKind.value(OCLKind.HALF));
+    Value addressValue = generator.operand(addressNode);
+    OCLArchitecture.OCLMemoryBase base = ((OCLUnary.MemoryAccess) addressValue).getBase();
+    OCLUnary.OCLAddressCast cast = new OCLUnary.OCLAddressCast(base, LIRKind.value(OCLKind.HALF));
+    tool.append(new OCLLIRStmt.LoadStmt(result, cast, (OCLUnary.MemoryAccess) addressValue));
+    generator.setResult(this, result);
+  }
 }

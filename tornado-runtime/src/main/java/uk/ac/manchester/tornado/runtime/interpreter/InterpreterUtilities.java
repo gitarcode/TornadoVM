@@ -29,30 +29,29 @@ import uk.ac.manchester.tornado.runtime.common.TornadoXPUDevice;
 
 public class InterpreterUtilities {
 
-    public InterpreterUtilities() {
-    }
+  public InterpreterUtilities() {}
 
-    static String debugHighLightBC(String bc) {
-        return ColoursTerminal.RED + " " + bc + " " + ColoursTerminal.RESET;
-    }
+  static String debugHighLightBC(String bc) {
+    return ColoursTerminal.RED + " " + bc + " " + ColoursTerminal.RESET;
+  }
 
-    static String debugHighLightNonExecBC(String bc) {
-        return ColoursTerminal.YELLOW + " " + bc + " " + ColoursTerminal.RESET;
-    }
+  static String debugHighLightNonExecBC(String bc) {
+    return ColoursTerminal.YELLOW + " " + bc + " " + ColoursTerminal.RESET;
+  }
 
-    static String debugHighLightHelper(String info) {
-        return ColoursTerminal.BLUE + info + " " + ColoursTerminal.RESET;
-    }
+  static String debugHighLightHelper(String info) {
+    return ColoursTerminal.BLUE + info + " " + ColoursTerminal.RESET;
+  }
 
-    static String debugDeviceBC(TornadoXPUDevice device) {
-        TornadoVMBackendType tornadoVMBackend = device.getTornadoVMBackend();
-        if (tornadoVMBackend == TornadoVMBackendType.OPENCL) {
-            return ColoursTerminal.CYAN + " " + device + " " + ColoursTerminal.RESET;
-        } else if (tornadoVMBackend == TornadoVMBackendType.SPIRV) {
-            return ColoursTerminal.PURPLE + " " + device + " " + ColoursTerminal.RESET;
-        } else if (tornadoVMBackend == TornadoVMBackendType.PTX) {
-            return ColoursTerminal.GREEN + " " + device + " " + ColoursTerminal.RESET;
-        }
-        return ColoursTerminal.YELLOW + " " + device + " " + ColoursTerminal.RESET;
+  static String debugDeviceBC(TornadoXPUDevice device) {
+    TornadoVMBackendType tornadoVMBackend = device.getTornadoVMBackend();
+    if (tornadoVMBackend == TornadoVMBackendType.OPENCL) {
+      return ColoursTerminal.CYAN + " " + device + " " + ColoursTerminal.RESET;
+    } else if (tornadoVMBackend == TornadoVMBackendType.SPIRV) {
+      return ColoursTerminal.PURPLE + " " + device + " " + ColoursTerminal.RESET;
+    } else if (tornadoVMBackend == TornadoVMBackendType.PTX) {
+      return ColoursTerminal.GREEN + " " + device + " " + ColoursTerminal.RESET;
     }
+    return ColoursTerminal.YELLOW + " " + device + " " + ColoursTerminal.RESET;
+  }
 }

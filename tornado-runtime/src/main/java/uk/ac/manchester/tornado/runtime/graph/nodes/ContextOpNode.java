@@ -24,13 +24,13 @@
 package uk.ac.manchester.tornado.runtime.graph.nodes;
 
 public abstract class ContextOpNode extends AbstractNode {
-    private final ContextNode context;
+  private final ContextNode context;
 
-    protected ContextOpNode(ContextNode context) {
-        this.context = context;
-    }
+  protected ContextOpNode(ContextNode context) {
+    this.context = context;
+  }
 
-    public ContextNode getContext() {
-        return context;
-    }
+  public ContextNode getContext() {
+    return context;
+  }
 }

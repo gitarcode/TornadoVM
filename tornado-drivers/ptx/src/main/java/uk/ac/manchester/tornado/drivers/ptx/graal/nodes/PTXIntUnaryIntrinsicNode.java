@@ -23,6 +23,9 @@ package uk.ac.manchester.tornado.drivers.ptx.graal.nodes;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
+import jdk.vm.ci.meta.ValueKind;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.Node;
@@ -36,10 +39,6 @@ import org.graalvm.compiler.nodes.calc.UnaryNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
-import jdk.vm.ci.meta.ValueKind;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXArithmeticTool;
@@ -49,98 +48,101 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt.AssignStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkIntIntrinsicNode;
 
 @NodeInfo(nameTemplate = "{p#operation/s}")
-public class PTXIntUnaryIntrinsicNode extends UnaryNode implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
+public class PTXIntUnaryIntrinsicNode extends UnaryNode
+    implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
 
-    public static final NodeClass<PTXIntUnaryIntrinsicNode> TYPE = NodeClass.create(PTXIntUnaryIntrinsicNode.class);
-    protected final Operation operation;
+  public static final NodeClass<PTXIntUnaryIntrinsicNode> TYPE =
+      NodeClass.create(PTXIntUnaryIntrinsicNode.class);
+  protected final Operation operation;
 
-    protected PTXIntUnaryIntrinsicNode(ValueNode x, Operation op, JavaKind kind) {
-        super(TYPE, StampFactory.forKind(kind), x);
-        this.operation = op;
+  protected PTXIntUnaryIntrinsicNode(ValueNode x, Operation op, JavaKind kind) {
+    super(TYPE, StampFactory.forKind(kind), x);
+    this.operation = op;
+  }
+
+  public static ValueNode create(ValueNode x, Operation op, JavaKind kind) {
+    ValueNode c = tryConstantFold(x, op, kind);
+    if (c != null) {
+      return c;
     }
+    return new PTXIntUnaryIntrinsicNode(x, op, kind);
+  }
 
-    public static ValueNode create(ValueNode x, Operation op, JavaKind kind) {
-        ValueNode c = tryConstantFold(x, op, kind);
-        if (c != null) {
-            return c;
-        }
-        return new PTXIntUnaryIntrinsicNode(x, op, kind);
+  protected static ValueNode tryConstantFold(ValueNode x, Operation op, JavaKind kind) {
+    ConstantNode result = null;
+
+    if (x.isConstant()) {
+      if (kind == JavaKind.Int) {
+        int ret = doCompute(x.asJavaConstant().asInt(), op);
+        result = ConstantNode.forInt(ret);
+      } else if (kind == JavaKind.Long) {
+        long ret = doCompute(x.asJavaConstant().asLong(), op);
+        result = ConstantNode.forLong(ret);
+      }
     }
+    return result;
+  }
 
-    protected static ValueNode tryConstantFold(ValueNode x, Operation op, JavaKind kind) {
-        ConstantNode result = null;
+  private static long doCompute(long value, Operation op) {
+    return switch (op) {
+      case ABS -> Math.abs(value);
+      case POPCOUNT -> Long.bitCount(value);
+      default -> throw new TornadoInternalError("unknown op %s", op);
+    };
+  }
 
-        if (x.isConstant()) {
-            if (kind == JavaKind.Int) {
-                int ret = doCompute(x.asJavaConstant().asInt(), op);
-                result = ConstantNode.forInt(ret);
-            } else if (kind == JavaKind.Long) {
-                long ret = doCompute(x.asJavaConstant().asLong(), op);
-                result = ConstantNode.forLong(ret);
-            }
-        }
-        return result;
-    }
+  private static int doCompute(int value, Operation op) {
+    return switch (op) {
+      case ABS -> Math.abs(value);
+      case POPCOUNT -> Integer.bitCount(value);
+      default -> throw new TornadoInternalError("unknown op %s", op);
+    };
+  }
 
-    private static long doCompute(long value, Operation op) {
-        return switch (op) {
-            case ABS -> Math.abs(value);
-            case POPCOUNT -> Long.bitCount(value);
-            default -> throw new TornadoInternalError("unknown op %s", op);
+  @Override
+  public String getOperation() {
+    return operation.toString();
+  }
+
+  public Operation operation() {
+    return operation;
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
+    Logger.traceBuildLIR(
+        Logger.BACKEND.PTX, "emitPTXIntUnaryIntrinsic: op=%s, x=%s", operation, getValue());
+    PTXBuiltinTool gen = ((PTXArithmeticTool) lirGen).getGen().getPtxBuiltinTool();
+    Value x = builder.operand(getValue());
+    Value result;
+    ValueKind valueKind =
+        switch (operation()) {
+          case ABS -> {
+            result = gen.genIntAbs(x);
+            yield result.getValueKind();
+          }
+          case POPCOUNT -> {
+            result = gen.genIntPopcount(x);
+            yield LIRKind.value(PTXKind.U32);
+          }
+          default -> throw shouldNotReachHere();
         };
+    Variable var = builder.getLIRGeneratorTool().newVariable(valueKind);
+    builder.getLIRGeneratorTool().append(new AssignStmt(var, result));
+    builder.setResult(this, var);
+  }
+
+  @Override
+  public Node canonical(CanonicalizerTool tool, ValueNode value) {
+    ValueNode c = tryConstantFold(value, operation(), getStackKind());
+    if (c != null) {
+      return c;
     }
+    return this;
+  }
 
-    private static int doCompute(int value, Operation op) {
-        return switch (op) {
-            case ABS -> Math.abs(value);
-            case POPCOUNT -> Integer.bitCount(value);
-            default -> throw new TornadoInternalError("unknown op %s", op);
-        };
-    }
-
-    @Override
-    public String getOperation() {
-        return operation.toString();
-    }
-
-    public Operation operation() {
-        return operation;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
-        Logger.traceBuildLIR(Logger.BACKEND.PTX, "emitPTXIntUnaryIntrinsic: op=%s, x=%s", operation, getValue());
-        PTXBuiltinTool gen = ((PTXArithmeticTool) lirGen).getGen().getPtxBuiltinTool();
-        Value x = builder.operand(getValue());
-        Value result;
-        ValueKind valueKind = switch (operation()) {
-            case ABS -> {
-                result = gen.genIntAbs(x);
-                yield result.getValueKind();
-            }
-            case POPCOUNT -> {
-                result = gen.genIntPopcount(x);
-                yield LIRKind.value(PTXKind.U32);
-            }
-            default -> throw shouldNotReachHere();
-        };
-        Variable var = builder.getLIRGeneratorTool().newVariable(valueKind);
-        builder.getLIRGeneratorTool().append(new AssignStmt(var, result));
-        builder.setResult(this, var);
-
-    }
-
-    @Override
-    public Node canonical(CanonicalizerTool tool, ValueNode value) {
-        ValueNode c = tryConstantFold(value, operation(), getStackKind());
-        if (c != null) {
-            return c;
-        }
-        return this;
-    }
-
-    public enum Operation {
-        ABS, POPCOUNT
-    }
-
+  public enum Operation {
+    ABS,
+    POPCOUNT
+  }
 }

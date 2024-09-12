@@ -19,20 +19,22 @@ package uk.ac.manchester.tornado.api.types.images;
 
 import java.lang.foreign.MemorySegment;
 import java.nio.Buffer;
-
 import uk.ac.manchester.tornado.api.types.common.PrimitiveStorage;
 
 public sealed interface TornadoImagesInterface<T extends Buffer> //
-        extends PrimitiveStorage<T> //
-        permits ImageByte3, ImageByte4, //
-        ImageFloat, ImageFloat3, ImageFloat4, ImageFloat8 {
+    extends PrimitiveStorage<T> //
+    permits ImageByte3,
+        ImageByte4, //
+        ImageFloat,
+        ImageFloat3,
+        ImageFloat4,
+        ImageFloat8 {
 
-    long getNumBytes();
+  long getNumBytes();
 
-    long getNumBytesWithHeader();
+  long getNumBytesWithHeader();
 
-    MemorySegment getSegment();
+  MemorySegment getSegment();
 
-    MemorySegment getSegmentWithHeader();
-
+  MemorySegment getSegmentWithHeader();
 }

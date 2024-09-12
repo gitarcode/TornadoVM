@@ -17,190 +17,186 @@
  */
 package uk.ac.manchester.tornado.api.types.collections;
 
+import static uk.ac.manchester.tornado.api.types.vectors.Half16.add;
+
+import java.lang.foreign.MemorySegment;
+import java.nio.ShortBuffer;
 import uk.ac.manchester.tornado.api.types.HalfFloat;
 import uk.ac.manchester.tornado.api.types.arrays.HalfFloatArray;
 import uk.ac.manchester.tornado.api.types.vectors.Half16;
 
-import java.lang.foreign.MemorySegment;
-import java.nio.ShortBuffer;
-
-import static uk.ac.manchester.tornado.api.types.vectors.Half16.add;
-
 public final class VectorHalf16 implements TornadoCollectionInterface<ShortBuffer> {
 
-    public static final Class<VectorHalf16> TYPE = VectorHalf16.class;
+  public static final Class<VectorHalf16> TYPE = VectorHalf16.class;
 
-    private static final int ELEMENT_SIZE = 16;
-    private final int numElements;
-    private final HalfFloatArray storage;
+  private static final int ELEMENT_SIZE = 16;
+  private final int numElements;
+  private final HalfFloatArray storage;
 
-    protected VectorHalf16(int numElements, HalfFloatArray array) {
-        this.numElements = numElements;
-        this.storage = array;
+  protected VectorHalf16(int numElements, HalfFloatArray array) {
+    this.numElements = numElements;
+    this.storage = array;
+  }
+
+  /**
+   * Creates an empty vector.
+   *
+   * @param numElements
+   */
+  public VectorHalf16(int numElements) {
+    this(numElements, new HalfFloatArray(numElements * ELEMENT_SIZE));
+  }
+
+  /** Creates a vector using the provided backing array. */
+  private VectorHalf16(HalfFloatArray array) {
+    this(array.getSize() / ELEMENT_SIZE, array);
+  }
+
+  public int vectorWidth() {
+    return ELEMENT_SIZE;
+  }
+
+  private int toIndex(int index) {
+    return (index * ELEMENT_SIZE);
+  }
+
+  /**
+   * Returns the {@link Half16} at the given index of this vector.
+   *
+   * @param index
+   * @return value
+   */
+  public Half16 get(int index) {
+    return loadFromArray(storage, toIndex(index));
+  }
+
+  private Half16 loadFromArray(final HalfFloatArray array, int index) {
+    final Half16 result = new Half16();
+    for (int i = 0; i < ELEMENT_SIZE; i++) {
+      result.set(i, array.get(index + i));
     }
+    return result;
+  }
 
-    /**
-     * Creates an empty vector.
-     *
-     * @param numElements
-     */
-    public VectorHalf16(int numElements) {
-        this(numElements, new HalfFloatArray(numElements * ELEMENT_SIZE));
+  /**
+   * Sets the {@code Half16} at the given index of this vector.
+   *
+   * @param index
+   * @param value
+   */
+  public void set(int index, Half16 value) {
+    storeToArray(value, storage, toIndex(index));
+  }
+
+  private void storeToArray(Half16 value, HalfFloatArray array, int index) {
+    for (int i = 0; i < ELEMENT_SIZE; i++) {
+      array.set(index + i, value.get(i));
     }
+  }
 
-    /**
-     * Creates a vector using the provided backing array.
-     */
-    private VectorHalf16(HalfFloatArray array) {
-        this(array.getSize() / ELEMENT_SIZE, array);
+  /**
+   * Sets the elements of this vector to that of the provided vector.
+   *
+   * @param values
+   */
+  public void set(VectorHalf16 values) {
+    for (int i = 0; i < numElements; i++) {
+      set(i, values.get(i));
     }
+  }
 
-    public int vectorWidth() {
-        return ELEMENT_SIZE;
+  /**
+   * Sets the elements of this vector to that of the provided array.
+   *
+   * @param values
+   */
+  public void set(HalfFloatArray values) {
+    VectorHalf16 vector = new VectorHalf16(values);
+    for (int i = 0; i < numElements; i++) {
+      set(i, vector.get(i));
     }
+  }
 
-    private int toIndex(int index) {
-        return (index * ELEMENT_SIZE);
+  public void fill(HalfFloat value) {
+    for (int i = 0; i < storage.getSize(); i++) {
+      storage.set(i, value);
     }
+  }
 
-    /**
-     * Returns the {@link Half16} at the given index of this vector.
-     *
-     * @param index
-     * @return value
-     */
-    public Half16 get(int index) {
-        return loadFromArray(storage, toIndex(index));
+  /**
+   * Duplicates this vector.
+   *
+   * @return vector
+   */
+  public VectorHalf16 duplicate() {
+    VectorHalf16 vector = new VectorHalf16(numElements);
+    vector.set(this);
+    return vector;
+  }
+
+  public String toString() {
+    if (this.numElements > ELEMENT_SIZE) {
+      return String.format("VectorHalf16 <%d>", this.numElements);
     }
-
-    private Half16 loadFromArray(final HalfFloatArray array, int index) {
-        final Half16 result = new Half16();
-        for (int i = 0; i < ELEMENT_SIZE; i++) {
-            result.set(i, array.get(index + i));
-        }
-        return result;
+    StringBuilder tempString = new StringBuilder();
+    for (int i = 0; i < numElements; i++) {
+      tempString.append(" ").append(this.get(i).toString());
     }
+    return tempString.toString();
+  }
 
-    /**
-     * Sets the {@code Half16} at the given index of this vector.
-     *
-     * @param index
-     * @param value
-     */
-    public void set(int index, Half16 value) {
-        storeToArray(value, storage, toIndex(index));
+  public Half16 sum() {
+    Half16 result = new Half16();
+    for (int i = 0; i < numElements; i++) {
+      result = add(result, get(i));
     }
+    return result;
+  }
 
-    private void storeToArray(Half16 value, HalfFloatArray array, int index) {
-        for (int i = 0; i < ELEMENT_SIZE; i++) {
-            array.set(index + i, value.get(i));
-        }
-    }
+  @Override
+  public void loadFromBuffer(ShortBuffer buffer) {
+    asBuffer().put(buffer);
+  }
 
-    /**
-     * Sets the elements of this vector to that of the provided vector.
-     *
-     * @param values
-     */
-    public void set(VectorHalf16 values) {
-        for (int i = 0; i < numElements; i++) {
-            set(i, values.get(i));
-        }
-    }
+  @Override
+  public ShortBuffer asBuffer() {
+    return ShortBuffer.wrap(storage.toShortArray());
+  }
 
-    /**
-     * Sets the elements of this vector to that of the provided array.
-     *
-     * @param values
-     */
-    public void set(HalfFloatArray values) {
-        VectorHalf16 vector = new VectorHalf16(values);
-        for (int i = 0; i < numElements; i++) {
-            set(i, vector.get(i));
-        }
-    }
+  @Override
+  public int size() {
+    return storage.getSize();
+  }
 
-    public void fill(HalfFloat value) {
-        for (int i = 0; i < storage.getSize(); i++) {
-            storage.set(i, value);
-        }
-    }
+  public int getLength() {
+    return numElements;
+  }
 
-    /**
-     * Duplicates this vector.
-     *
-     * @return vector
-     */
-    public VectorHalf16 duplicate() {
-        VectorHalf16 vector = new VectorHalf16(numElements);
-        vector.set(this);
-        return vector;
-    }
+  public HalfFloatArray getArray() {
+    return storage;
+  }
 
-    public String toString() {
-        if (this.numElements > ELEMENT_SIZE) {
-            return String.format("VectorHalf16 <%d>", this.numElements);
-        }
-        StringBuilder tempString = new StringBuilder();
-        for (int i = 0; i < numElements; i++) {
-            tempString.append(" ").append(this.get(i).toString());
-        }
-        return tempString.toString();
-    }
+  public void clear() {
+    storage.clear();
+  }
 
-    public Half16 sum() {
-        Half16 result = new Half16();
-        for (int i = 0; i < numElements; i++) {
-            result = add(result, get(i));
-        }
-        return result;
-    }
+  @Override
+  public long getNumBytes() {
+    return storage.getNumBytesOfSegment();
+  }
 
-    @Override
-    public void loadFromBuffer(ShortBuffer buffer) {
-        asBuffer().put(buffer);
-    }
+  @Override
+  public long getNumBytesWithHeader() {
+    return storage.getNumBytesOfSegmentWithHeader();
+  }
 
-    @Override
-    public ShortBuffer asBuffer() {
-        return ShortBuffer.wrap(storage.toShortArray());
-    }
+  @Override
+  public MemorySegment getSegment() {
+    return getArray().getSegment();
+  }
 
-    @Override
-    public int size() {
-        return storage.getSize();
-    }
-
-    public int getLength() {
-        return numElements;
-    }
-
-    public HalfFloatArray getArray() {
-        return storage;
-    }
-
-    public void clear() {
-        storage.clear();
-    }
-
-    @Override
-    public long getNumBytes() {
-        return storage.getNumBytesOfSegment();
-    }
-
-    @Override
-    public long getNumBytesWithHeader() {
-        return storage.getNumBytesOfSegmentWithHeader();
-    }
-
-    @Override
-    public MemorySegment getSegment() {
-        return getArray().getSegment();
-    }
-
-    @Override
-    public MemorySegment getSegmentWithHeader() {
-        return getArray().getSegmentWithHeader();
-    }
-
+  @Override
+  public MemorySegment getSegmentWithHeader() {
+    return getArray().getSegmentWithHeader();
+  }
 }

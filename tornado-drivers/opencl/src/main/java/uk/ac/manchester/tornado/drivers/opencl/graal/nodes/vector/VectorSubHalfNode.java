@@ -38,27 +38,24 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 @NodeInfo
 public class VectorSubHalfNode extends ValueNode implements LIRLowerable {
 
-    public static final NodeClass<VectorSubHalfNode> TYPE = NodeClass.create(VectorSubHalfNode.class);
+  public static final NodeClass<VectorSubHalfNode> TYPE = NodeClass.create(VectorSubHalfNode.class);
 
-    @Input
-    private ValueNode x;
+  @Input private ValueNode x;
 
-    @Input
-    private ValueNode y;
+  @Input private ValueNode y;
 
-    public VectorSubHalfNode(ValueNode x, ValueNode y) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.x = x;
-        this.y = y;
-    }
+  public VectorSubHalfNode(ValueNode x, ValueNode y) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.x = x;
+    this.y = y;
+  }
 
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(LIRKind.value(OCLKind.HALF));
-        Value inputX = generator.operand(x);
-        Value inputY = generator.operand(y);
-        tool.append(new OCLLIRStmt.VectorSubHalfStmt(result, inputX, inputY));
-        generator.setResult(this, result);
-    }
-
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(LIRKind.value(OCLKind.HALF));
+    Value inputX = generator.operand(x);
+    Value inputY = generator.operand(y);
+    tool.append(new OCLLIRStmt.VectorSubHalfStmt(result, inputX, inputY));
+    generator.setResult(this, result);
+  }
 }

@@ -21,6 +21,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.graph.NodeInputList;
@@ -29,37 +30,33 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.ExprStmt;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLPrintf;
 
 @NodeInfo(shortName = "printf")
 public class PrintfNode extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<PrintfNode> TYPE = NodeClass.create(PrintfNode.class);
+  public static final NodeClass<PrintfNode> TYPE = NodeClass.create(PrintfNode.class);
 
-    @Input
-    private NodeInputList<ValueNode> inputs;
+  @Input private NodeInputList<ValueNode> inputs;
 
-    public PrintfNode(ValueNode... values) {
-        super(TYPE, StampFactory.forVoid());
-        this.inputs = new NodeInputList<>(this, values);
+  public PrintfNode(ValueNode... values) {
+    super(TYPE, StampFactory.forVoid());
+    this.inputs = new NodeInputList<>(this, values);
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    Value[] args = new Value[inputs.size()];
+    for (int i = 0; i < args.length; i++) {
+
+      ValueNode param = inputs.get(i);
+      if (param.isConstant()) {
+        args[i] = gen.operand(param);
+      } else {
+        args[i] = gen.getLIRGeneratorTool().emitMove(gen.operand(param));
+      }
     }
-
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        Value[] args = new Value[inputs.size()];
-        for (int i = 0; i < args.length; i++) {
-
-            ValueNode param = inputs.get(i);
-            if (param.isConstant()) {
-                args[i] = gen.operand(param);
-            } else {
-                args[i] = gen.getLIRGeneratorTool().emitMove(gen.operand(param));
-            }
-        }
-        gen.getLIRGeneratorTool().append(new ExprStmt(new OCLPrintf(args)));
-    }
-
+    gen.getLIRGeneratorTool().append(new ExprStmt(new OCLPrintf(args)));
+  }
 }

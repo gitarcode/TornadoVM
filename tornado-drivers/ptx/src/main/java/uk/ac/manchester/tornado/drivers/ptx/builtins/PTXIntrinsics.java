@@ -27,50 +27,45 @@ import org.graalvm.compiler.api.replacements.Fold;
 
 public class PTXIntrinsics {
 
-    public static native int get_global_id(int value);
+  public static native int get_global_id(int value);
 
-    public static native int get_local_id(int value);
+  public static native int get_local_id(int value);
 
-    public static native int get_global_size(int value);
+  public static native int get_global_size(int value);
 
-    public static native int get_local_size(int value);
+  public static native int get_local_size(int value);
 
-    public static native int get_group_id(int value);
+  public static native int get_group_id(int value);
 
-    public static native int get_group_size(int value);
+  public static native int get_group_size(int value);
 
-    /**
-     * <p>
-     * <code>
-     * barrier.sync 0;
-     * </code>
-     * </p>
-     */
-    public static native void localBarrier();
+  /**
+   * <code>
+   * barrier.sync 0;
+   * </code>
+   */
+  public static native void localBarrier();
 
-    /**
-     * <p>
-     * <code>
-     * barrier.sync 1;
-     * </code>
-     * </p>
-     */
-    public static native void globalBarrier();
+  /**
+   * <code>
+   * barrier.sync 1;
+   * </code>
+   */
+  public static native void globalBarrier();
 
-    public static native void printf();
+  public static native void printf();
 
-    public static native void printEmpty();
+  public static native void printEmpty();
 
-    public static native void createLocalMemory(int[] array, int size);
+  public static native void createLocalMemory(int[] array, int size);
 
-    @Fold
-    public static int fmax(float a, float b) {
-        return 0;
-    }
+  @Fold
+  public static int fmax(float a, float b) {
+    return 0;
+  }
 
-    @Fold
-    public static int fmax() {
-        return 0;
-    }
-
+  @Fold
+  public static int fmax() {
+    return 0;
+  }
 }

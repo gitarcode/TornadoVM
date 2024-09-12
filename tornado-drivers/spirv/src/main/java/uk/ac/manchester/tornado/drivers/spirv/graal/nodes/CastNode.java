@@ -24,6 +24,7 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.calc.FloatConvert;
 import org.graalvm.compiler.core.common.type.Stamp;
@@ -34,8 +35,6 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.SPIRVLIRGenerator;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
@@ -45,39 +44,42 @@ import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkCastNode;
 @NodeInfo(shortName = "SPIRVCastNode")
 public class CastNode extends FloatingNode implements LIRLowerable, MarkCastNode {
 
-    public static final NodeClass<CastNode> TYPE = NodeClass.create(CastNode.class);
+  public static final NodeClass<CastNode> TYPE = NodeClass.create(CastNode.class);
 
-    @Input
-    protected ValueNode value;
-    protected FloatConvert op;
+  @Input protected ValueNode value;
+  protected FloatConvert op;
 
-    public CastNode(Stamp stamp, FloatConvert op, ValueNode value) {
-        super(TYPE, stamp);
-        this.value = value;
-        this.op = op;
-    }
+  public CastNode(Stamp stamp, FloatConvert op, ValueNode value) {
+    super(TYPE, stamp);
+    this.value = value;
+    this.op = op;
+  }
 
-    private SPIRVUnary.CastOperations resolveOp(Variable result, LIRKind lirKind, Value value) {
-        return switch (op) {
-            case I2F -> new SPIRVUnary.CastIToFloat(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_32);
-            case I2D -> new SPIRVUnary.CastIToFloat(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_64);
-            case D2F -> new SPIRVUnary.CastFloatDouble(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_32);
-            case F2D -> new SPIRVUnary.CastFloatDouble(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_64);
-            case L2D -> new SPIRVUnary.CastFloatDouble(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_64);
-            case L2F -> new SPIRVUnary.CastFloatToLong(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_32);
-            case F2I -> new SPIRVUnary.CastFloatToInt(lirKind, result, value, SPIRVKind.OP_TYPE_INT_32);
-            default -> throw new RuntimeException("Conversion Cast Operation unimplemented: " + op);
-        };
-    }
+  private SPIRVUnary.CastOperations resolveOp(Variable result, LIRKind lirKind, Value value) {
+    return switch (op) {
+      case I2F -> new SPIRVUnary.CastIToFloat(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_32);
+      case I2D -> new SPIRVUnary.CastIToFloat(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_64);
+      case D2F ->
+          new SPIRVUnary.CastFloatDouble(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_32);
+      case F2D ->
+          new SPIRVUnary.CastFloatDouble(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_64);
+      case L2D ->
+          new SPIRVUnary.CastFloatDouble(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_64);
+      case L2F ->
+          new SPIRVUnary.CastFloatToLong(lirKind, result, value, SPIRVKind.OP_TYPE_FLOAT_32);
+      case F2I -> new SPIRVUnary.CastFloatToInt(lirKind, result, value, SPIRVKind.OP_TYPE_INT_32);
+      default -> throw new RuntimeException("Conversion Cast Operation unimplemented: " + op);
+    };
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        SPIRVLIRGenerator gen = (SPIRVLIRGenerator) generator.getLIRGeneratorTool();
-        LIRKind lirKind = gen.getLIRKind(stamp);
-        final Variable result = gen.newVariable(lirKind);
-        Value value = generator.operand(this.value);
-        SPIRVUnary.CastOperations cast = resolveOp(result, lirKind, value);
-        gen.append(new SPIRVLIRStmt.AssignStmt(result, cast));
-        generator.setResult(this, result);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    SPIRVLIRGenerator gen = (SPIRVLIRGenerator) generator.getLIRGeneratorTool();
+    LIRKind lirKind = gen.getLIRKind(stamp);
+    final Variable result = gen.newVariable(lirKind);
+    Value value = generator.operand(this.value);
+    SPIRVUnary.CastOperations cast = resolveOp(result, lirKind, value);
+    gen.append(new SPIRVLIRStmt.AssignStmt(result, cast));
+    generator.setResult(this, result);
+  }
 }

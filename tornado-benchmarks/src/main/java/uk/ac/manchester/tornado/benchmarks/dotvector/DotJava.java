@@ -20,7 +20,6 @@ package uk.ac.manchester.tornado.benchmarks.dotvector;
 import static uk.ac.manchester.tornado.benchmarks.GraphicsKernels.dotVector;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.types.collections.VectorFloat3;
@@ -29,55 +28,53 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class DotJava extends BenchmarkDriver {
 
-    private final int numElements;
+  private final int numElements;
 
-    private VectorFloat3 a;
-    private VectorFloat3 b;
-    private FloatArray c;
+  private VectorFloat3 a;
+  private VectorFloat3 b;
+  private FloatArray c;
 
-    public DotJava(int iterations, int numElements) {
-        super(iterations);
-        this.numElements = numElements;
+  public DotJava(int iterations, int numElements) {
+    super(iterations);
+    this.numElements = numElements;
+  }
+
+  @Override
+  public void setUp() {
+    a = new VectorFloat3(numElements);
+    b = new VectorFloat3(numElements);
+    c = new FloatArray(numElements);
+
+    Random r = new Random();
+    for (int i = 0; i < numElements; i++) {
+      a.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
+      b.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
     }
+  }
 
-    @Override
-    public void setUp() {
-        a = new VectorFloat3(numElements);
-        b = new VectorFloat3(numElements);
-        c = new FloatArray(numElements);
+  @Override
+  public void tearDown() {
+    a = null;
+    b = null;
+    c = null;
+    super.tearDown();
+  }
 
-        Random r = new Random();
-        for (int i = 0; i < numElements; i++) {
-            a.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-            b.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-        }
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    dotVector(a, b, c);
+  }
 
-    @Override
-    public void tearDown() {
-        a = null;
-        b = null;
-        c = null;
-        super.tearDown();
-    }
+  @Override
+  public void barrier() {}
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        dotVector(a, b, c);
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void barrier() {
-
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

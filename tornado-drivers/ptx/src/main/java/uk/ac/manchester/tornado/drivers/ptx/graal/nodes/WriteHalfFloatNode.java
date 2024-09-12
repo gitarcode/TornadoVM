@@ -21,6 +21,8 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -33,48 +35,42 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.memory.address.AddressNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
-import uk.ac.manchester.tornado.drivers.ptx.graal.compiler.PTXLIRGenerationResult;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXUnary;
-import uk.ac.manchester.tornado.runtime.graph.nodes.ConstantNode;
 
 @NodeInfo
 public class WriteHalfFloatNode extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<WriteHalfFloatNode> TYPE = NodeClass.create(WriteHalfFloatNode.class);
+  public static final NodeClass<WriteHalfFloatNode> TYPE =
+      NodeClass.create(WriteHalfFloatNode.class);
 
-    @Input
-    private AddressNode addressNode;
+  @Input private AddressNode addressNode;
 
-    @Input
-    private ValueNode valueNode;
+  @Input private ValueNode valueNode;
 
-    public WriteHalfFloatNode(AddressNode addressNode, ValueNode valueNode) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.addressNode = addressNode;
-        this.valueNode = valueNode;
+  public WriteHalfFloatNode(AddressNode addressNode, ValueNode valueNode) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.addressNode = addressNode;
+    this.valueNode = valueNode;
+  }
+
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Value valueToStore;
+    if (valueNode.stamp(NodeView.DEFAULT).isFloatStamp()) {
+      // the value to be written is in float format, so the bytecodes to convert
+      // to half float need to be generated
+      Value value = generator.operand(valueNode);
+      Variable intermediate = tool.newVariable(LIRKind.value(PTXKind.F32));
+      Variable result = tool.newVariable(LIRKind.value(PTXKind.F16));
+      tool.append(new PTXLIRStmt.ConvertHalfFloatStmt(result, value, intermediate));
+      valueToStore = result;
+    } else {
+      valueToStore = generator.operand(valueNode);
     }
-
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Value valueToStore;
-        if (valueNode.stamp(NodeView.DEFAULT).isFloatStamp()) {
-            // the value to be written is in float format, so the bytecodes to convert
-            // to half float need to be generated
-            Value value = generator.operand(valueNode);
-            Variable intermediate = tool.newVariable(LIRKind.value(PTXKind.F32));
-            Variable result = tool.newVariable(LIRKind.value(PTXKind.F16));
-            tool.append(new PTXLIRStmt.ConvertHalfFloatStmt(result, value, intermediate));
-            valueToStore = result;
-        } else {
-            valueToStore = generator.operand(valueNode);
-        }
-        Value addressValue = generator.operand(addressNode);
-        PTXUnary.MemoryAccess access = (PTXUnary.MemoryAccess) addressValue;
-        tool.append(new PTXLIRStmt.HalfFloatStoreStmt(access, valueToStore));
-    }
+    Value addressValue = generator.operand(addressNode);
+    PTXUnary.MemoryAccess access = (PTXUnary.MemoryAccess) addressValue;
+    tool.append(new PTXLIRStmt.HalfFloatStoreStmt(access, valueToStore));
+  }
 }

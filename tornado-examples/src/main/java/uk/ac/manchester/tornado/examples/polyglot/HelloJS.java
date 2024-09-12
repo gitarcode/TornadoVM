@@ -20,42 +20,40 @@
 package uk.ac.manchester.tornado.examples.polyglot;
 
 import java.util.Arrays;
-
 import org.graalvm.polyglot.Context;
 
 /**
  * Example of GraalVM Polyglot using JavaScript and Tornado.
- * 
- * The JS program calls MyCompute.compute() to accelerate vector addition on a
- * GPU/FPGA.
- * 
- * How to run:
- * 
- * <code>
+ *
+ * <p>The JS program calls MyCompute.compute() to accelerate vector addition on a GPU/FPGA.
+ *
+ * <p>How to run: <code>
  *     $ tornado --debug -m tornado.examples/uk.ac.manchester.tornado.examples.polyglot.HelloJS
  * </code>
- * 
  */
 public class HelloJS {
 
-    public static void runTornadoFromJavaScript() {
-        try (Context context = Context.newBuilder().allowAllAccess(true).build()) {
-            // @formatter:off
-            float[] v = context.eval("js", 
-                    "var myclass = Java.type('uk.ac.manchester.tornado.examples.polyglot.MyCompute');" + 
-                            "var output = myclass.compute();" + 
-                            "print (output.toString());" + "output")
-                    .asHostObject();
-            // @formatter:on
-            System.out.println(Arrays.toString(v));
-        }
+  public static void runTornadoFromJavaScript() {
+    try (Context context = Context.newBuilder().allowAllAccess(true).build()) {
+      // @formatter:off
+      float[] v =
+          context
+              .eval(
+                  "js",
+                  "var myclass = Java.type('uk.ac.manchester.tornado.examples.polyglot.MyCompute');"
+                      + "var output = myclass.compute();"
+                      + "print (output.toString());"
+                      + "output")
+              .asHostObject();
+      // @formatter:on
+      System.out.println(Arrays.toString(v));
     }
+  }
 
-    public static void main(String[] args) {
-        System.out.println("Hello polyglot world Java!");
-        Context context = Context.create();
-        context.eval("js", "print('Hello polyglot world JavaScript!');");
-        runTornadoFromJavaScript();
-    }
-
+  public static void main(String[] args) {
+    System.out.println("Hello polyglot world Java!");
+    Context context = Context.create();
+    context.eval("js", "print('Hello polyglot world JavaScript!');");
+    runTornadoFromJavaScript();
+  }
 }

@@ -38,27 +38,24 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 @NodeInfo
 public class VectorAddHalfNode extends ValueNode implements LIRLowerable {
 
-    public static final NodeClass<VectorAddHalfNode> TYPE = NodeClass.create(VectorAddHalfNode.class);
+  public static final NodeClass<VectorAddHalfNode> TYPE = NodeClass.create(VectorAddHalfNode.class);
 
-    @Input
-    private ValueNode x;
+  @Input private ValueNode x;
 
-    @Input
-    private ValueNode y;
+  @Input private ValueNode y;
 
-    public VectorAddHalfNode(ValueNode x, ValueNode y) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.x = x;
-        this.y = y;
-    }
+  public VectorAddHalfNode(ValueNode x, ValueNode y) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.x = x;
+    this.y = y;
+  }
 
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(LIRKind.value(PTXKind.B16));
-        Value inputX = generator.operand(x);
-        Value inputY = generator.operand(y);
-        tool.append(new PTXLIRStmt.VectorAddHalfStmt(result, inputX, inputY));
-        generator.setResult(this, result);
-    }
-
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(LIRKind.value(PTXKind.B16));
+    Value inputX = generator.operand(x);
+    Value inputY = generator.operand(y);
+    tool.append(new PTXLIRStmt.VectorAddHalfStmt(result, inputX, inputY));
+    generator.setResult(this, result);
+  }
 }

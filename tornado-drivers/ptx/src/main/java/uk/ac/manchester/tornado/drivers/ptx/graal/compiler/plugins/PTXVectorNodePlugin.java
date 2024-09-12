@@ -21,45 +21,42 @@
  */
 package uk.ac.manchester.tornado.drivers.ptx.graal.compiler.plugins;
 
-import org.graalvm.compiler.nodes.graphbuilderconf.GraphBuilderContext;
-import org.graalvm.compiler.nodes.graphbuilderconf.NodePlugin;
-
 import jdk.vm.ci.hotspot.HotSpotResolvedJavaType;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.ResolvedJavaType;
+import org.graalvm.compiler.nodes.graphbuilderconf.GraphBuilderContext;
+import org.graalvm.compiler.nodes.graphbuilderconf.NodePlugin;
 import uk.ac.manchester.tornado.api.internal.annotations.Vector;
 import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXKind;
 import uk.ac.manchester.tornado.drivers.ptx.graal.nodes.vector.VectorValueNode;
 
 public class PTXVectorNodePlugin implements NodePlugin {
 
-    @Override
-    public boolean handleNewInstance(GraphBuilderContext b, ResolvedJavaType type) {
+  @Override
+  public boolean handleNewInstance(GraphBuilderContext b, ResolvedJavaType type) {
 
-        if (type.getAnnotation(Vector.class) != null) {
-            return createVectorInstance(b, type);
-        }
-
-        return false;
-
+    if (type.getAnnotation(Vector.class) != null) {
+      return createVectorInstance(b, type);
     }
 
-    private boolean createVectorInstance(GraphBuilderContext b, ResolvedJavaType type) {
-        PTXKind vectorKind = resolvePTXKind(type);
-        if (vectorKind != PTXKind.ILLEGAL) {
-            b.push(JavaKind.Object, b.append(new VectorValueNode(vectorKind)));
-            return true;
-        }
+    return false;
+  }
 
-        return false;
+  private boolean createVectorInstance(GraphBuilderContext b, ResolvedJavaType type) {
+    PTXKind vectorKind = resolvePTXKind(type);
+    if (vectorKind != PTXKind.ILLEGAL) {
+      b.push(JavaKind.Object, b.append(new VectorValueNode(vectorKind)));
+      return true;
     }
 
-    private PTXKind resolvePTXKind(ResolvedJavaType type) {
-        if (type instanceof HotSpotResolvedJavaType) {
-            return PTXKind.fromResolvedJavaType(type);
-        }
+    return false;
+  }
 
-        return PTXKind.ILLEGAL;
+  private PTXKind resolvePTXKind(ResolvedJavaType type) {
+    if (type instanceof HotSpotResolvedJavaType) {
+      return PTXKind.fromResolvedJavaType(type);
     }
 
+    return PTXKind.ILLEGAL;
+  }
 }

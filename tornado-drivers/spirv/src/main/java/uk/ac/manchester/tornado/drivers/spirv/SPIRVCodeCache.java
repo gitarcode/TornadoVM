@@ -32,7 +32,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoBailoutRuntimeException;
 import uk.ac.manchester.tornado.drivers.spirv.graal.SPIRVInstalledCode;
 import uk.ac.manchester.tornado.runtime.common.TornadoOptions;
@@ -40,82 +39,86 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public abstract class SPIRVCodeCache {
 
-    protected final SPIRVDeviceContext deviceContext;
-    protected final ConcurrentHashMap<String, SPIRVInstalledCode> cache;
+  protected final SPIRVDeviceContext deviceContext;
+  protected final ConcurrentHashMap<String, SPIRVInstalledCode> cache;
 
-    protected SPIRVCodeCache(SPIRVDeviceContext deviceContext) {
-        this.deviceContext = deviceContext;
-        cache = new ConcurrentHashMap<>();
+  protected SPIRVCodeCache(SPIRVDeviceContext deviceContext) {
+    this.deviceContext = deviceContext;
+    cache = new ConcurrentHashMap<>();
+  }
+
+  public SPIRVInstalledCode getCachedCode(String name) {
+    return cache.get(name);
+  }
+
+  public boolean isCached(String name) {
+    return cache.containsKey(name);
+  }
+
+  public void reset() {
+    for (SPIRVInstalledCode code : cache.values()) {
+      code.invalidate();
+    }
+    cache.clear();
+  }
+
+  public SPIRVInstalledCode getInstalledCode(String id, String entryPoint) {
+    return cache.get(id + "-" + entryPoint);
+  }
+
+  protected void writeBufferToFile(ByteBuffer buffer, String filepath) {
+    buffer.flip();
+    try (FileOutputStream fos = new FileOutputStream(filepath)) {
+      fos.write(buffer.array());
+    } catch (Exception e) {
+      throw new RuntimeException("[ERROR] Store of the SPIR-V File failed.");
+    } finally {
+      buffer.clear();
+    }
+  }
+
+  protected void checkBinaryFileExists(String pathToFile) {
+    final Path pathToSPIRVBin = Paths.get(pathToFile);
+    if (!pathToSPIRVBin.toFile().exists()) {
+      throw new RuntimeException("Binary File does not exist");
+    }
+  }
+
+  protected String createSPIRVTempDirectoryName() {
+    String tempDirectory = System.getProperty("java.io.tmpdir");
+    String user = System.getProperty("user.name");
+    String pathSeparator = FileSystems.getDefault().getSeparator();
+    return tempDirectory + pathSeparator + user + pathSeparator + "tornadoVM-spirv";
+  }
+
+  public SPIRVInstalledCode installSPIRVBinary(
+      TaskDataContext meta, String id, String entryPoint, byte[] binary) {
+    if (binary == null || binary.length == 0) {
+      throw new RuntimeException("[ERROR] SPIR-V Binary Module is Empty");
+    }
+    ByteBuffer buffer = ByteBuffer.allocate(binary.length);
+    buffer.order(ByteOrder.LITTLE_ENDIAN);
+    buffer.put(binary);
+    String spirvTempDirectory = createSPIRVTempDirectoryName();
+    Path path = Paths.get(spirvTempDirectory);
+    try {
+      Files.createDirectories(path);
+    } catch (IOException e) {
+      throw new TornadoBailoutRuntimeException(
+          "Error - Exception when creating the temp directory for SPIR-V");
+    }
+    long timeStamp = System.nanoTime();
+    String pathSeparator = FileSystems.getDefault().getSeparator();
+    String spirvFile =
+        spirvTempDirectory + pathSeparator + timeStamp + "-" + id + entryPoint + ".spv";
+    if (TornadoOptions.DEBUG) {
+      System.out.println("SPIR-V Binary File: " + spirvFile);
     }
 
-    public SPIRVInstalledCode getCachedCode(String name) {
-        return cache.get(name);
-    }
+    writeBufferToFile(buffer, spirvFile);
+    return installSPIRVBinary(meta, id, entryPoint, spirvFile);
+  }
 
-    public boolean isCached(String name) {
-        return cache.containsKey(name);
-    }
-
-    public void reset() {
-        for (SPIRVInstalledCode code : cache.values()) {
-            code.invalidate();
-        }
-        cache.clear();
-    }
-
-    public SPIRVInstalledCode getInstalledCode(String id, String entryPoint) {
-        return cache.get(id + "-" + entryPoint);
-    }
-
-    protected void writeBufferToFile(ByteBuffer buffer, String filepath) {
-        buffer.flip();
-        try (FileOutputStream fos = new FileOutputStream(filepath)) {
-            fos.write(buffer.array());
-        } catch (Exception e) {
-            throw new RuntimeException("[ERROR] Store of the SPIR-V File failed.");
-        } finally {
-            buffer.clear();
-        }
-    }
-
-    protected void checkBinaryFileExists(String pathToFile) {
-        final Path pathToSPIRVBin = Paths.get(pathToFile);
-        if (!pathToSPIRVBin.toFile().exists()) {
-            throw new RuntimeException("Binary File does not exist");
-        }
-    }
-
-    protected String createSPIRVTempDirectoryName() {
-        String tempDirectory = System.getProperty("java.io.tmpdir");
-        String user = System.getProperty("user.name");
-        String pathSeparator = FileSystems.getDefault().getSeparator();
-        return tempDirectory + pathSeparator + user + pathSeparator + "tornadoVM-spirv";
-    }
-
-    public SPIRVInstalledCode installSPIRVBinary(TaskDataContext meta, String id, String entryPoint, byte[] binary) {
-        if (binary == null || binary.length == 0) {
-            throw new RuntimeException("[ERROR] SPIR-V Binary Module is Empty");
-        }
-        ByteBuffer buffer = ByteBuffer.allocate(binary.length);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-        buffer.put(binary);
-        String spirvTempDirectory = createSPIRVTempDirectoryName();
-        Path path = Paths.get(spirvTempDirectory);
-        try {
-            Files.createDirectories(path);
-        } catch (IOException e) {
-            throw new TornadoBailoutRuntimeException("Error - Exception when creating the temp directory for SPIR-V");
-        }
-        long timeStamp = System.nanoTime();
-        String pathSeparator = FileSystems.getDefault().getSeparator();
-        String spirvFile = spirvTempDirectory + pathSeparator + timeStamp + "-" + id + entryPoint + ".spv";
-        if (TornadoOptions.DEBUG) {
-            System.out.println("SPIR-V Binary File: " + spirvFile);
-        }
-
-        writeBufferToFile(buffer, spirvFile);
-        return installSPIRVBinary(meta, id, entryPoint, spirvFile);
-    }
-
-    public abstract SPIRVInstalledCode installSPIRVBinary(TaskDataContext meta, String id, String entryPoint, String pathToFile);
+  public abstract SPIRVInstalledCode installSPIRVBinary(
+      TaskDataContext meta, String id, String entryPoint, String pathToFile);
 }

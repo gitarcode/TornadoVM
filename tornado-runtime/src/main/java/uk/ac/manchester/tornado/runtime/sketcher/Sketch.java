@@ -24,37 +24,35 @@
 package uk.ac.manchester.tornado.runtime.sketcher;
 
 import org.graalvm.compiler.graph.Graph;
-
 import uk.ac.manchester.tornado.api.common.Access;
 
 public class Sketch {
 
-    private final Graph graph;
+  private final Graph graph;
 
-    private boolean batchWriteThreadIndex;
+  private boolean batchWriteThreadIndex;
 
-    /**
-     * Argument accesses of the {@link #graph}. If arguments escape to callees, it
-     * will contain the updated accesses based on what the non-inlined methods do.
-     */
-    private final Access[] argumentsAccess;
+  /**
+   * Argument accesses of the {@link #graph}. If arguments escape to callees, it will contain the
+   * updated accesses based on what the non-inlined methods do.
+   */
+  private final Access[] argumentsAccess;
 
-    Sketch(Graph graph, Access[] argumentAccesses, boolean batchWriteThreadIndex) {
-        this.graph = graph;
-        this.argumentsAccess = argumentAccesses;
-        this.batchWriteThreadIndex = batchWriteThreadIndex;
-    }
+  Sketch(Graph graph, Access[] argumentAccesses, boolean batchWriteThreadIndex) {
+    this.graph = graph;
+    this.argumentsAccess = argumentAccesses;
+    this.batchWriteThreadIndex = batchWriteThreadIndex;
+  }
 
-    public Graph getGraph() {
-        return graph;
-    }
+  public Graph getGraph() {
+    return graph;
+  }
 
-    public Access[] getArgumentsAccess() {
-        return argumentsAccess;
-    }
+  public Access[] getArgumentsAccess() {
+    return argumentsAccess;
+  }
 
-    public boolean getBatchWriteThreadIndex() {
-        return this.batchWriteThreadIndex;
-    }
-
+  public boolean getBatchWriteThreadIndex() {
+    return this.batchWriteThreadIndex;
+  }
 }

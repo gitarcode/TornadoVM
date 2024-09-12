@@ -20,8 +20,7 @@ package uk.ac.manchester.tornado.unittests.common;
 
 public class TornadoVMOpenCLNotSupported extends RuntimeException {
 
-    public TornadoVMOpenCLNotSupported(String message) {
-        super(message);
-    }
-
+  public TornadoVMOpenCLNotSupported(String message) {
+    super(message);
+  }
 }

@@ -22,30 +22,30 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class GridScheduler {
 
-    private final ConcurrentHashMap<String, WorkerGrid> gridTaskMap;
+  private final ConcurrentHashMap<String, WorkerGrid> gridTaskMap;
 
-    public GridScheduler() {
-        gridTaskMap = new ConcurrentHashMap<>();
-    }
+  public GridScheduler() {
+    gridTaskMap = new ConcurrentHashMap<>();
+  }
 
-    public GridScheduler(String taskName, WorkerGrid workerGrid) {
-        gridTaskMap = new ConcurrentHashMap<>();
-        gridTaskMap.put(taskName, workerGrid);
-    }
+  public GridScheduler(String taskName, WorkerGrid workerGrid) {
+    gridTaskMap = new ConcurrentHashMap<>();
+    gridTaskMap.put(taskName, workerGrid);
+  }
 
-    public void setWorkerGrid(String taskName, WorkerGrid workerGrid) {
-        gridTaskMap.put(taskName, workerGrid);
-    }
+  public void setWorkerGrid(String taskName, WorkerGrid workerGrid) {
+    gridTaskMap.put(taskName, workerGrid);
+  }
 
-    public WorkerGrid get(String taskName) {
-        return gridTaskMap.get(taskName);
-    }
+  public WorkerGrid get(String taskName) {
+    return gridTaskMap.get(taskName);
+  }
 
-    public boolean contains(String taskScheduleName, String taskName) {
-        return gridTaskMap.containsKey(taskScheduleName + "." + taskName);
-    }
+  public boolean contains(String taskScheduleName, String taskName) {
+    return gridTaskMap.containsKey(taskScheduleName + "." + taskName);
+  }
 
-    public Set<String> keySet() {
-        return gridTaskMap.keySet();
-    }
+  public Set<String> keySet() {
+    return gridTaskMap.keySet();
+  }
 }

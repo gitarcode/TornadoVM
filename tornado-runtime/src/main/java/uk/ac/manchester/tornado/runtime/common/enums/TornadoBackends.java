@@ -29,30 +29,27 @@ import static uk.ac.manchester.tornado.runtime.common.TornadoOptions.PTX_BACKEND
 import static uk.ac.manchester.tornado.runtime.common.TornadoOptions.SPIRV_BACKEND_PRIORITY;
 
 /**
- * Used to prioritize one backend over another. The drivers will be sorted based
- * on their priority. The driver with the highest priority will become driver 0
- * (default driver).
+ * Used to prioritize one backend over another. The drivers will be sorted based on their priority.
+ * The driver with the highest priority will become driver 0 (default driver).
  */
-
 public enum TornadoBackends {
+  PTX(PTX_BACKEND_PRIORITY, "implemented"), //
+  OpenCL(OPENCL_BACKEND_PRIORITY, "implemented"), //
+  SPIRV(SPIRV_BACKEND_PRIORITY, "implemented"); //
 
-    PTX(PTX_BACKEND_PRIORITY, "implemented"), //
-    OpenCL(OPENCL_BACKEND_PRIORITY, "implemented"), //
-    SPIRV(SPIRV_BACKEND_PRIORITY, "implemented"); //
+  private final int priority;
+  private final String status;
 
-    private final int priority;
-    private final String status;
+  TornadoBackends(int priority, String status) {
+    this.priority = priority;
+    this.status = status;
+  }
 
-    TornadoBackends(int priority, String status) {
-        this.priority = priority;
-        this.status = status;
-    }
+  public int value() {
+    return priority;
+  }
 
-    public int value() {
-        return priority;
-    }
-
-    public String status() {
-        return status;
-    }
+  public String status() {
+    return status;
+  }
 }

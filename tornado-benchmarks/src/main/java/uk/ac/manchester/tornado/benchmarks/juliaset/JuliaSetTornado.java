@@ -26,81 +26,79 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner juliaset
  * </code>
  */
 public class JuliaSetTornado extends BenchmarkDriver {
 
-    private final int size;
-    private final int iterations;
+  private final int size;
+  private final int iterations;
 
-    private static FloatArray hue;
-    private static FloatArray brightness;
+  private static FloatArray hue;
+  private static FloatArray brightness;
 
-    public JuliaSetTornado(int iterations, int size) {
-        super(iterations);
-        this.iterations = iterations;
-        this.size = size;
+  public JuliaSetTornado(int iterations, int size) {
+    super(iterations);
+    this.iterations = iterations;
+    this.size = size;
+  }
+
+  @Override
+  public void setUp() {
+    hue = new FloatArray(size * size);
+    brightness = new FloatArray(size * size);
+
+    taskGraph =
+        new TaskGraph("benchmark") //
+            .task("juliaSet", GraphicsKernels::juliaSetTornado, size, hue, brightness) //
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, hue, brightness);
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
+
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+    hue = null;
+    brightness = null;
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+    final FloatArray hueSeq = new FloatArray(size * size);
+    final FloatArray brightnessSeq = new FloatArray(size * size);
+
+    runBenchmark(device);
+    executionPlan.clearProfiles();
+
+    GraphicsKernels.juliaSetTornado(size, hueSeq, brightnessSeq);
+
+    boolean isCorrect = true;
+    float delta = 0.01f;
+    for (int i = 0; i < hueSeq.getSize(); i++) {
+      if (Math.abs(hueSeq.get(i) - hue.get(i)) > delta) {
+        isCorrect = false;
+        break;
+      }
+      if (Math.abs(brightnessSeq.get(i) - brightness.get(i)) > delta) {
+        isCorrect = false;
+        break;
+      }
     }
+    return isCorrect;
+  }
 
-    @Override
-    public void setUp() {
-        hue = new FloatArray(size * size);
-        brightness = new FloatArray(size * size);
+  @Override
+  public TaskGraph getTaskGraph() {
+    return taskGraph;
+  }
 
-        taskGraph = new TaskGraph("benchmark") //
-                .task("juliaSet", GraphicsKernels::juliaSetTornado, size, hue, brightness) //
-                .transferToHost(DataTransferMode.EVERY_EXECUTION, hue, brightness);
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
-    }
-
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-        hue = null;
-        brightness = null;
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        final FloatArray hueSeq = new FloatArray(size * size);
-        final FloatArray brightnessSeq = new FloatArray(size * size);
-
-        runBenchmark(device);
-        executionPlan.clearProfiles();
-
-        GraphicsKernels.juliaSetTornado(size, hueSeq, brightnessSeq);
-
-        boolean isCorrect = true;
-        float delta = 0.01f;
-        for (int i = 0; i < hueSeq.getSize(); i++) {
-            if (Math.abs(hueSeq.get(i) - hue.get(i)) > delta) {
-                isCorrect = false;
-                break;
-            }
-            if (Math.abs(brightnessSeq.get(i) - brightness.get(i)) > delta) {
-                isCorrect = false;
-                break;
-            }
-        }
-        return isCorrect;
-    }
-
-    @Override
-    public TaskGraph getTaskGraph() {
-        return taskGraph;
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
 }

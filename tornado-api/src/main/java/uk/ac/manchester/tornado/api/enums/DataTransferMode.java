@@ -18,31 +18,28 @@
 package uk.ac.manchester.tornado.api.enums;
 
 /**
- * Enumerate to specify the mode in which data will be copied to/from the host
- * to/from the device.
+ * Enumerate to specify the mode in which data will be copied to/from the host to/from the device.
  */
 public class DataTransferMode {
 
-    /**
-     * Flag to copy data between host <-> device only during the first execution. If
-     * the task-graph is executed multiple times, all data set with this flag will
-     * remain on the device as a Read-Only data.
-     */
-    public static final int FIRST_EXECUTION = 0;
+  /**
+   * Flag to copy data between host <-> device only during the first execution. If the task-graph is
+   * executed multiple times, all data set with this flag will remain on the device as a Read-Only
+   * data.
+   */
+  public static final int FIRST_EXECUTION = 0;
 
-    /**
-     * Flag to copy data between host <-> device every time the execute method of a
-     * task-graph ({@link uk.ac.manchester.tornado.api.TaskGraph}) is invoked.
-     */
-    public static final int EVERY_EXECUTION = 1;
+  /**
+   * Flag to copy data between host <-> device every time the execute method of a task-graph ({@link
+   * uk.ac.manchester.tornado.api.TaskGraph}) is invoked.
+   */
+  public static final int EVERY_EXECUTION = 1;
 
-    /**
-     * Flag to indicate that copy out of buffers (device -> host) are handled by the
-     * programmer rather than the TornadoVM runtime system. If this flag is used,
-     * developers must manually transfer the data from the device to the host by
-     * invoking
-     * {@link uk.ac.manchester.tornado.api.TornadoExecutionResult#transferToHost(Object...)}
-     * method.
-     */
-    public static final int UNDER_DEMAND = 2;
+  /**
+   * Flag to indicate that copy out of buffers (device -> host) are handled by the programmer rather
+   * than the TornadoVM runtime system. If this flag is used, developers must manually transfer the
+   * data from the device to the host by invoking {@link
+   * uk.ac.manchester.tornado.api.TornadoExecutionResult#transferToHost(Object...)} method.
+   */
+  public static final int UNDER_DEMAND = 2;
 }

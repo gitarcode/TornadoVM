@@ -24,42 +24,42 @@
 package uk.ac.manchester.tornado.drivers.ptx;
 
 public class PTXModule {
-    public final byte[] moduleWrapper;
-    public final String kernelFunctionName;
-    private int maxBlockSize;
-    public final String javaName;
-    private final byte[] source;
+  public final byte[] moduleWrapper;
+  public final String kernelFunctionName;
+  private int maxBlockSize;
+  public final String javaName;
+  private final byte[] source;
 
-    public PTXModule(String name, byte[] source, String kernelFunctionName) {
-        moduleWrapper = cuModuleLoadData(source);
-        this.source = source;
-        this.kernelFunctionName = kernelFunctionName;
-        maxBlockSize = -1;
-        javaName = name;
+  public PTXModule(String name, byte[] source, String kernelFunctionName) {
+    moduleWrapper = cuModuleLoadData(source);
+    this.source = source;
+    this.kernelFunctionName = kernelFunctionName;
+    maxBlockSize = -1;
+    javaName = name;
+  }
+
+  private static native byte[] cuModuleLoadData(byte[] source);
+
+  private static native long cuModuleUnload(byte[] module);
+
+  private static native int cuOccupancyMaxPotentialBlockSize(byte[] module, String funcName);
+
+  public int getPotentialBlockSizeMaxOccupancy() {
+    if (maxBlockSize < 0) {
+      maxBlockSize = cuOccupancyMaxPotentialBlockSize(moduleWrapper, kernelFunctionName);
     }
+    return maxBlockSize;
+  }
 
-    private static native byte[] cuModuleLoadData(byte[] source);
+  public byte[] getSource() {
+    return source;
+  }
 
-    private static native long cuModuleUnload(byte[] module);
+  public boolean isPTXJITSuccess() {
+    return moduleWrapper.length != 0;
+  }
 
-    private static native int cuOccupancyMaxPotentialBlockSize(byte[] module, String funcName);
-
-    public int getPotentialBlockSizeMaxOccupancy() {
-        if (maxBlockSize < 0) {
-            maxBlockSize = cuOccupancyMaxPotentialBlockSize(moduleWrapper, kernelFunctionName);
-        }
-        return maxBlockSize;
-    }
-
-    public byte[] getSource() {
-        return source;
-    }
-
-    public boolean isPTXJITSuccess() {
-        return moduleWrapper.length != 0;
-    }
-
-    public void unload() {
-        cuModuleUnload(moduleWrapper);
-    }
+  public void unload() {
+    cuModuleUnload(moduleWrapper);
+  }
 }

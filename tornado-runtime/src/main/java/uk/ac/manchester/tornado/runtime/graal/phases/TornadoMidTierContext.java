@@ -21,51 +21,55 @@
  */
 package uk.ac.manchester.tornado.runtime.graal.phases;
 
+import jdk.vm.ci.meta.ProfilingInfo;
+import jdk.vm.ci.meta.ResolvedJavaMethod;
 import org.graalvm.compiler.phases.OptimisticOptimizations;
 import org.graalvm.compiler.phases.tiers.MidTierContext;
 import org.graalvm.compiler.phases.tiers.TargetProvider;
 import org.graalvm.compiler.phases.util.Providers;
-
-import jdk.vm.ci.meta.ProfilingInfo;
-import jdk.vm.ci.meta.ResolvedJavaMethod;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class TornadoMidTierContext extends MidTierContext {
 
-    protected final ResolvedJavaMethod method;
-    protected final Object[] args;
-    protected final TaskDataContext meta;
+  protected final ResolvedJavaMethod method;
+  protected final Object[] args;
+  protected final TaskDataContext meta;
 
-    public TornadoMidTierContext(Providers copyFrom, TargetProvider target, OptimisticOptimizations optimisticOpts, ProfilingInfo profilingInfo, ResolvedJavaMethod method, Object[] args,
-            TaskDataContext meta) {
-        super(copyFrom, target, optimisticOpts, profilingInfo);
-        this.method = method;
-        this.args = args;
-        this.meta = meta;
-    }
+  public TornadoMidTierContext(
+      Providers copyFrom,
+      TargetProvider target,
+      OptimisticOptimizations optimisticOpts,
+      ProfilingInfo profilingInfo,
+      ResolvedJavaMethod method,
+      Object[] args,
+      TaskDataContext meta) {
+    super(copyFrom, target, optimisticOpts, profilingInfo);
+    this.method = method;
+    this.args = args;
+    this.meta = meta;
+  }
 
-    public ResolvedJavaMethod getMethod() {
-        return method;
-    }
+  public ResolvedJavaMethod getMethod() {
+    return method;
+  }
 
-    public Object[] getArgs() {
-        return args;
-    }
+  public Object[] getArgs() {
+    return args;
+  }
 
-    public boolean hasArgs() {
-        return args != null;
-    }
+  public boolean hasArgs() {
+    return args != null;
+  }
 
-    public Object getArg(int index) {
-        return args[index];
-    }
+  public Object getArg(int index) {
+    return args[index];
+  }
 
-    public int getNumArgs() {
-        return (hasArgs()) ? args.length : 0;
-    }
+  public int getNumArgs() {
+    return (hasArgs()) ? args.length : 0;
+  }
 
-    public TaskDataContext getMeta() {
-        return meta;
-    }
-
+  public TaskDataContext getMeta() {
+    return meta;
+  }
 }

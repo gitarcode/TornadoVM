@@ -25,7 +25,6 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoRuntimeException;
 import uk.ac.manchester.tornado.drivers.spirv.levelzero.LevelZeroDriver;
 import uk.ac.manchester.tornado.drivers.spirv.levelzero.ZeDriverHandle;
@@ -34,39 +33,38 @@ import uk.ac.manchester.tornado.drivers.spirv.levelzero.ZeResult;
 
 public class SPIRVLevelZeroDriver implements SPIRVDispatcher {
 
-    private final ZeDriverHandle driversHandler;
-    private final List<SPIRVPlatform> spirvPlatforms;
+  private final ZeDriverHandle driversHandler;
+  private final List<SPIRVPlatform> spirvPlatforms;
 
-    public SPIRVLevelZeroDriver() {
-        LevelZeroDriver driver = new LevelZeroDriver();
-        int errorCode = driver.zeInit(ZeInitFlag.ZE_INIT_FLAG_GPU_ONLY);
-        if (errorCode != ZeResult.ZE_RESULT_SUCCESS) {
-            throw new TornadoRuntimeException("[ERROR] Level Zero Driver Not Found");
-        }
-
-        int[] numDrivers = new int[1];
-        errorCode = driver.zeDriverGet(numDrivers, null);
-        if (errorCode != ZeResult.ZE_RESULT_SUCCESS) {
-            throw new TornadoRuntimeException("[ERROR] Level Zero Driver Not Found");
-        }
-        spirvPlatforms = new ArrayList<>();
-
-        driversHandler = new ZeDriverHandle(numDrivers[0]);
-        driver.zeDriverGet(numDrivers, driversHandler);
-        for (int i = 0; i < numDrivers[0]; i++) {
-            SPIRVPlatform platform = new SPIRVLevelZeroPlatform(driver, driversHandler, i);
-            spirvPlatforms.add(platform);
-        }
+  public SPIRVLevelZeroDriver() {
+    LevelZeroDriver driver = new LevelZeroDriver();
+    int errorCode = driver.zeInit(ZeInitFlag.ZE_INIT_FLAG_GPU_ONLY);
+    if (errorCode != ZeResult.ZE_RESULT_SUCCESS) {
+      throw new TornadoRuntimeException("[ERROR] Level Zero Driver Not Found");
     }
 
-    @Override
-    public int getNumPlatforms() {
-        return driversHandler.getNumDrivers();
+    int[] numDrivers = new int[1];
+    errorCode = driver.zeDriverGet(numDrivers, null);
+    if (errorCode != ZeResult.ZE_RESULT_SUCCESS) {
+      throw new TornadoRuntimeException("[ERROR] Level Zero Driver Not Found");
     }
+    spirvPlatforms = new ArrayList<>();
 
-    @Override
-    public SPIRVPlatform getPlatform(int index) {
-        return spirvPlatforms.get(index);
+    driversHandler = new ZeDriverHandle(numDrivers[0]);
+    driver.zeDriverGet(numDrivers, driversHandler);
+    for (int i = 0; i < numDrivers[0]; i++) {
+      SPIRVPlatform platform = new SPIRVLevelZeroPlatform(driver, driversHandler, i);
+      spirvPlatforms.add(platform);
     }
+  }
 
+  @Override
+  public int getNumPlatforms() {
+    return driversHandler.getNumDrivers();
+  }
+
+  @Override
+  public SPIRVPlatform getPlatform(int index) {
+    return spirvPlatforms.get(index);
+  }
 }

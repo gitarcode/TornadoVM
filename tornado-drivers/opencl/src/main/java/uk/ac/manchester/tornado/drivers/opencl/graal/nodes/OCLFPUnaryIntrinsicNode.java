@@ -25,6 +25,8 @@ package uk.ac.manchester.tornado.drivers.opencl.graal.nodes;
 
 import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shouldNotReachHere;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.FloatStamp;
 import org.graalvm.compiler.core.common.type.PrimitiveStamp;
 import org.graalvm.compiler.core.common.type.StampFactory;
@@ -40,9 +42,6 @@ import org.graalvm.compiler.nodes.calc.UnaryNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLArithmeticTool;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLBuiltinTool;
@@ -50,165 +49,169 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkFloatingPointIntrinsicsNode;
 
 @NodeInfo(nameTemplate = "{p#operation/s}")
-public class OCLFPUnaryIntrinsicNode extends UnaryNode implements ArithmeticLIRLowerable, MarkFloatingPointIntrinsicsNode {
+public class OCLFPUnaryIntrinsicNode extends UnaryNode
+    implements ArithmeticLIRLowerable, MarkFloatingPointIntrinsicsNode {
 
-    public static final NodeClass<OCLFPUnaryIntrinsicNode> TYPE = NodeClass.create(OCLFPUnaryIntrinsicNode.class);
-    protected final Operation operation;
+  public static final NodeClass<OCLFPUnaryIntrinsicNode> TYPE =
+      NodeClass.create(OCLFPUnaryIntrinsicNode.class);
+  protected final Operation operation;
 
-    protected OCLFPUnaryIntrinsicNode(ValueNode value, Operation op, JavaKind kind) {
-        super(TYPE, StampFactory.forKind(kind), value);
-        assert value.stamp(NodeView.DEFAULT) instanceof FloatStamp && PrimitiveStamp.getBits(value.stamp(NodeView.DEFAULT)) == kind.getBitCount();
-        this.operation = op;
+  protected OCLFPUnaryIntrinsicNode(ValueNode value, Operation op, JavaKind kind) {
+    super(TYPE, StampFactory.forKind(kind), value);
+    assert value.stamp(NodeView.DEFAULT) instanceof FloatStamp
+        && PrimitiveStamp.getBits(value.stamp(NodeView.DEFAULT)) == kind.getBitCount();
+    this.operation = op;
+  }
+
+  public static ValueNode create(ValueNode value, Operation op, JavaKind kind) {
+    ValueNode c = tryConstantFold(value, op, kind);
+    if (c != null) {
+      return c;
     }
+    return new OCLFPUnaryIntrinsicNode(value, op, kind);
+  }
 
-    public static ValueNode create(ValueNode value, Operation op, JavaKind kind) {
-        ValueNode c = tryConstantFold(value, op, kind);
-        if (c != null) {
-            return c;
-        }
-        return new OCLFPUnaryIntrinsicNode(value, op, kind);
+  protected static ValueNode tryConstantFold(ValueNode value, Operation op, JavaKind kind) {
+    ConstantNode result = null;
+
+    if (value.isConstant()) {
+      if (kind == JavaKind.Double) {
+        double ret = doCompute(value.asJavaConstant().asDouble(), op);
+        result = ConstantNode.forDouble(ret);
+      } else if (kind == JavaKind.Float) {
+        float ret = doCompute(value.asJavaConstant().asFloat(), op);
+        result = ConstantNode.forFloat(ret);
+      }
     }
+    return result;
+  }
 
-    protected static ValueNode tryConstantFold(ValueNode value, Operation op, JavaKind kind) {
-        ConstantNode result = null;
+  private static double doCompute(double value, Operation op) {
+    return switch (op) {
+      case ASIN -> Math.asin(value);
+      case ACOS -> Math.acos(value);
+      case FABS -> Math.abs(value);
+      case EXP -> Math.exp(value);
+      case SQRT -> Math.sqrt(value);
+      case FLOOR -> Math.floor(value);
+      case LOG -> Math.log(value);
+      default -> throw new TornadoInternalError("unable to compute op %s", op);
+    };
+  }
 
-        if (value.isConstant()) {
-            if (kind == JavaKind.Double) {
-                double ret = doCompute(value.asJavaConstant().asDouble(), op);
-                result = ConstantNode.forDouble(ret);
-            } else if (kind == JavaKind.Float) {
-                float ret = doCompute(value.asJavaConstant().asFloat(), op);
-                result = ConstantNode.forFloat(ret);
-            }
-        }
-        return result;
+  // @formatter:on
+
+  private static float doCompute(float value, Operation op) {
+    return switch (op) {
+      case ASIN -> (float) Math.asin(value);
+      case ACOS -> (float) Math.acos(value);
+      case FABS -> Math.abs(value);
+      case EXP -> (float) Math.exp(value);
+      case SQRT -> (float) Math.sqrt(value);
+      case FLOOR -> (float) Math.floor(value);
+      case LOG -> (float) Math.log(value);
+      default -> throw new TornadoInternalError("unable to compute op %s", op);
+    };
+  }
+
+  @Override
+  public String getOperation() {
+    return operation.toString();
+  }
+
+  public Operation getIntrinsicOperation() {
+    return operation;
+  }
+
+  public Operation operation() {
+    return operation;
+  }
+
+  @Override
+  public Node canonical(CanonicalizerTool tool, ValueNode forValue) {
+    ValueNode c = tryConstantFold(forValue, operation(), forValue.getStackKind());
+    if (c != null) {
+      return c;
     }
+    return this;
+  }
 
-    private static double doCompute(double value, Operation op) {
-        return switch (op) {
-            case ASIN -> Math.asin(value);
-            case ACOS -> Math.acos(value);
-            case FABS -> Math.abs(value);
-            case EXP -> Math.exp(value);
-            case SQRT -> Math.sqrt(value);
-            case FLOOR -> Math.floor(value);
-            case LOG -> Math.log(value);
-            default -> throw new TornadoInternalError("unable to compute op %s", op);
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
+    OCLBuiltinTool gen = ((OCLArithmeticTool) lirGen).getGen().getOCLBuiltinTool();
+    Value input = builder.operand(getValue());
+    Value result =
+        switch (operation()) {
+          case ASIN -> gen.genFloatASin(input);
+          case ACOS -> gen.genFloatACos(input);
+          case ATAN -> gen.genFloatATan(input);
+          case CEIL -> gen.genFloatCeil(input);
+          case COS -> gen.genFloatCos(input);
+          case FABS -> gen.genFloatAbs(input);
+          case EXP -> gen.genFloatExp(input);
+          case SIN -> gen.genFloatSin(input);
+          case SQRT -> gen.genFloatSqrt(input);
+          case TAN -> gen.genFloatTan(input);
+          case TANH -> gen.genFloatTanh(input);
+          case FLOOR -> gen.genFloatFloor(input);
+          case LOG -> gen.genFloatLog(input);
+          case RADIANS -> gen.genFloatRadians(input);
+          case COSPI -> gen.genFloatCosPI(input);
+          case SINPI -> gen.genFloatSinPI(input);
+          default -> throw shouldNotReachHere();
         };
-    }
-    // @formatter:on
+    Variable x = builder.getLIRGeneratorTool().newVariable(result.getValueKind());
+    builder.getLIRGeneratorTool().append(new AssignStmt(x, result));
+    builder.setResult(this, x);
+  }
 
-    private static float doCompute(float value, Operation op) {
-        return switch (op) {
-            case ASIN -> (float) Math.asin(value);
-            case ACOS -> (float) Math.acos(value);
-            case FABS -> Math.abs(value);
-            case EXP -> (float) Math.exp(value);
-            case SQRT -> (float) Math.sqrt(value);
-            case FLOOR -> (float) Math.floor(value);
-            case LOG -> (float) Math.log(value);
-            default -> throw new TornadoInternalError("unable to compute op %s", op);
-        };
-    }
-
-    @Override
-    public String getOperation() {
-        return operation.toString();
-    }
-
-    public Operation getIntrinsicOperation() {
-        return operation;
-    }
-
-    public Operation operation() {
-        return operation;
-    }
-
-    @Override
-    public Node canonical(CanonicalizerTool tool, ValueNode forValue) {
-        ValueNode c = tryConstantFold(forValue, operation(), forValue.getStackKind());
-        if (c != null) {
-            return c;
-        }
-        return this;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGen) {
-        OCLBuiltinTool gen = ((OCLArithmeticTool) lirGen).getGen().getOCLBuiltinTool();
-        Value input = builder.operand(getValue());
-        Value result = switch (operation()) {
-            case ASIN -> gen.genFloatASin(input);
-            case ACOS -> gen.genFloatACos(input);
-            case ATAN -> gen.genFloatATan(input);
-            case CEIL -> gen.genFloatCeil(input);
-            case COS -> gen.genFloatCos(input);
-            case FABS -> gen.genFloatAbs(input);
-            case EXP -> gen.genFloatExp(input);
-            case SIN -> gen.genFloatSin(input);
-            case SQRT -> gen.genFloatSqrt(input);
-            case TAN -> gen.genFloatTan(input);
-            case TANH -> gen.genFloatTanh(input);
-            case FLOOR -> gen.genFloatFloor(input);
-            case LOG -> gen.genFloatLog(input);
-            case RADIANS -> gen.genFloatRadians(input);
-            case COSPI -> gen.genFloatCosPI(input);
-            case SINPI -> gen.genFloatSinPI(input);
-            default -> throw shouldNotReachHere();
-        };
-        Variable x = builder.getLIRGeneratorTool().newVariable(result.getValueKind());
-        builder.getLIRGeneratorTool().append(new AssignStmt(x, result));
-        builder.setResult(this, x);
-
-    }
-
-    // @formatter:off
-    public enum Operation {
-        ACOS,
-        ACOSH,
-        ACOSPI,
-        ASIN,
-        ASINH,
-        ASINPI,
-        ATAN,
-        ATANH,
-        ATANPI,
-        CBRT,
-        CEIL,
-        COS,
-        COSH,
-        COSPI,
-        ERFC,
-        ERF,
-        EXP,
-        EXP2,
-        EXP10,
-        EXPM1,
-        FABS,
-        FLOOR,
-        ILOGB,
-        LGAMMA,
-        LOG,
-        LOG2,
-        LOG10,
-        LOG1P,
-        LOGB,
-        NAN,
-        RADIANS,
-        REMQUO,
-        RINT,
-        ROUND,
-        RSQRT,
-        SIN,
-        SINH,
-        SINPI,
-        SQRT,
-        TAN,
-        TANH,
-        TANPI,
-        TGAMMA,
-        TRUNC
-    }
-    // @formatter:on
+  // @formatter:off
+  public enum Operation {
+    ACOS,
+    ACOSH,
+    ACOSPI,
+    ASIN,
+    ASINH,
+    ASINPI,
+    ATAN,
+    ATANH,
+    ATANPI,
+    CBRT,
+    CEIL,
+    COS,
+    COSH,
+    COSPI,
+    ERFC,
+    ERF,
+    EXP,
+    EXP2,
+    EXP10,
+    EXPM1,
+    FABS,
+    FLOOR,
+    ILOGB,
+    LGAMMA,
+    LOG,
+    LOG2,
+    LOG10,
+    LOG1P,
+    LOGB,
+    NAN,
+    RADIANS,
+    REMQUO,
+    RINT,
+    ROUND,
+    RSQRT,
+    SIN,
+    SINH,
+    SINPI,
+    SQRT,
+    TAN,
+    TANH,
+    TANPI,
+    TGAMMA,
+    TRUNC
+  }
+  // @formatter:on
 
 }

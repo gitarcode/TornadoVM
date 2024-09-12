@@ -25,7 +25,7 @@ package uk.ac.manchester.tornado.drivers.spirv;
 
 public interface SPIRVModule {
 
-    String getPathToSPIRVBinary();
+  String getPathToSPIRVBinary();
 
-    String getEntryPoint();
+  String getEntryPoint();
 }

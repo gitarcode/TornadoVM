@@ -17,6 +17,7 @@
  */
 package uk.ac.manchester.tornado.examples.kernelcontext.reductions;
 
+import java.util.stream.IntStream;
 import uk.ac.manchester.tornado.api.GridScheduler;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.KernelContext;
@@ -24,85 +25,82 @@ import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
 import uk.ac.manchester.tornado.api.WorkerGrid;
 import uk.ac.manchester.tornado.api.WorkerGrid1D;
-import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.api.enums.DataTransferMode;
-
-import java.util.stream.IntStream;
+import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * $ tornado --threadInfo -m tornado.examples/uk.ac.manchester.tornado.examples.kernelcontext.reductions.ReductionsGlobalMemory
  * </code>
  */
 public class ReductionsGlobalMemory {
 
-    // Reduction in Global memory using KernelContext
-    public static void reduction(FloatArray a, FloatArray b, KernelContext context) {
-        int localIdx = context.localIdx;
-        int localGroupSize = context.localGroupSizeX;
-        int groupID = context.groupIdx; // Expose Group ID
-        int id = localGroupSize * groupID + localIdx;
+  // Reduction in Global memory using KernelContext
+  public static void reduction(FloatArray a, FloatArray b, KernelContext context) {
+    int localIdx = context.localIdx;
+    int localGroupSize = context.localGroupSizeX;
+    int groupID = context.groupIdx; // Expose Group ID
+    int id = localGroupSize * groupID + localIdx;
 
-        for (int stride = (localGroupSize / 2); stride > 0; stride /= 2) {
-            context.localBarrier();
-            if (localIdx < stride) {
-                a.set(id, a.get(id) + a.get(id + stride));
-            }
-        }
-        if (localIdx == 0) {
-            b.set(groupID, a.get(id));
-        }
+    for (int stride = (localGroupSize / 2); stride > 0; stride /= 2) {
+      context.localBarrier();
+      if (localIdx < stride) {
+        a.set(id, a.get(id) + a.get(id + stride));
+      }
     }
-
-    public static float computeSequential(FloatArray input) {
-        float acc = 0;
-        for (int i = 0; i < input.getSize(); i++) {
-            acc += input.get(i);
-        }
-        return acc;
+    if (localIdx == 0) {
+      b.set(groupID, a.get(id));
     }
+  }
 
-    public static void rAdd(final FloatArray array, int size) {
-        float acc = array.get(0);
-        for (int i = 1; i < array.getSize(); i++) {
-            acc += array.get(i);
-        }
-        array.set(0, acc);
+  public static float computeSequential(FloatArray input) {
+    float acc = 0;
+    for (int i = 0; i < input.getSize(); i++) {
+      acc += input.get(i);
     }
+    return acc;
+  }
 
-    public static void main(String[] args) {
-        final int size = 1024;
-        FloatArray input = new FloatArray(size);
-        FloatArray reduce = new FloatArray(size);
-
-        IntStream.range(0, input.getSize()).sequential().forEach(i -> input.set(i, i));
-        float sequential = computeSequential(input);
-
-        WorkerGrid worker = new WorkerGrid1D(size);
-        GridScheduler gridScheduler = new GridScheduler();
-        gridScheduler.setWorkerGrid("s0.t0", worker);
-        KernelContext context = new KernelContext();
-
-        TaskGraph taskGraph = new TaskGraph("s0") //
-                .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
-                .task("t0", ReductionsGlobalMemory::reduction, input, reduce, context) //
-                .task("t1", ReductionsGlobalMemory::rAdd, reduce, size).transferToHost(DataTransferMode.EVERY_EXECUTION, reduce);
-
-        ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-        TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
-        executor.withGridScheduler(gridScheduler).execute();
-
-        // Final SUM
-        float finalSum = reduce.get(0);
-
-        System.out.println("Final SUM = " + finalSum + " vs seq= " + sequential);
-        if ((sequential - finalSum) == 0) {
-            System.out.println("Result is correct");
-        } else {
-            System.out.println("Result is wrong");
-        }
+  public static void rAdd(final FloatArray array, int size) {
+    float acc = array.get(0);
+    for (int i = 1; i < array.getSize(); i++) {
+      acc += array.get(i);
     }
+    array.set(0, acc);
+  }
+
+  public static void main(String[] args) {
+    final int size = 1024;
+    FloatArray input = new FloatArray(size);
+    FloatArray reduce = new FloatArray(size);
+
+    IntStream.range(0, input.getSize()).sequential().forEach(i -> input.set(i, i));
+    float sequential = computeSequential(input);
+
+    WorkerGrid worker = new WorkerGrid1D(size);
+    GridScheduler gridScheduler = new GridScheduler();
+    gridScheduler.setWorkerGrid("s0.t0", worker);
+    KernelContext context = new KernelContext();
+
+    TaskGraph taskGraph =
+        new TaskGraph("s0") //
+            .transferToDevice(DataTransferMode.EVERY_EXECUTION, input) //
+            .task("t0", ReductionsGlobalMemory::reduction, input, reduce, context) //
+            .task("t1", ReductionsGlobalMemory::rAdd, reduce, size)
+            .transferToHost(DataTransferMode.EVERY_EXECUTION, reduce);
+
+    ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+    TornadoExecutionPlan executor = new TornadoExecutionPlan(immutableTaskGraph);
+    executor.withGridScheduler(gridScheduler).execute();
+
+    // Final SUM
+    float finalSum = reduce.get(0);
+
+    System.out.println("Final SUM = " + finalSum + " vs seq= " + sequential);
+    if ((sequential - finalSum) == 0) {
+      System.out.println("Result is correct");
+    } else {
+      System.out.println("Result is wrong");
+    }
+  }
 }

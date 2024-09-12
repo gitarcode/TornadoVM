@@ -21,7 +21,6 @@ import static uk.ac.manchester.tornado.benchmarks.GraphicsKernels.dotVector;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -39,7 +38,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -50,78 +48,77 @@ import uk.ac.manchester.tornado.api.types.vectors.Float3;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.dotvector.JMHDotVector
  * </code>
  */
 public class JMHDotVector {
 
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
-        int numElements = Integer.parseInt(System.getProperty("x", "4194304"));
-        private VectorFloat3 a;
-        private VectorFloat3 b;
-        private FloatArray c;
-        TornadoExecutionPlan executor;
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
+    int numElements = Integer.parseInt(System.getProperty("x", "4194304"));
+    private VectorFloat3 a;
+    private VectorFloat3 b;
+    private FloatArray c;
+    TornadoExecutionPlan executor;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            a = new VectorFloat3(numElements);
-            b = new VectorFloat3(numElements);
-            c = new FloatArray(numElements);
+    @Setup(Level.Trial)
+    public void doSetup() {
+      a = new VectorFloat3(numElements);
+      b = new VectorFloat3(numElements);
+      c = new FloatArray(numElements);
 
-            Random r = new Random();
-            for (int i = 0; i < numElements; i++) {
-                a.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-                b.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
-            }
-            TaskGraph taskGraph = new TaskGraph("benchmark")//
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                    .task("dotVector", GraphicsKernels::dotVector, a, b, c) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
+      Random r = new Random();
+      for (int i = 0; i < numElements; i++) {
+        a.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
+        b.set(i, new Float3(r.nextFloat(), r.nextFloat(), r.nextFloat()));
+      }
+      TaskGraph taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
+              .task("dotVector", GraphicsKernels::dotVector, a, b, c) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
-        }
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void dotVectorJava(BenchmarkSetup state) {
-        dotVector(state.a, state.b, state.c);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void dotVectorJava(BenchmarkSetup state) {
+    dotVector(state.a, state.b, state.c);
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void dotVectorTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void dotVectorTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHDotVector.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHDotVector.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

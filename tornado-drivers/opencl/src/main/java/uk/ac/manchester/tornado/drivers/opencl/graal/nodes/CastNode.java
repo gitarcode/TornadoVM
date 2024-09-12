@@ -31,7 +31,6 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLUnaryOp;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt.AssignStmt;
@@ -42,56 +41,60 @@ import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkCastNode;
 @NodeInfo
 public class CastNode extends FloatingNode implements LIRLowerable, MarkCastNode {
 
-    public static final NodeClass<CastNode> TYPE = NodeClass.create(CastNode.class);
+  public static final NodeClass<CastNode> TYPE = NodeClass.create(CastNode.class);
 
-    @Input
-    protected ValueNode value;
-    protected FloatConvert op;
+  @Input protected ValueNode value;
+  protected FloatConvert op;
 
-    public CastNode(Stamp stamp, FloatConvert op, ValueNode value) {
-        super(TYPE, stamp);
-        this.op = op;
-        this.value = value;
+  public CastNode(Stamp stamp, FloatConvert op, ValueNode value) {
+    super(TYPE, stamp);
+    this.op = op;
+    this.value = value;
+  }
+
+  private OCLUnaryOp resolveOp() {
+    switch (op) {
+      case I2D:
+      case F2D:
+      case L2D:
+        return OCLUnaryOp.CAST_TO_DOUBLE;
+      case F2I:
+      case D2I:
+        return OCLUnaryOp.CAST_TO_INT;
+      case I2F:
+      case D2F:
+      case L2F:
+        return OCLUnaryOp.CAST_TO_FLOAT;
+      case D2L:
+      case F2L:
+        return OCLUnaryOp.CAST_TO_LONG;
+      default:
+        TornadoUnsupportedError.unsupported("Conversion unimplemented: ", op.toString());
+        break;
     }
+    return null;
+  }
 
-    private OCLUnaryOp resolveOp() {
-        switch (op) {
-            case I2D:
-            case F2D:
-            case L2D:
-                return OCLUnaryOp.CAST_TO_DOUBLE;
-            case F2I:
-            case D2I:
-                return OCLUnaryOp.CAST_TO_INT;
-            case I2F:
-            case D2F:
-            case L2F:
-                return OCLUnaryOp.CAST_TO_FLOAT;
-            case D2L:
-            case F2L:
-                return OCLUnaryOp.CAST_TO_LONG;
-            default:
-                TornadoUnsupportedError.unsupported("Conversion unimplemented: ", op.toString());
-                break;
-        }
-        return null;
+  @Override
+  public void generate(NodeLIRBuilderTool gen) {
+    /*
+     * using as_T reinterprets the data as type T - consider: float x = (float) 1;
+     * and int value = 1, float x = &(value);
+     */
+    LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
+    OCLKind oclKind = (OCLKind) lirKind.getPlatformKind();
+    final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
+    if (oclKind.isFloating()) {
+      gen.getLIRGeneratorTool()
+          .append(
+              new AssignStmt(result, new OCLUnary.Expr(resolveOp(), lirKind, gen.operand(value))));
+    } else {
+      gen.getLIRGeneratorTool()
+          .append(
+              new AssignStmt(
+                  result,
+                  new OCLUnary.FloatCast(OCLUnaryOp.CAST_TO_INT, lirKind, gen.operand(value))));
     }
-
-    @Override
-    public void generate(NodeLIRBuilderTool gen) {
-        /*
-         * using as_T reinterprets the data as type T - consider: float x = (float) 1;
-         * and int value = 1, float x = &(value);
-         */
-        LIRKind lirKind = gen.getLIRGeneratorTool().getLIRKind(stamp);
-        OCLKind oclKind = (OCLKind) lirKind.getPlatformKind();
-        final Variable result = gen.getLIRGeneratorTool().newVariable(lirKind);
-        if (oclKind.isFloating()) {
-            gen.getLIRGeneratorTool().append(new AssignStmt(result, new OCLUnary.Expr(resolveOp(), lirKind, gen.operand(value))));
-        } else {
-            gen.getLIRGeneratorTool().append(new AssignStmt(result, new OCLUnary.FloatCast(OCLUnaryOp.CAST_TO_INT, lirKind, gen.operand(value))));
-
-        }
-        gen.setResult(this, result);
-    }
+    gen.setResult(this, result);
+  }
 }

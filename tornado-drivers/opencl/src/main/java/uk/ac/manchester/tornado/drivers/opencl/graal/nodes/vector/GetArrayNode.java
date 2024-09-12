@@ -22,6 +22,7 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.nodes.vector;
 
+import jdk.vm.ci.meta.JavaKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
@@ -31,8 +32,6 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLStampFactory;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLKind;
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
@@ -40,35 +39,34 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 @NodeInfo
 public class GetArrayNode extends FloatingNode implements LIRLowerable {
 
-    public static final NodeClass<GetArrayNode> TYPE = NodeClass.create(GetArrayNode.class);
-    private final OCLKind oclKind;
+  public static final NodeClass<GetArrayNode> TYPE = NodeClass.create(GetArrayNode.class);
+  private final OCLKind oclKind;
 
-    @Input
-    private ValueNode arrayNode;
+  @Input private ValueNode arrayNode;
 
-    private JavaKind elementKind;
+  private JavaKind elementKind;
 
-    public GetArrayNode(OCLKind oclKind, ValueNode array, JavaKind elementKind) {
-        super(TYPE, StampFactory.forKind(oclKind.asJavaKind()));
-        this.oclKind = oclKind;
-        this.arrayNode = array;
-        this.elementKind = elementKind;
-    }
+  public GetArrayNode(OCLKind oclKind, ValueNode array, JavaKind elementKind) {
+    super(TYPE, StampFactory.forKind(oclKind.asJavaKind()));
+    this.oclKind = oclKind;
+    this.arrayNode = array;
+    this.elementKind = elementKind;
+  }
 
-    @Override
-    public boolean inferStamp() {
-        return updateStamp(OCLStampFactory.getStampFor(oclKind));
-    }
+  @Override
+  public boolean inferStamp() {
+    return updateStamp(OCLStampFactory.getStampFor(oclKind));
+  }
 
-    public OCLKind getOCLKind() {
-        return oclKind;
-    }
+  public OCLKind getOCLKind() {
+    return oclKind;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(tool.getLIRKind(stamp));
-        tool.append(new OCLLIRStmt.AssignStmt(result, generator.operand(arrayNode)));
-        generator.setResult(this, result);
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(tool.getLIRKind(stamp));
+    tool.append(new OCLLIRStmt.AssignStmt(result, generator.operand(arrayNode)));
+    generator.setResult(this, result);
+  }
 }

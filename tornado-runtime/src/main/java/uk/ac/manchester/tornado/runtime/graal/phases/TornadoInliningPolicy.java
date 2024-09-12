@@ -23,5 +23,4 @@ package uk.ac.manchester.tornado.runtime.graal.phases;
 
 import org.graalvm.compiler.phases.common.inlining.policy.InliningPolicy;
 
-public interface TornadoInliningPolicy extends InliningPolicy {
-}
+public interface TornadoInliningPolicy extends InliningPolicy {}

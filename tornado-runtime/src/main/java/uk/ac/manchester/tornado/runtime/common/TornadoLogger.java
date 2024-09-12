@@ -28,86 +28,86 @@ import java.util.logging.Logger;
 
 public class TornadoLogger {
 
-    private final Logger logger;
-    private final boolean isLogOptionEnabled = TornadoOptions.DEBUG || TornadoOptions.FULL_DEBUG;
+  private final Logger logger;
+  private final boolean isLogOptionEnabled = TornadoOptions.DEBUG || TornadoOptions.FULL_DEBUG;
 
-    public TornadoLogger(Class<?> clazz) {
-        if (clazz == null) {
-            logger = Logger.getAnonymousLogger();
-        } else {
-            logger = Logger.getLogger(clazz.getName());
-        }
+  public TornadoLogger(Class<?> clazz) {
+    if (clazz == null) {
+      logger = Logger.getAnonymousLogger();
+    } else {
+      logger = Logger.getLogger(clazz.getName());
     }
+  }
 
-    public TornadoLogger() {
-        this(null);
-    }
+  public TornadoLogger() {
+    this(null);
+  }
 
-    public void debug(final String msg) {
-        if (isLogOptionEnabled) {
-            logger.setLevel(Level.INFO);
-            logger.info(msg);
-        }
+  public void debug(final String msg) {
+    if (isLogOptionEnabled) {
+      logger.setLevel(Level.INFO);
+      logger.info(msg);
     }
+  }
 
-    public void debug(final String pattern, final Object... args) {
-        debug(String.format(pattern, args));
-    }
+  public void debug(final String pattern, final Object... args) {
+    debug(String.format(pattern, args));
+  }
 
-    public void error(final String msg) {
-        if (isLogOptionEnabled) {
-            logger.setLevel(Level.SEVERE);
-            logger.severe(msg);
-        }
+  public void error(final String msg) {
+    if (isLogOptionEnabled) {
+      logger.setLevel(Level.SEVERE);
+      logger.severe(msg);
     }
+  }
 
-    public void error(final String pattern, final Object... args) {
-        if (isLogOptionEnabled) {
-            error(String.format(pattern, args));
-        }
+  public void error(final String pattern, final Object... args) {
+    if (isLogOptionEnabled) {
+      error(String.format(pattern, args));
     }
+  }
 
-    public void fatal(final String msg) {
-        if (isLogOptionEnabled) {
-            logger.setLevel(Level.SEVERE);
-            logger.severe(msg);
-        }
+  public void fatal(final String msg) {
+    if (isLogOptionEnabled) {
+      logger.setLevel(Level.SEVERE);
+      logger.severe(msg);
     }
+  }
 
-    public void fatal(final String pattern, final Object... args) {
-        fatal(String.format(pattern, args));
-    }
+  public void fatal(final String pattern, final Object... args) {
+    fatal(String.format(pattern, args));
+  }
 
-    public void info(final String msg) {
-        if (isLogOptionEnabled) {
-            logger.setLevel(Level.INFO);
-            logger.info(msg);
-        }
+  public void info(final String msg) {
+    if (isLogOptionEnabled) {
+      logger.setLevel(Level.INFO);
+      logger.info(msg);
     }
+  }
 
-    public void info(final String pattern, final Object... args) {
-        info(String.format(pattern, args));
-    }
+  public void info(final String pattern, final Object... args) {
+    info(String.format(pattern, args));
+  }
 
-    public void trace(final String msg) {
-        if (isLogOptionEnabled) {
-            logger.setLevel(Level.INFO);
-            logger.info(msg);
-        }
+  public void trace(final String msg) {
+    if (isLogOptionEnabled) {
+      logger.setLevel(Level.INFO);
+      logger.info(msg);
     }
+  }
 
-    public void trace(final String pattern, final Object... args) {
-        trace(String.format(pattern, args));
-    }
+  public void trace(final String pattern, final Object... args) {
+    trace(String.format(pattern, args));
+  }
 
-    public void warn(final String msg) {
-        if (isLogOptionEnabled) {
-            logger.setLevel(Level.WARNING);
-            logger.warning(msg);
-        }
+  public void warn(final String msg) {
+    if (isLogOptionEnabled) {
+      logger.setLevel(Level.WARNING);
+      logger.warning(msg);
     }
+  }
 
-    public void warn(final String msg, final Object... args) {
-        trace(String.format(msg, args));
-    }
+  public void warn(final String msg, final Object... args) {
+    trace(String.format(msg, args));
+  }
 }

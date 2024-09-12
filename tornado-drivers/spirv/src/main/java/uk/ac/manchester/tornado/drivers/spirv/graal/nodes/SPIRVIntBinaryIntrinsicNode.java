@@ -24,6 +24,8 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.type.Stamp;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -37,9 +39,6 @@ import org.graalvm.compiler.nodes.calc.BinaryNode;
 import org.graalvm.compiler.nodes.spi.ArithmeticLIRLowerable;
 import org.graalvm.compiler.nodes.spi.CanonicalizerTool;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.drivers.spirv.graal.compiler.lir.SPIRVArithmeticTool;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVBuiltinTool;
@@ -47,117 +46,122 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 import uk.ac.manchester.tornado.runtime.graal.nodes.interfaces.MarkIntIntrinsicNode;
 
 @NodeInfo(nameTemplate = "{p#operation/s}")
-public class SPIRVIntBinaryIntrinsicNode extends BinaryNode implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
+public class SPIRVIntBinaryIntrinsicNode extends BinaryNode
+    implements ArithmeticLIRLowerable, MarkIntIntrinsicNode {
 
-    public static final NodeClass<SPIRVIntBinaryIntrinsicNode> TYPE = NodeClass.create(SPIRVIntBinaryIntrinsicNode.class);
-    protected final SPIRVIntOperation operation;
+  public static final NodeClass<SPIRVIntBinaryIntrinsicNode> TYPE =
+      NodeClass.create(SPIRVIntBinaryIntrinsicNode.class);
+  protected final SPIRVIntOperation operation;
 
-    protected SPIRVIntBinaryIntrinsicNode(ValueNode x, ValueNode y, SPIRVIntOperation op, JavaKind kind) {
-        super(TYPE, StampFactory.forKind(kind), x, y);
-        this.operation = op;
+  protected SPIRVIntBinaryIntrinsicNode(
+      ValueNode x, ValueNode y, SPIRVIntOperation op, JavaKind kind) {
+    super(TYPE, StampFactory.forKind(kind), x, y);
+    this.operation = op;
+  }
+
+  public static ValueNode create(ValueNode x, ValueNode y, SPIRVIntOperation op, JavaKind kind) {
+    ValueNode c = tryConstantFold(x, y, op, kind);
+    if (c != null) {
+      return c;
     }
+    return new SPIRVIntBinaryIntrinsicNode(x, y, op, kind);
+  }
 
-    public static ValueNode create(ValueNode x, ValueNode y, SPIRVIntOperation op, JavaKind kind) {
-        ValueNode c = tryConstantFold(x, y, op, kind);
-        if (c != null) {
-            return c;
-        }
-        return new SPIRVIntBinaryIntrinsicNode(x, y, op, kind);
+  protected static ValueNode tryConstantFold(
+      ValueNode x, ValueNode y, SPIRVIntOperation op, JavaKind kind) {
+    ConstantNode result = null;
+
+    if (x.isConstant() && y.isConstant()) {
+      if (kind == JavaKind.Int) {
+        int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), op);
+        result = ConstantNode.forInt(ret);
+      } else if (kind == JavaKind.Long) {
+        long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), op);
+        result = ConstantNode.forLong(ret);
+      }
     }
+    return result;
+  }
 
-    protected static ValueNode tryConstantFold(ValueNode x, ValueNode y, SPIRVIntOperation op, JavaKind kind) {
-        ConstantNode result = null;
+  private static long doCompute(long x, long y, SPIRVIntOperation op) {
+    return switch (op) {
+      case MIN -> Math.min(x, y);
+      case MAX -> Math.max(x, y);
+      default -> throw new TornadoInternalError("unknown op %s", op);
+    };
+  }
 
-        if (x.isConstant() && y.isConstant()) {
-            if (kind == JavaKind.Int) {
-                int ret = doCompute(x.asJavaConstant().asInt(), y.asJavaConstant().asInt(), op);
-                result = ConstantNode.forInt(ret);
-            } else if (kind == JavaKind.Long) {
-                long ret = doCompute(x.asJavaConstant().asLong(), y.asJavaConstant().asLong(), op);
-                result = ConstantNode.forLong(ret);
-            }
-        }
-        return result;
+  private static int doCompute(int x, int y, SPIRVIntOperation op) {
+    return switch (op) {
+      case MIN -> Math.min(x, y);
+      case MAX -> Math.max(x, y);
+      default -> throw new TornadoInternalError("unknown op %s", op);
+    };
+  }
+
+  @Override
+  public String getOperation() {
+    return operation.toString();
+  }
+
+  @Override
+  public ValueNode canonical(CanonicalizerTool tool) {
+    return canonical(tool, getX(), getY());
+  }
+
+  @Override
+  public Stamp foldStamp(Stamp stampX, Stamp stampY) {
+    return stamp(NodeView.DEFAULT);
+  }
+
+  @Override
+  public void generate(NodeLIRBuilderTool tool) {
+    generate(tool, tool.getLIRGeneratorTool().getArithmetic());
+  }
+
+  public SPIRVIntOperation operation() {
+    return operation;
+  }
+
+  @Override
+  public ValueNode canonical(CanonicalizerTool tool, ValueNode x, ValueNode y) {
+    ValueNode c = tryConstantFold(x, y, operation(), getStackKind());
+    if (c != null) {
+      return c;
     }
+    return this;
+  }
 
-    private static long doCompute(long x, long y, SPIRVIntOperation op) {
-        return switch (op) {
-            case MIN -> Math.min(x, y);
-            case MAX -> Math.max(x, y);
-            default -> throw new TornadoInternalError("unknown op %s", op);
+  @Override
+  public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGeneratorTool) {
+    SPIRVBuiltinTool gen = ((SPIRVArithmeticTool) lirGeneratorTool).getGen().getSpirvBuiltinTool();
+    Value x = builder.operand(getX());
+    Value y = builder.operand(getY());
+    Value computeIntrinsic =
+        switch (operation) {
+          case MIN -> gen.genIntMin(x, y);
+          case MAX -> gen.genIntMax(x, y);
+          default -> throw new RuntimeException("Int binary intrinsic not supported yet");
         };
-    }
+    Variable result = builder.getLIRGeneratorTool().newVariable(computeIntrinsic.getValueKind());
+    builder.getLIRGeneratorTool().append(new SPIRVLIRStmt.AssignStmt(result, computeIntrinsic));
+    builder.setResult(this, result);
+  }
 
-    private static int doCompute(int x, int y, SPIRVIntOperation op) {
-        return switch (op) {
-            case MIN -> Math.min(x, y);
-            case MAX -> Math.max(x, y);
-            default -> throw new TornadoInternalError("unknown op %s", op);
-        };
-    }
-
-    @Override
-    public String getOperation() {
-        return operation.toString();
-    }
-
-    @Override
-    public ValueNode canonical(CanonicalizerTool tool) {
-        return canonical(tool, getX(), getY());
-    }
-
-    @Override
-    public Stamp foldStamp(Stamp stampX, Stamp stampY) {
-        return stamp(NodeView.DEFAULT);
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool tool) {
-        generate(tool, tool.getLIRGeneratorTool().getArithmetic());
-    }
-
-    public SPIRVIntOperation operation() {
-        return operation;
-    }
-
-    @Override
-    public ValueNode canonical(CanonicalizerTool tool, ValueNode x, ValueNode y) {
-        ValueNode c = tryConstantFold(x, y, operation(), getStackKind());
-        if (c != null) {
-            return c;
-        }
-        return this;
-    }
-
-    @Override
-    public void generate(NodeLIRBuilderTool builder, ArithmeticLIRGeneratorTool lirGeneratorTool) {
-        SPIRVBuiltinTool gen = ((SPIRVArithmeticTool) lirGeneratorTool).getGen().getSpirvBuiltinTool();
-        Value x = builder.operand(getX());
-        Value y = builder.operand(getY());
-        Value computeIntrinsic = switch (operation) {
-            case MIN -> gen.genIntMin(x, y);
-            case MAX -> gen.genIntMax(x, y);
-            default -> throw new RuntimeException("Int binary intrinsic not supported yet");
-        };
-        Variable result = builder.getLIRGeneratorTool().newVariable(computeIntrinsic.getValueKind());
-        builder.getLIRGeneratorTool().append(new SPIRVLIRStmt.AssignStmt(result, computeIntrinsic));
-        builder.setResult(this, result);
-    }
-
-    //@formatter:off
-    public enum SPIRVIntOperation {
-        ABS_DIFF,
-        ABS_SAT,
-        HADD,
-        RHADD,
-        MAX,
-        MIN,
-        MUL_HI,
-        ROTATE,
-        SUB_SAT,
-        UPSAMPLE,
-        MUL24,
-    }
-    //@formatter:on
+  // @formatter:off
+  public enum SPIRVIntOperation {
+    ABS_DIFF,
+    ABS_SAT,
+    HADD,
+    RHADD,
+    MAX,
+    MIN,
+    MUL_HI,
+    ROTATE,
+    SUB_SAT,
+    UPSAMPLE,
+    MUL24,
+  }
+  // @formatter:on
 
 }

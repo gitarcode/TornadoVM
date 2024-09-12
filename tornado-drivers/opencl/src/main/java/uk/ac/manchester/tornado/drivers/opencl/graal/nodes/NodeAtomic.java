@@ -29,12 +29,11 @@ import org.graalvm.compiler.nodes.ValueNode;
 @NodeInfo(shortName = "ATOMIC")
 public abstract class NodeAtomic extends ValueNode {
 
-    public static final NodeClass<NodeAtomic> TYPE = NodeClass.create(NodeAtomic.class);
+  public static final NodeClass<NodeAtomic> TYPE = NodeClass.create(NodeAtomic.class);
 
-    protected NodeAtomic(NodeClass<? extends ValueNode> c, Stamp stamp) {
-        super(c, stamp);
-    }
+  protected NodeAtomic(NodeClass<? extends ValueNode> c, Stamp stamp) {
+    super(c, stamp);
+  }
 
-    public abstract ValueNode getAtomicNode();
-
+  public abstract ValueNode getAtomicNode();
 }

@@ -23,11 +23,10 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.lir.LIRInstruction.Use;
 import org.graalvm.compiler.lir.Opcode;
-
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLOp;
 import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler.OCLOp3;
@@ -37,212 +36,207 @@ import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResu
 
 public class OCLVectorAssign {
 
-    /**
-     * OpenCL vector assignment expression
-     */
-    public static class Assign2Expr extends OCLLIROp {
+  /** OpenCL vector assignment expression */
+  public static class Assign2Expr extends OCLLIROp {
 
-        @Opcode
-        protected final OCLOp opcode;
+    @Opcode protected final OCLOp opcode;
 
-        @Use
-        protected Value s0;
-        @Use
-        protected Value s1;
+    @Use protected Value s0;
+    @Use protected Value s1;
 
-        public Assign2Expr(OCLOp opcode, OCLKind oclKind, Value s0, Value s1) {
-            super(LIRKind.value(oclKind));
-            this.opcode = opcode;
-            this.s0 = s0;
-            this.s1 = s1;
-        }
-
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            asm.emit(opcode.toString());
-            asm.emit("(");
-            asm.emitValueOrOp(crb, s0);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s1);
-            asm.emit(")");
-        }
+    public Assign2Expr(OCLOp opcode, OCLKind oclKind, Value s0, Value s1) {
+      super(LIRKind.value(oclKind));
+      this.opcode = opcode;
+      this.s0 = s0;
+      this.s1 = s1;
     }
 
-    /**
-     * OpenCL vector assignment expression
-     */
-    public static class Assign3Expr extends Assign2Expr {
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      asm.emit(opcode.toString());
+      asm.emit("(");
+      asm.emitValueOrOp(crb, s0);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s1);
+      asm.emit(")");
+    }
+  }
 
-        @Use
-        protected Value s2;
+  /** OpenCL vector assignment expression */
+  public static class Assign3Expr extends Assign2Expr {
 
-        public Assign3Expr(OCLOp3 opcode, OCLKind kind, Value s0, Value s1, Value s2) {
-            super(opcode, kind, s0, s1);
-            this.s2 = s2;
-        }
+    @Use protected Value s2;
 
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            asm.emit(opcode.toString());
-            asm.emit("(");
-            asm.emitValueOrOp(crb, s0);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s1);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s2);
-            asm.emit(")");
-        }
-
+    public Assign3Expr(OCLOp3 opcode, OCLKind kind, Value s0, Value s1, Value s2) {
+      super(opcode, kind, s0, s1);
+      this.s2 = s2;
     }
 
-    /**
-     * OpenCL vector assignment expression
-     */
-    public static class Assign4Expr extends Assign3Expr {
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      asm.emit(opcode.toString());
+      asm.emit("(");
+      asm.emitValueOrOp(crb, s0);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s1);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s2);
+      asm.emit(")");
+    }
+  }
 
-        @Use
-        protected Value s3;
+  /** OpenCL vector assignment expression */
+  public static class Assign4Expr extends Assign3Expr {
 
-        public Assign4Expr(OCLOp4 opcode, OCLKind kind, Value s0, Value s1, Value s2, Value s3) {
-            super(opcode, kind, s0, s1, s2);
-            this.s3 = s3;
-        }
+    @Use protected Value s3;
 
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            asm.emit(opcode.toString());
-            asm.emit("(");
-            asm.emitValueOrOp(crb, s0);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s1);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s2);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s3);
-            asm.emit(")");
-        }
-
+    public Assign4Expr(OCLOp4 opcode, OCLKind kind, Value s0, Value s1, Value s2, Value s3) {
+      super(opcode, kind, s0, s1, s2);
+      this.s3 = s3;
     }
 
-    /**
-     * OpenCL vector assignment expression
-     */
-    public static class Assign8Expr extends Assign4Expr {
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      asm.emit(opcode.toString());
+      asm.emit("(");
+      asm.emitValueOrOp(crb, s0);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s1);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s2);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s3);
+      asm.emit(")");
+    }
+  }
 
-        @Use
-        protected Value s4;
-        @Use
-        protected Value s5;
-        @Use
-        protected Value s6;
-        @Use
-        protected Value s7;
+  /** OpenCL vector assignment expression */
+  public static class Assign8Expr extends Assign4Expr {
 
-        public Assign8Expr(OCLOp8 opcode, OCLKind kind, Value s0, Value s1, Value s2, Value s3, Value s4, Value s5, Value s6, Value s7) {
-            super(opcode, kind, s0, s1, s2, s3);
-            this.s4 = s4;
-            this.s5 = s5;
-            this.s6 = s6;
-            this.s7 = s7;
-        }
+    @Use protected Value s4;
+    @Use protected Value s5;
+    @Use protected Value s6;
+    @Use protected Value s7;
 
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            asm.emit(opcode.toString());
-            asm.emit("(");
-            asm.emitValueOrOp(crb, s0);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s1);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s2);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s3);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s4);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s5);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s6);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s7);
-            asm.emit(")");
-        }
-
+    public Assign8Expr(
+        OCLOp8 opcode,
+        OCLKind kind,
+        Value s0,
+        Value s1,
+        Value s2,
+        Value s3,
+        Value s4,
+        Value s5,
+        Value s6,
+        Value s7) {
+      super(opcode, kind, s0, s1, s2, s3);
+      this.s4 = s4;
+      this.s5 = s5;
+      this.s6 = s6;
+      this.s7 = s7;
     }
 
-    /**
-     * OpenCL vector assignment expression
-     */
-    public static class Assign16Expr extends Assign8Expr {
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      asm.emit(opcode.toString());
+      asm.emit("(");
+      asm.emitValueOrOp(crb, s0);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s1);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s2);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s3);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s4);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s5);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s6);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s7);
+      asm.emit(")");
+    }
+  }
 
-        @Use
-        protected Value s8;
-        @Use
-        protected Value s9;
-        @Use
-        protected Value s10;
-        @Use
-        protected Value s11;
-        @Use
-        protected Value s12;
-        @Use
-        protected Value s13;
-        @Use
-        protected Value s14;
-        @Use
-        protected Value s15;
+  /** OpenCL vector assignment expression */
+  public static class Assign16Expr extends Assign8Expr {
 
-        public Assign16Expr(OCLOp8 opcode, OCLKind kind, Value s0, Value s1, Value s2, Value s3, Value s4, Value s5, Value s6, Value s7, Value s8, Value s9, Value s10, Value s11, Value s12, Value s13,
-                Value s14, Value s15) {
-            super(opcode, kind, s0, s1, s2, s3, s4, s5, s6, s7);
-            this.s8 = s8;
-            this.s9 = s9;
-            this.s10 = s10;
-            this.s11 = s11;
-            this.s12 = s12;
-            this.s13 = s13;
-            this.s14 = s14;
-            this.s15 = s15;
-        }
+    @Use protected Value s8;
+    @Use protected Value s9;
+    @Use protected Value s10;
+    @Use protected Value s11;
+    @Use protected Value s12;
+    @Use protected Value s13;
+    @Use protected Value s14;
+    @Use protected Value s15;
 
-        @Override
-        public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-            asm.emit(opcode.toString());
-            asm.emit("(");
-            asm.emitValueOrOp(crb, s0);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s1);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s2);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s3);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s4);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s5);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s6);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s7);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s8);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s9);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s10);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s11);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s12);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s13);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s14);
-            asm.emit(", ");
-            asm.emitValueOrOp(crb, s15);
-            asm.emit(")");
-        }
-
+    public Assign16Expr(
+        OCLOp8 opcode,
+        OCLKind kind,
+        Value s0,
+        Value s1,
+        Value s2,
+        Value s3,
+        Value s4,
+        Value s5,
+        Value s6,
+        Value s7,
+        Value s8,
+        Value s9,
+        Value s10,
+        Value s11,
+        Value s12,
+        Value s13,
+        Value s14,
+        Value s15) {
+      super(opcode, kind, s0, s1, s2, s3, s4, s5, s6, s7);
+      this.s8 = s8;
+      this.s9 = s9;
+      this.s10 = s10;
+      this.s11 = s11;
+      this.s12 = s12;
+      this.s13 = s13;
+      this.s14 = s14;
+      this.s15 = s15;
     }
 
+    @Override
+    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+      asm.emit(opcode.toString());
+      asm.emit("(");
+      asm.emitValueOrOp(crb, s0);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s1);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s2);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s3);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s4);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s5);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s6);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s7);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s8);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s9);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s10);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s11);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s12);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s13);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s14);
+      asm.emit(", ");
+      asm.emitValueOrOp(crb, s15);
+      asm.emit(")");
+    }
+  }
 }

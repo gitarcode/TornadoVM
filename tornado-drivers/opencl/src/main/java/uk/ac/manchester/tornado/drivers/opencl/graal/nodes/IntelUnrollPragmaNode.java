@@ -31,25 +31,26 @@ import org.graalvm.compiler.nodes.FixedWithNextNode;
 import org.graalvm.compiler.nodes.LoopBeginNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
 import uk.ac.manchester.tornado.drivers.opencl.graal.lir.OCLLIRStmt;
 
 @NodeInfo
 public class IntelUnrollPragmaNode extends FixedWithNextNode implements LIRLowerable {
 
-    @Successor
-    LoopBeginNode loopBgNd;
-    public static final NodeClass<IntelUnrollPragmaNode> TYPE = NodeClass.create(IntelUnrollPragmaNode.class);
+  @Successor LoopBeginNode loopBgNd;
+  public static final NodeClass<IntelUnrollPragmaNode> TYPE =
+      NodeClass.create(IntelUnrollPragmaNode.class);
 
-    private int unroll;
+  private int unroll;
 
-    public IntelUnrollPragmaNode(int unroll) {
-        super(TYPE, StampFactory.forVoid());
-        this.unroll = unroll;
-    }
+  public IntelUnrollPragmaNode(int unroll) {
+    super(TYPE, StampFactory.forVoid());
+    this.unroll = unroll;
+  }
 
-    @Override
-    public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
-        nodeLIRBuilderTool.getLIRGeneratorTool().append(new OCLLIRStmt.PragmaExpr(new OCLPragmaUnroll(unroll)));
-    }
+  @Override
+  public void generate(NodeLIRBuilderTool nodeLIRBuilderTool) {
+    nodeLIRBuilderTool
+        .getLIRGeneratorTool()
+        .append(new OCLLIRStmt.PragmaExpr(new OCLPragmaUnroll(unroll)));
+  }
 }

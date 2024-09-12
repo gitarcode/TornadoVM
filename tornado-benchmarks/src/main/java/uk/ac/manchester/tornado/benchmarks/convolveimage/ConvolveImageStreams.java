@@ -27,56 +27,54 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class ConvolveImageStreams extends BenchmarkDriver {
 
-    private final int imageSizeX;
-    private final int imageSizeY;
-    private final int filterSize;
+  private final int imageSizeX;
+  private final int imageSizeY;
+  private final int filterSize;
 
-    private ImageFloat input;
-    private ImageFloat output;
-    private ImageFloat filter;
+  private ImageFloat input;
+  private ImageFloat output;
+  private ImageFloat filter;
 
-    public ConvolveImageStreams(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
-        super(iterations);
-        this.imageSizeX = imageSizeX;
-        this.imageSizeY = imageSizeY;
-        this.filterSize = filterSize;
-    }
+  public ConvolveImageStreams(int iterations, int imageSizeX, int imageSizeY, int filterSize) {
+    super(iterations);
+    this.imageSizeX = imageSizeX;
+    this.imageSizeY = imageSizeY;
+    this.filterSize = filterSize;
+  }
 
-    @Override
-    public void setUp() {
-        input = new ImageFloat(imageSizeX, imageSizeY);
-        output = new ImageFloat(imageSizeX, imageSizeY);
-        filter = new ImageFloat(filterSize, filterSize);
+  @Override
+  public void setUp() {
+    input = new ImageFloat(imageSizeX, imageSizeY);
+    output = new ImageFloat(imageSizeX, imageSizeY);
+    filter = new ImageFloat(filterSize, filterSize);
 
-        createImage(input);
-        createFilter(filter);
-    }
+    createImage(input);
+    createFilter(filter);
+  }
 
-    @Override
-    public void tearDown() {
-        input = null;
-        output = null;
-        filter = null;
-        super.tearDown();
-    }
+  @Override
+  public void tearDown() {
+    input = null;
+    output = null;
+    filter = null;
+    super.tearDown();
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        convolveImageStreams(input, filter, output);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    convolveImageStreams(input, filter, output);
+  }
 
-    @Override
-    public void barrier() {
+  @Override
+  public void barrier() {}
 
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

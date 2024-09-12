@@ -46,88 +46,123 @@ import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class LevelZeroKernelTimeStamp {
 
-    private ZeKernelTimeStampResult resultKernel;
-    private LevelZeroByteBuffer timeStampBuffer;
-    private ZeEventPoolHandle eventPoolHandle;
-    private SPIRVDeviceContext deviceContext;
-    private LevelZeroCommandList commandList;
-    private ZeEventHandle kernelEventTimer;
-    private SPIRVLevelZeroCommandQueue commandQueue;
+  private ZeKernelTimeStampResult resultKernel;
+  private LevelZeroByteBuffer timeStampBuffer;
+  private ZeEventPoolHandle eventPoolHandle;
+  private SPIRVDeviceContext deviceContext;
+  private LevelZeroCommandList commandList;
+  private ZeEventHandle kernelEventTimer;
+  private SPIRVLevelZeroCommandQueue commandQueue;
 
-    public LevelZeroKernelTimeStamp(SPIRVDeviceContext deviceContext, LevelZeroCommandList commandList, SPIRVLevelZeroCommandQueue commandQueue) {
-        this.deviceContext = deviceContext;
-        this.commandList = commandList;
-        this.commandQueue = commandQueue;
+  public LevelZeroKernelTimeStamp(
+      SPIRVDeviceContext deviceContext,
+      LevelZeroCommandList commandList,
+      SPIRVLevelZeroCommandQueue commandQueue) {
+    this.deviceContext = deviceContext;
+    this.commandList = commandList;
+    this.commandQueue = commandQueue;
+  }
+
+  public ZeEventHandle getKernelEventTimer() {
+    return this.kernelEventTimer;
+  }
+
+  public void createEventTimer() {
+    if (eventPoolHandle == null) {
+      eventPoolHandle = new ZeEventPoolHandle();
     }
+    kernelEventTimer = new ZeEventHandle();
+    LevelZeroDevice device = commandQueue.getDevice();
+    LevelZeroContext context = commandList.getContext();
+    createEventPoolAndEvents(
+        context,
+        device,
+        eventPoolHandle,
+        ZeEventPoolFlags.ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP,
+        1,
+        kernelEventTimer);
+  }
 
-    public ZeEventHandle getKernelEventTimer() {
-        return this.kernelEventTimer;
+  private static void createEventPoolAndEvents(
+      LevelZeroContext context,
+      LevelZeroDevice device,
+      ZeEventPoolHandle eventPoolHandle,
+      int poolEventFlags,
+      int poolSize,
+      ZeEventHandle kernelEvent) {
+
+    ZeEventPoolDescriptor eventPoolDescription = new ZeEventPoolDescriptor();
+
+    eventPoolDescription.setCount(poolSize);
+    eventPoolDescription.setFlags(poolEventFlags);
+
+    int result =
+        context.zeEventPoolCreate(
+            context.getDefaultContextPtr(),
+            eventPoolDescription,
+            1,
+            device.getDeviceHandlerPtr(),
+            eventPoolHandle);
+    LevelZeroUtils.errorLog("zeEventPoolCreate", result);
+
+    // Create Kernel Event
+    ZeEventDescriptor eventDescription = new ZeEventDescriptor();
+    eventDescription.setIndex(0);
+    eventDescription.setSignal(ZeEventScopeFlags.ZE_EVENT_SCOPE_FLAG_HOST);
+    eventDescription.setWait(ZeEventScopeFlags.ZE_EVENT_SCOPE_FLAG_HOST);
+    result = context.zeEventCreate(eventPoolHandle, eventDescription, kernelEvent);
+    LevelZeroUtils.errorLog("zeEventCreate", result);
+  }
+
+  public void solveEvent(long executionPlanId, TaskDataContext meta) {
+    timeStampBuffer = new LevelZeroByteBuffer();
+    ZeHostMemAllocDescriptor hostMemAllocDesc = new ZeHostMemAllocDescriptor();
+    LevelZeroContext context = commandList.getContext();
+    int result =
+        context.zeMemAllocHost(
+            context.getDefaultContextPtr(),
+            hostMemAllocDesc,
+            Sizeof.ze_kernel_timestamp_result_t.getNumBytes(),
+            1,
+            timeStampBuffer);
+    LevelZeroUtils.errorLog("zeMemAllocHost", result);
+
+    result =
+        commandList.zeCommandListAppendQueryKernelTimestamps(
+            commandList.getCommandListHandlerPtr(),
+            1,
+            kernelEventTimer,
+            timeStampBuffer,
+            null,
+            null,
+            0,
+            null);
+    LevelZeroUtils.errorLog("zeCommandListAppendQueryKernelTimestamps", result);
+    LevelZeroDevice device = commandQueue.getDevice();
+    solveKernelEvent(executionPlanId, device);
+    updateProfiler(resultKernel, meta);
+  }
+
+  public void solveKernelEvent(long executionPlanId, LevelZeroDevice device) {
+    ZeDeviceProperties deviceProperties = new ZeDeviceProperties();
+    int result = device.zeDeviceGetProperties(device.getDeviceHandlerPtr(), deviceProperties);
+    LevelZeroUtils.errorLog("zeDeviceGetProperties", result);
+    resultKernel = new ZeKernelTimeStampResult(deviceProperties);
+    deviceContext.flush(executionPlanId, device.getDeviceIndex());
+
+    resultKernel.resolve(timeStampBuffer);
+
+    if (TornadoOptions.DEBUG) {
+      resultKernel.printTimers();
     }
+  }
 
-    public void createEventTimer() {
-        if (eventPoolHandle == null) {
-            eventPoolHandle = new ZeEventPoolHandle();
-        }
-        kernelEventTimer = new ZeEventHandle();
-        LevelZeroDevice device = commandQueue.getDevice();
-        LevelZeroContext context = commandList.getContext();
-        createEventPoolAndEvents(context, device, eventPoolHandle, ZeEventPoolFlags.ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP, 1, kernelEventTimer);
-    }
-
-    private static void createEventPoolAndEvents(LevelZeroContext context, LevelZeroDevice device, ZeEventPoolHandle eventPoolHandle, int poolEventFlags, int poolSize, ZeEventHandle kernelEvent) {
-
-        ZeEventPoolDescriptor eventPoolDescription = new ZeEventPoolDescriptor();
-
-        eventPoolDescription.setCount(poolSize);
-        eventPoolDescription.setFlags(poolEventFlags);
-
-        int result = context.zeEventPoolCreate(context.getDefaultContextPtr(), eventPoolDescription, 1, device.getDeviceHandlerPtr(), eventPoolHandle);
-        LevelZeroUtils.errorLog("zeEventPoolCreate", result);
-
-        // Create Kernel Event
-        ZeEventDescriptor eventDescription = new ZeEventDescriptor();
-        eventDescription.setIndex(0);
-        eventDescription.setSignal(ZeEventScopeFlags.ZE_EVENT_SCOPE_FLAG_HOST);
-        eventDescription.setWait(ZeEventScopeFlags.ZE_EVENT_SCOPE_FLAG_HOST);
-        result = context.zeEventCreate(eventPoolHandle, eventDescription, kernelEvent);
-        LevelZeroUtils.errorLog("zeEventCreate", result);
-    }
-
-    public void solveEvent(long executionPlanId, TaskDataContext meta) {
-        timeStampBuffer = new LevelZeroByteBuffer();
-        ZeHostMemAllocDescriptor hostMemAllocDesc = new ZeHostMemAllocDescriptor();
-        LevelZeroContext context = commandList.getContext();
-        int result = context.zeMemAllocHost(context.getDefaultContextPtr(), hostMemAllocDesc, Sizeof.ze_kernel_timestamp_result_t.getNumBytes(), 1, timeStampBuffer);
-        LevelZeroUtils.errorLog("zeMemAllocHost", result);
-
-        result = commandList.zeCommandListAppendQueryKernelTimestamps(commandList.getCommandListHandlerPtr(), 1, kernelEventTimer, timeStampBuffer, null, null, 0, null);
-        LevelZeroUtils.errorLog("zeCommandListAppendQueryKernelTimestamps", result);
-        LevelZeroDevice device = commandQueue.getDevice();
-        solveKernelEvent(executionPlanId, device);
-        updateProfiler(resultKernel, meta);
-    }
-
-    public void solveKernelEvent(long executionPlanId, LevelZeroDevice device) {
-        ZeDeviceProperties deviceProperties = new ZeDeviceProperties();
-        int result = device.zeDeviceGetProperties(device.getDeviceHandlerPtr(), deviceProperties);
-        LevelZeroUtils.errorLog("zeDeviceGetProperties", result);
-        resultKernel = new ZeKernelTimeStampResult(deviceProperties);
-        deviceContext.flush(executionPlanId, device.getDeviceIndex());
-
-        resultKernel.resolve(timeStampBuffer);
-
-        if (TornadoOptions.DEBUG) {
-            resultKernel.printTimers();
-        }
-    }
-
-    private void updateProfiler(ZeKernelTimeStampResult resultKernel, final TaskDataContext meta) {
-        long timer = meta.getProfiler().getTimer(ProfilerType.TOTAL_KERNEL_TIME);
-        long kernelElapsedTime = (long) resultKernel.getKernelElapsedTime();
-        // Register globalTime
-        meta.getProfiler().setTimer(ProfilerType.TOTAL_KERNEL_TIME, timer + kernelElapsedTime);
-        // Register the time for the task
-        meta.getProfiler().setTaskTimer(ProfilerType.TASK_KERNEL_TIME, meta.getId(), kernelElapsedTime);
-    }
-
+  private void updateProfiler(ZeKernelTimeStampResult resultKernel, final TaskDataContext meta) {
+    long timer = meta.getProfiler().getTimer(ProfilerType.TOTAL_KERNEL_TIME);
+    long kernelElapsedTime = (long) resultKernel.getKernelElapsedTime();
+    // Register globalTime
+    meta.getProfiler().setTimer(ProfilerType.TOTAL_KERNEL_TIME, timer + kernelElapsedTime);
+    // Register the time for the task
+    meta.getProfiler().setTaskTimer(ProfilerType.TASK_KERNEL_TIME, meta.getId(), kernelElapsedTime);
+  }
 }

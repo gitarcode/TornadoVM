@@ -22,7 +22,6 @@
 package uk.ac.manchester.tornado.runtime.graal.phases.sketcher;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.graph.Node;
 import org.graalvm.compiler.graph.iterators.NodeIterable;
 import org.graalvm.compiler.nodes.GraphState;
@@ -34,71 +33,69 @@ import org.graalvm.compiler.nodes.calc.NarrowNode;
 import org.graalvm.compiler.nodes.calc.ShiftNode;
 import org.graalvm.compiler.nodes.calc.SignExtendNode;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoSketchTierContext;
 
 /**
- * The TornadoVM sketcher builds the IR for each reachable method from a given
- * task, and it passes a series of optimizations phases, starting with
- * Canonicalization. The first cannicalization phase differs from the Graal
- * execution workflow, and TornadoVM removes the link between a Narrow node and
- * the sign-Extend. This deletion triggers the elimination of this node when
- * passing to the deadcode-elimination.
- * 
- * This phase links the Narrow node with the Sign-Extend. This phase is intended
- * to be called after the first canonicalizer phase is passed. Currently this is
- * done in the TornadoVM Sketcher.
- * 
- * More detailed explanation: In this phase, we need to prevent that a Narrow
- * that is followed by a Sign-Extend node is removed from the IR. This is due to
- * a custom canonicalizer in TornadoVM, because we don't want to simplify vector
- * types, among other types. This path differs from vanilla GraalVM compiler.
- * 
+ * The TornadoVM sketcher builds the IR for each reachable method from a given task, and it passes a
+ * series of optimizations phases, starting with Canonicalization. The first cannicalization phase
+ * differs from the Graal execution workflow, and TornadoVM removes the link between a Narrow node
+ * and the sign-Extend. This deletion triggers the elimination of this node when passing to the
+ * deadcode-elimination.
+ *
+ * <p>This phase links the Narrow node with the Sign-Extend. This phase is intended to be called
+ * after the first canonicalizer phase is passed. Currently this is done in the TornadoVM Sketcher.
+ *
+ * <p>More detailed explanation: In this phase, we need to prevent that a Narrow that is followed by
+ * a Sign-Extend node is removed from the IR. This is due to a custom canonicalizer in TornadoVM,
+ * because we don't want to simplify vector types, among other types. This path differs from vanilla
+ * GraalVM compiler.
  */
 public class TornadoNumericPromotionPhase extends BasePhase<TornadoSketchTierContext> {
 
-    private boolean isNodeElegibleForNumericPromotion(ValueNode node) {
-        return (node instanceof BinaryArithmeticNode || node instanceof ShiftNode || node instanceof FixedBinaryNode);
-    }
+  private boolean isNodeElegibleForNumericPromotion(ValueNode node) {
+    return (node instanceof BinaryArithmeticNode
+        || node instanceof ShiftNode
+        || node instanceof FixedBinaryNode);
+  }
 
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
+  @Override
+  protected void run(StructuredGraph graph, TornadoSketchTierContext context) {
 
-        // Get Narrow Nodes
-        NodeIterable<NarrowNode> narrowNodes = graph.getNodes().filter(NarrowNode.class);
+    // Get Narrow Nodes
+    NodeIterable<NarrowNode> narrowNodes = graph.getNodes().filter(NarrowNode.class);
 
-        for (NarrowNode narrow : narrowNodes) {
-            // We check if the usage is sign-extend and the predecessor is a logic operator
-            ValueNode valueOfNarrow = narrow.getValue();
+    for (NarrowNode narrow : narrowNodes) {
+      // We check if the usage is sign-extend and the predecessor is a logic operator
+      ValueNode valueOfNarrow = narrow.getValue();
 
-            if (!isNodeElegibleForNumericPromotion(valueOfNarrow)) {
-                continue;
-            }
+      if (!isNodeElegibleForNumericPromotion(valueOfNarrow)) {
+        continue;
+      }
 
-            NodeIterable<Node> usages = narrow.usages();
-            SignExtendNode signExtendNode = null;
-            for (Node u : usages) {
-                if (u instanceof SignExtendNode) {
-                    signExtendNode = (SignExtendNode) u;
-                }
-            }
-            if (signExtendNode == null) {
-                continue;
-            }
-
-            NodeIterable<NarrowNode> filter = signExtendNode.usages().filter(NarrowNode.class);
-
-            if (filter.isNotEmpty()) {
-                // Do the link
-                NarrowNode newNarrowNode = filter.first();
-                signExtendNode.replaceAtMatchingUsages(newNarrowNode, node -> !node.equals(newNarrowNode));
-                assert graph.verify();
-            }
+      NodeIterable<Node> usages = narrow.usages();
+      SignExtendNode signExtendNode = null;
+      for (Node u : usages) {
+        if (u instanceof SignExtendNode) {
+          signExtendNode = (SignExtendNode) u;
         }
+      }
+      if (signExtendNode == null) {
+        continue;
+      }
+
+      NodeIterable<NarrowNode> filter = signExtendNode.usages().filter(NarrowNode.class);
+
+      if (filter.isNotEmpty()) {
+        // Do the link
+        NarrowNode newNarrowNode = filter.first();
+        signExtendNode.replaceAtMatchingUsages(newNarrowNode, node -> !node.equals(newNarrowNode));
+        assert graph.verify();
+      }
     }
+  }
 }

@@ -26,18 +26,16 @@
 package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
 import java.util.HashMap;
-
-import org.graalvm.compiler.core.common.LIRKind;
-import org.graalvm.compiler.lir.ConstantValue;
-import org.graalvm.compiler.lir.Variable;
-import org.graalvm.compiler.nodes.NodeView;
-import org.graalvm.compiler.nodes.ParameterNode;
-
 import jdk.vm.ci.meta.AllocatableValue;
 import jdk.vm.ci.meta.JavaKind;
 import jdk.vm.ci.meta.Local;
 import jdk.vm.ci.meta.PrimitiveConstant;
 import jdk.vm.ci.meta.Value;
+import org.graalvm.compiler.core.common.LIRKind;
+import org.graalvm.compiler.lir.ConstantValue;
+import org.graalvm.compiler.lir.Variable;
+import org.graalvm.compiler.nodes.NodeView;
+import org.graalvm.compiler.nodes.ParameterNode;
 import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.opencl.OCLTargetDescription;
 import uk.ac.manchester.tornado.drivers.opencl.graal.OCLArchitecture;
@@ -54,56 +52,77 @@ import uk.ac.manchester.tornado.runtime.common.OCLTokens;
 
 public class OCLGenTool {
 
-    protected OCLLIRGenerator gen;
+  protected OCLLIRGenerator gen;
 
-    private final HashMap<ParameterNode, Variable> parameterToVariable = new HashMap<>();
+  private final HashMap<ParameterNode, Variable> parameterToVariable = new HashMap<>();
 
-    public OCLGenTool(OCLLIRGenerator gen) {
-        this.gen = gen;
+  public OCLGenTool(OCLLIRGenerator gen) {
+    this.gen = gen;
+  }
+
+  public void emitVectorLoad(
+      AllocatableValue result,
+      OCLBinaryIntrinsic op,
+      Value index,
+      OCLAddressCast cast,
+      MemoryAccess address) {
+    Logger.traceBuildLIR(
+        Logger.BACKEND.OpenCL,
+        "emitVectorLoad: %s = (%s) %s",
+        result.toString(),
+        result.getPlatformKind().toString(),
+        address.toString());
+    gen.append(new VectorLoadStmt(result, op, index, cast, address));
+  }
+
+  private String getParameterName(Local local) {
+    String parameterName = local.getName();
+    if (OCLTokens.openCLTokens.contains(parameterName)) {
+      parameterName = "_" + parameterName;
+    }
+    return parameterName;
+  }
+
+  public Value emitParameterLoad(Local local, ParameterNode paramNode) {
+
+    Logger.traceBuildLIR(
+        Logger.BACKEND.OpenCL, "emitParameterLoad: stamp=%s", paramNode.stamp(NodeView.DEFAULT));
+
+    LIRKind lirKind = gen.getLIRKind(paramNode.stamp(NodeView.DEFAULT));
+    OCLKind oclKind = (OCLKind) lirKind.getPlatformKind();
+    OCLTargetDescription oclTarget = gen.target();
+
+    Variable result =
+        (oclKind.isVector())
+            ? gen.newVariable(LIRKind.value(oclTarget.getOCLKind(JavaKind.Object)))
+            : gen.newVariable(lirKind);
+    String parameterName = getParameterName(local);
+    gen.append(
+        new AssignStmt(
+            result, new OCLNullary.Parameter(OCLUnaryOp.CAST_TO_ULONG + parameterName, lirKind)));
+    parameterToVariable.put(paramNode, result);
+
+    if (oclKind.isVector()) {
+
+      Variable vector = gen.newVariable(lirKind);
+      OCLMemoryBase base = OCLArchitecture.globalSpace;
+      OCLBinaryIntrinsic intrinsic = VectorUtil.resolveLoadIntrinsic(oclKind);
+      OCLAddressCast cast = new OCLAddressCast(base, LIRKind.value(oclKind.getElementKind()));
+      MemoryAccess address = new MemoryAccess(base, result);
+
+      emitVectorLoad(
+          vector,
+          intrinsic,
+          new ConstantValue(LIRKind.value(OCLKind.INT), PrimitiveConstant.INT_0),
+          cast,
+          address);
+      result = vector;
     }
 
-    public void emitVectorLoad(AllocatableValue result, OCLBinaryIntrinsic op, Value index, OCLAddressCast cast, MemoryAccess address) {
-        Logger.traceBuildLIR(Logger.BACKEND.OpenCL, "emitVectorLoad: %s = (%s) %s", result.toString(), result.getPlatformKind().toString(), address.toString());
-        gen.append(new VectorLoadStmt(result, op, index, cast, address));
-    }
+    return result;
+  }
 
-    private String getParameterName(Local local) {
-        String parameterName = local.getName();
-        if (OCLTokens.openCLTokens.contains(parameterName)) {
-            parameterName = "_" + parameterName;
-        }
-        return parameterName;
-    }
-
-    public Value emitParameterLoad(Local local, ParameterNode paramNode) {
-
-        Logger.traceBuildLIR(Logger.BACKEND.OpenCL, "emitParameterLoad: stamp=%s", paramNode.stamp(NodeView.DEFAULT));
-
-        LIRKind lirKind = gen.getLIRKind(paramNode.stamp(NodeView.DEFAULT));
-        OCLKind oclKind = (OCLKind) lirKind.getPlatformKind();
-        OCLTargetDescription oclTarget = gen.target();
-
-        Variable result = (oclKind.isVector()) ? gen.newVariable(LIRKind.value(oclTarget.getOCLKind(JavaKind.Object))) : gen.newVariable(lirKind);
-        String parameterName = getParameterName(local);
-        gen.append(new AssignStmt(result, new OCLNullary.Parameter(OCLUnaryOp.CAST_TO_ULONG + parameterName, lirKind)));
-        parameterToVariable.put(paramNode, result);
-
-        if (oclKind.isVector()) {
-
-            Variable vector = gen.newVariable(lirKind);
-            OCLMemoryBase base = OCLArchitecture.globalSpace;
-            OCLBinaryIntrinsic intrinsic = VectorUtil.resolveLoadIntrinsic(oclKind);
-            OCLAddressCast cast = new OCLAddressCast(base, LIRKind.value(oclKind.getElementKind()));
-            MemoryAccess address = new MemoryAccess(base, result);
-
-            emitVectorLoad(vector, intrinsic, new ConstantValue(LIRKind.value(OCLKind.INT), PrimitiveConstant.INT_0), cast, address);
-            result = vector;
-        }
-
-        return result;
-    }
-
-    public HashMap<ParameterNode, Variable> getParameterToVariable() {
-        return parameterToVariable;
-    }
+  public HashMap<ParameterNode, Variable> getParameterToVariable() {
+    return parameterToVariable;
+  }
 }

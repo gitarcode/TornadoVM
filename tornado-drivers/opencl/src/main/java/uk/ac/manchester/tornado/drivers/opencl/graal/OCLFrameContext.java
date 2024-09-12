@@ -25,24 +25,22 @@ import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.unimp
 
 import org.graalvm.compiler.lir.asm.CompilationResultBuilder;
 import org.graalvm.compiler.lir.asm.FrameContext;
-
 import uk.ac.manchester.tornado.runtime.common.TornadoLogger;
 
 public class OCLFrameContext implements FrameContext {
 
-    @Override
-    public void enter(CompilationResultBuilder crb) {
-        new TornadoLogger().trace("FrameContext.enter()");
-    }
+  @Override
+  public void enter(CompilationResultBuilder crb) {
+    new TornadoLogger().trace("FrameContext.enter()");
+  }
 
-    @Override
-    public void leave(CompilationResultBuilder crb) {
-        new TornadoLogger().trace("FrameContext.leave()");
-    }
+  @Override
+  public void leave(CompilationResultBuilder crb) {
+    new TornadoLogger().trace("FrameContext.leave()");
+  }
 
-    @Override
-    public void returned(CompilationResultBuilder crb) {
-        unimplemented();
-    }
-
+  @Override
+  public void returned(CompilationResultBuilder crb) {
+    unimplemented();
+  }
 }

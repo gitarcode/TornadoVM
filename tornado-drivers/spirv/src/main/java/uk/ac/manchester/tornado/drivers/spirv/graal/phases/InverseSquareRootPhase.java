@@ -25,45 +25,50 @@
 package uk.ac.manchester.tornado.drivers.spirv.graal.phases;
 
 import java.util.Optional;
-
 import org.graalvm.compiler.nodes.ConstantNode;
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.StructuredGraph;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatDivNode;
 import org.graalvm.compiler.phases.Phase;
-
 import uk.ac.manchester.tornado.drivers.spirv.graal.nodes.RSqrtNode;
 import uk.ac.manchester.tornado.drivers.spirv.graal.nodes.SPIRVFPUnaryIntrinsicNode;
 
 public class InverseSquareRootPhase extends Phase {
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph) {
+  @Override
+  protected void run(StructuredGraph graph) {
 
-        graph.getNodes().filter(FloatDivNode.class).forEach(floatDivisionNode -> {
+    graph
+        .getNodes()
+        .filter(FloatDivNode.class)
+        .forEach(
+            floatDivisionNode -> {
 
-            // The combination is 1/sqrt(x)
-            if (floatDivisionNode.getX() instanceof ConstantNode) {
+              // The combination is 1/sqrt(x)
+              if (floatDivisionNode.getX() instanceof ConstantNode) {
                 ConstantNode constant = (ConstantNode) floatDivisionNode.getX();
-                if ((constant.getValue().toValueString().equals("1.0")) && (floatDivisionNode.getY() instanceof SPIRVFPUnaryIntrinsicNode)) {
-                    SPIRVFPUnaryIntrinsicNode intrinsicNode = (SPIRVFPUnaryIntrinsicNode) floatDivisionNode.getY();
-                    if (intrinsicNode.getIntrinsicOperation() == SPIRVFPUnaryIntrinsicNode.SPIRVUnaryOperation.SQRT) {
-                        ValueNode n = intrinsicNode.getValue();
-                        RSqrtNode rsqrtNode = new RSqrtNode(n);
-                        graph.addOrUnique(rsqrtNode);
-                        intrinsicNode.removeUsage(floatDivisionNode);
-                        if (intrinsicNode.hasNoUsages()) {
-                            intrinsicNode.safeDelete();
-                        }
-                        floatDivisionNode.replaceAtUsages(rsqrtNode);
-                        floatDivisionNode.safeDelete();
+                if ((constant.getValue().toValueString().equals("1.0"))
+                    && (floatDivisionNode.getY() instanceof SPIRVFPUnaryIntrinsicNode)) {
+                  SPIRVFPUnaryIntrinsicNode intrinsicNode =
+                      (SPIRVFPUnaryIntrinsicNode) floatDivisionNode.getY();
+                  if (intrinsicNode.getIntrinsicOperation()
+                      == SPIRVFPUnaryIntrinsicNode.SPIRVUnaryOperation.SQRT) {
+                    ValueNode n = intrinsicNode.getValue();
+                    RSqrtNode rsqrtNode = new RSqrtNode(n);
+                    graph.addOrUnique(rsqrtNode);
+                    intrinsicNode.removeUsage(floatDivisionNode);
+                    if (intrinsicNode.hasNoUsages()) {
+                      intrinsicNode.safeDelete();
                     }
+                    floatDivisionNode.replaceAtUsages(rsqrtNode);
+                    floatDivisionNode.safeDelete();
+                  }
                 }
-            }
-        });
-    }
+              }
+            });
+  }
 }

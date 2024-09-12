@@ -18,33 +18,43 @@
 package uk.ac.manchester.tornado.annotation;
 
 import java.util.List;
-
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.TypePath;
-
 import uk.ac.manchester.tornado.runtime.common.ParallelAnnotationProvider;
 
 public class ASMMethodVisitor extends MethodVisitor {
 
-    private final List<ParallelAnnotationProvider> parallelAnnotations;
-    static String parallelAnnotationClassPath = System.getProperty("tornado.load.annotation.parallel");
+  private final List<ParallelAnnotationProvider> parallelAnnotations;
+  static String parallelAnnotationClassPath =
+      System.getProperty("tornado.load.annotation.parallel");
 
-    public ASMMethodVisitor(int api, MethodVisitor methodVisitor, List<ParallelAnnotationProvider> parallelAnnotations) {
-        super(api, methodVisitor);
-        this.parallelAnnotations = parallelAnnotations;
+  public ASMMethodVisitor(
+      int api, MethodVisitor methodVisitor, List<ParallelAnnotationProvider> parallelAnnotations) {
+    super(api, methodVisitor);
+    this.parallelAnnotations = parallelAnnotations;
+  }
+
+  @Override
+  public AnnotationVisitor visitLocalVariableAnnotation(
+      int typeRef,
+      TypePath typePath,
+      Label[] start,
+      Label[] end,
+      int[] index,
+      String descriptor,
+      boolean visible) {
+    String annotationName = descriptor.replaceFirst("L", "").replace(";", "").replace("/", ".");
+
+    if (parallelAnnotationClassPath.equals(annotationName)) {
+      ParallelAnnotationProvider parallelAnnotation =
+          new ParallelAnnotation(
+              start[0].getOffset(), end[0].getOffset() - start[0].getOffset(), index[0]);
+      parallelAnnotations.add(parallelAnnotation);
     }
 
-    @Override
-    public AnnotationVisitor visitLocalVariableAnnotation(int typeRef, TypePath typePath, Label[] start, Label[] end, int[] index, String descriptor, boolean visible) {
-        String annotationName = descriptor.replaceFirst("L", "").replace(";", "").replace("/", ".");
-
-        if (parallelAnnotationClassPath.equals(annotationName)) {
-            ParallelAnnotationProvider parallelAnnotation = new ParallelAnnotation(start[0].getOffset(), end[0].getOffset() - start[0].getOffset(), index[0]);
-            parallelAnnotations.add(parallelAnnotation);
-        }
-
-        return super.visitLocalVariableAnnotation(typeRef, typePath, start, end, index, descriptor, visible);
-    }
+    return super.visitLocalVariableAnnotation(
+        typeRef, typePath, start, end, index, descriptor, visible);
+  }
 }

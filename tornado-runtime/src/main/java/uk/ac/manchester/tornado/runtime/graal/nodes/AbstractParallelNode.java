@@ -29,36 +29,37 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.calc.FloatingNode;
 
 @NodeInfo
-public abstract class AbstractParallelNode extends FloatingNode implements Comparable<AbstractParallelNode> {
+public abstract class AbstractParallelNode extends FloatingNode
+    implements Comparable<AbstractParallelNode> {
 
-    public static final NodeClass<AbstractParallelNode> TYPE = NodeClass.create(AbstractParallelNode.class);
+  public static final NodeClass<AbstractParallelNode> TYPE =
+      NodeClass.create(AbstractParallelNode.class);
 
-    protected int index;
-    @Input
-    protected ValueNode value;
+  protected int index;
+  @Input protected ValueNode value;
 
-    protected AbstractParallelNode(NodeClass<? extends AbstractParallelNode> type, int index, ValueNode value) {
-        super(type, StampFactory.forKind(JavaKind.Int));
-        assert stamp != null;
-        this.index = index;
-        this.value = value;
-    }
+  protected AbstractParallelNode(
+      NodeClass<? extends AbstractParallelNode> type, int index, ValueNode value) {
+    super(type, StampFactory.forKind(JavaKind.Int));
+    assert stamp != null;
+    this.index = index;
+    this.value = value;
+  }
 
-    public ValueNode value() {
-        return value;
-    }
+  public ValueNode value() {
+    return value;
+  }
 
-    public int index() {
-        return index;
-    }
+  public int index() {
+    return index;
+  }
 
-    @Override
-    public int compareTo(AbstractParallelNode o) {
-        return Integer.compare(index, o.index);
-    }
+  @Override
+  public int compareTo(AbstractParallelNode o) {
+    return Integer.compare(index, o.index);
+  }
 
-    public void setValue(ValueNode value) {
-        this.value = value;
-    }
-
+  public void setValue(ValueNode value) {
+    this.value = value;
+  }
 }

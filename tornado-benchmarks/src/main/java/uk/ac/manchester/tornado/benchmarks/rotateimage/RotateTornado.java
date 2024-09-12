@@ -31,90 +31,86 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run?
- * </p>
- * <code>
+ * How to run? <code>
  * tornado -m tornado.benchmarks/uk.ac.manchester.tornado.benchmarks.BenchmarkRunner rotateimage
  * </code>
  */
 public class RotateTornado extends BenchmarkDriver {
 
-    private final int numElementsX;
-    private final int numElementsY;
-    private ImageFloat3 input;
-    private ImageFloat3 output;
-    private Matrix4x4Float m;
+  private final int numElementsX;
+  private final int numElementsY;
+  private ImageFloat3 input;
+  private ImageFloat3 output;
+  private Matrix4x4Float m;
 
-    public RotateTornado(int iterations, int numElementsX, int numElementsY) {
-        super(iterations);
-        this.numElementsX = numElementsX;
-        this.numElementsY = numElementsY;
+  public RotateTornado(int iterations, int numElementsX, int numElementsY) {
+    super(iterations);
+    this.numElementsX = numElementsX;
+    this.numElementsY = numElementsY;
+  }
+
+  @Override
+  public void setUp() {
+    input = new ImageFloat3(numElementsX, numElementsY);
+    output = new ImageFloat3(numElementsX, numElementsY);
+
+    m = new Matrix4x4Float();
+    m.identity();
+
+    final Float3 value = new Float3(1f, 2f, 3f);
+    for (int i = 0; i < input.Y(); i++) {
+      for (int j = 0; j < input.X(); j++) {
+        input.set(j, i, value);
+      }
     }
 
-    @Override
-    public void setUp() {
-        input = new ImageFloat3(numElementsX, numElementsY);
-        output = new ImageFloat3(numElementsX, numElementsY);
+    taskGraph = new TaskGraph("benchmark");
+    taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, input);
+    taskGraph.task("rotateImage", GraphicsKernels::rotateImage, output, m, input);
+    taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, output);
 
-        m = new Matrix4x4Float();
-        m.identity();
+    immutableTaskGraph = taskGraph.snapshot();
+    executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
+    executionPlan.withWarmUp();
+  }
 
-        final Float3 value = new Float3(1f, 2f, 3f);
-        for (int i = 0; i < input.Y(); i++) {
-            for (int j = 0; j < input.X(); j++) {
-                input.set(j, i, value);
-            }
+  @Override
+  public void tearDown() {
+    executionResult.getProfilerResult().dumpProfiles();
+
+    input = null;
+    output = null;
+    m = null;
+
+    executionPlan.resetDevice();
+    super.tearDown();
+  }
+
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    executionResult = executionPlan.withDevice(device).execute();
+  }
+
+  @Override
+  public boolean validate(TornadoDevice device) {
+
+    final ImageFloat3 result = new ImageFloat3(numElementsX, numElementsY);
+
+    runBenchmark(device);
+    executionPlan.clearProfiles();
+
+    rotateImage(result, m, input);
+
+    float maxULP = 0f;
+    for (int i = 0; i < input.Y(); i++) {
+      for (int j = 0; j < input.X(); j++) {
+        final float ulp = findMaxULP(output.get(j, i), result.get(j, i));
+
+        if (ulp > maxULP) {
+          maxULP = ulp;
         }
-
-        taskGraph = new TaskGraph("benchmark");
-        taskGraph.transferToDevice(DataTransferMode.EVERY_EXECUTION, input);
-        taskGraph.task("rotateImage", GraphicsKernels::rotateImage, output, m, input);
-        taskGraph.transferToHost(DataTransferMode.EVERY_EXECUTION, output);
-
-        immutableTaskGraph = taskGraph.snapshot();
-        executionPlan = new TornadoExecutionPlan(immutableTaskGraph);
-        executionPlan.withWarmUp();
+      }
     }
-
-    @Override
-    public void tearDown() {
-        executionResult.getProfilerResult().dumpProfiles();
-
-        input = null;
-        output = null;
-        m = null;
-
-        executionPlan.resetDevice();
-        super.tearDown();
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        executionResult = executionPlan.withDevice(device).execute();
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-
-        final ImageFloat3 result = new ImageFloat3(numElementsX, numElementsY);
-
-        runBenchmark(device);
-        executionPlan.clearProfiles();
-
-        rotateImage(result, m, input);
-
-        float maxULP = 0f;
-        for (int i = 0; i < input.Y(); i++) {
-            for (int j = 0; j < input.X(); j++) {
-                final float ulp = findMaxULP(output.get(j, i), result.get(j, i));
-
-                if (ulp > maxULP) {
-                    maxULP = ulp;
-                }
-            }
-        }
-        return Float.compare(maxULP, MAX_ULP) <= 0;
-    }
-
+    return Float.compare(maxULP, MAX_ULP) <= 0;
+  }
 }

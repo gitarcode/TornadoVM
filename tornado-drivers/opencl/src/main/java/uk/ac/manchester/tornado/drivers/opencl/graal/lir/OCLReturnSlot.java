@@ -21,35 +21,33 @@
  */
 package uk.ac.manchester.tornado.drivers.opencl.graal.lir;
 
-import org.graalvm.compiler.core.common.LIRKind;
-import org.graalvm.compiler.lir.Opcode;
-
-import jdk.vm.ci.meta.AllocatableValue;
-import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
-import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
-
 import static uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssemblerConstants.FRAME_REF_NAME;
 import static uk.ac.manchester.tornado.drivers.opencl.mm.OCLKernelStackFrame.RETURN_VALUE_INDEX;
+
+import jdk.vm.ci.meta.AllocatableValue;
+import org.graalvm.compiler.core.common.LIRKind;
+import org.graalvm.compiler.lir.Opcode;
+import uk.ac.manchester.tornado.drivers.opencl.graal.asm.OCLAssembler;
+import uk.ac.manchester.tornado.drivers.opencl.graal.compiler.OCLCompilationResultBuilder;
 
 @Opcode("RETURN VALUE")
 public class OCLReturnSlot extends AllocatableValue {
 
-    public OCLReturnSlot(LIRKind lirKind) {
-        super(lirKind);
-    }
+  public OCLReturnSlot(LIRKind lirKind) {
+    super(lirKind);
+  }
 
-    public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
-        OCLKind type = ((OCLKind) getPlatformKind());
-        asm.emit("%s[%d]", FRAME_REF_NAME, RETURN_VALUE_INDEX);
-    }
+  public void emit(OCLCompilationResultBuilder crb, OCLAssembler asm) {
+    OCLKind type = ((OCLKind) getPlatformKind());
+    asm.emit("%s[%d]", FRAME_REF_NAME, RETURN_VALUE_INDEX);
+  }
 
-    public String getStringFormat() {
-        return String.format("%s[%d]", FRAME_REF_NAME, RETURN_VALUE_INDEX);
-    }
+  public String getStringFormat() {
+    return String.format("%s[%d]", FRAME_REF_NAME, RETURN_VALUE_INDEX);
+  }
 
-    @Override
-    public String toString() {
-        return "RETURN_SLOT";
-    }
-
+  @Override
+  public String toString() {
+    return "RETURN_SLOT";
+  }
 }

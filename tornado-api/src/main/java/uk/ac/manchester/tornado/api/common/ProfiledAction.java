@@ -21,24 +21,23 @@ import uk.ac.manchester.tornado.api.enums.TornadoExecutionStatus;
 
 public interface ProfiledAction {
 
-    String getName();
+  String getName();
 
-    long getQueuedTime();
+  long getQueuedTime();
 
-    long getSubmitTime();
+  long getSubmitTime();
 
-    long getStartTime();
+  long getStartTime();
 
-    long getEndTime();
+  long getEndTime();
 
-    long getElapsedTime();
+  long getElapsedTime();
 
-    long getDriverDispatchTime();
+  long getDriverDispatchTime();
 
-    double getElapsedTimeInSeconds();
+  double getElapsedTimeInSeconds();
 
-    TornadoExecutionStatus getStatus();
+  TornadoExecutionStatus getStatus();
 
-    double getTotalTimeInSeconds();
-
+  double getTotalTimeInSeconds();
 }

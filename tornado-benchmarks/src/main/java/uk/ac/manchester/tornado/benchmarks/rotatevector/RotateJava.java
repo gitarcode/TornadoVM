@@ -27,57 +27,54 @@ import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class RotateJava extends BenchmarkDriver {
 
-    private final int numElements;
+  private final int numElements;
 
-    private VectorFloat3 input;
-    private VectorFloat3 output;
-    private Matrix4x4Float m;
+  private VectorFloat3 input;
+  private VectorFloat3 output;
+  private Matrix4x4Float m;
 
-    public RotateJava(int iterations, int numElements) {
-        super(iterations);
-        this.numElements = numElements;
+  public RotateJava(int iterations, int numElements) {
+    super(iterations);
+    this.numElements = numElements;
+  }
+
+  @Override
+  public void setUp() {
+    input = new VectorFloat3(numElements);
+    output = new VectorFloat3(numElements);
+
+    m = new Matrix4x4Float();
+    m.identity();
+
+    final Float3 value = new Float3(1f, 2f, 3f);
+    for (int i = 0; i < numElements; i++) {
+      input.set(i, value);
     }
+  }
 
-    @Override
-    public void setUp() {
-        input = new VectorFloat3(numElements);
-        output = new VectorFloat3(numElements);
+  @Override
+  public void tearDown() {
+    input = null;
+    output = null;
+    m = null;
+    super.tearDown();
+  }
 
-        m = new Matrix4x4Float();
-        m.identity();
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    rotateVector(output, m, input);
+  }
 
-        final Float3 value = new Float3(1f, 2f, 3f);
-        for (int i = 0; i < numElements; i++) {
-            input.set(i, value);
-        }
+  @Override
+  public void barrier() {}
 
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public void tearDown() {
-        input = null;
-        output = null;
-        m = null;
-        super.tearDown();
-    }
-
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        rotateVector(output, m, input);
-    }
-
-    @Override
-    public void barrier() {
-
-    }
-
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }

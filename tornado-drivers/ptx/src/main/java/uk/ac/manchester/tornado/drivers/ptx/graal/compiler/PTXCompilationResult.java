@@ -27,42 +27,40 @@ import static uk.ac.manchester.tornado.drivers.ptx.graal.PTXCodeUtil.prependToTa
 
 import java.util.HashSet;
 import java.util.Set;
-
-import org.graalvm.compiler.code.CompilationResult;
-
 import jdk.vm.ci.meta.ResolvedJavaMethod;
+import org.graalvm.compiler.code.CompilationResult;
 import uk.ac.manchester.tornado.drivers.ptx.graal.backend.PTXBackend;
 import uk.ac.manchester.tornado.runtime.tasks.meta.TaskDataContext;
 
 public class PTXCompilationResult extends CompilationResult {
 
-    private Set<ResolvedJavaMethod> nonInlinedMethods;
-    private TaskDataContext taskMetaData;
+  private Set<ResolvedJavaMethod> nonInlinedMethods;
+  private TaskDataContext taskMetaData;
 
-    public PTXCompilationResult(String functionName, TaskDataContext meta) {
-        super(functionName);
-        this.taskMetaData = meta;
-    }
+  public PTXCompilationResult(String functionName, TaskDataContext meta) {
+    super(functionName);
+    this.taskMetaData = meta;
+  }
 
-    public void setNonInlinedMethods(Set<ResolvedJavaMethod> value) {
-        nonInlinedMethods = value;
-    }
+  public void setNonInlinedMethods(Set<ResolvedJavaMethod> value) {
+    nonInlinedMethods = value;
+  }
 
-    public Set<ResolvedJavaMethod> getNonInlinedMethods() {
-        return (nonInlinedMethods != null) ? nonInlinedMethods : new HashSet<>();
-    }
+  public Set<ResolvedJavaMethod> getNonInlinedMethods() {
+    return (nonInlinedMethods != null) ? nonInlinedMethods : new HashSet<>();
+  }
 
-    public void addCompiledMethodCode(byte[] code) {
-        byte[] newCode = prependToTargetCode(getTargetCode(), code);
-        setTargetCode(newCode, newCode.length);
-    }
+  public void addCompiledMethodCode(byte[] code) {
+    byte[] newCode = prependToTargetCode(getTargetCode(), code);
+    setTargetCode(newCode, newCode.length);
+  }
 
-    public void addPTXHeader(PTXBackend backend) {
-        byte[] newCode = getCodeWithAttachedPTXHeader(getTargetCode(), backend);
-        setTargetCode(newCode, newCode.length);
-    }
+  public void addPTXHeader(PTXBackend backend) {
+    byte[] newCode = getCodeWithAttachedPTXHeader(getTargetCode(), backend);
+    setTargetCode(newCode, newCode.length);
+  }
 
-    public TaskDataContext metaData() {
-        return taskMetaData;
-    }
+  public TaskDataContext metaData() {
+    return taskMetaData;
+  }
 }

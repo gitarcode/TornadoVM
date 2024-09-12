@@ -40,48 +40,46 @@ import uk.ac.manchester.tornado.drivers.ptx.graal.lir.PTXLIRStmt;
 @NodeInfo
 public class VectorMultHalfNode extends ValueNode implements LIRLowerable {
 
-    public static final NodeClass<VectorMultHalfNode> TYPE = NodeClass.create(VectorMultHalfNode.class);
+  public static final NodeClass<VectorMultHalfNode> TYPE =
+      NodeClass.create(VectorMultHalfNode.class);
 
-    @Input
-    private ValueNode x;
+  @Input private ValueNode x;
 
-    @Input
-    private ValueNode y;
+  @Input private ValueNode y;
 
-    public VectorMultHalfNode(ValueNode x, ValueNode y) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.x = x;
-        this.y = y;
+  public VectorMultHalfNode(ValueNode x, ValueNode y) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.x = x;
+    this.y = y;
+  }
+
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+    Variable result = tool.newVariable(LIRKind.value(PTXKind.B16));
+    Value inputX, inputY;
+    if (x.stamp(NodeView.DEFAULT).isFloatStamp() || x instanceof ConstantNode) {
+      // the value to be written is in float format, so the bytecodes to convert
+      // to half float need to be generated
+      Value value = generator.operand(x);
+      Variable intermediate = tool.newVariable(LIRKind.value(PTXKind.F32));
+      Variable res = tool.newVariable(LIRKind.value(PTXKind.F16));
+      tool.append(new PTXLIRStmt.ConvertHalfFloatStmt(res, value, intermediate));
+      inputX = res;
+    } else {
+      inputX = generator.operand(x);
     }
-
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-        Variable result = tool.newVariable(LIRKind.value(PTXKind.B16));
-        Value inputX, inputY;
-        if (x.stamp(NodeView.DEFAULT).isFloatStamp() || x instanceof ConstantNode) {
-            // the value to be written is in float format, so the bytecodes to convert
-            // to half float need to be generated
-            Value value = generator.operand(x);
-            Variable intermediate = tool.newVariable(LIRKind.value(PTXKind.F32));
-            Variable res = tool.newVariable(LIRKind.value(PTXKind.F16));
-            tool.append(new PTXLIRStmt.ConvertHalfFloatStmt(res, value, intermediate));
-            inputX = res;
-        } else {
-            inputX = generator.operand(x);
-        }
-        if (y.stamp(NodeView.DEFAULT).isFloatStamp() || y instanceof ConstantNode) {
-            // the value to be written is in float format, so the bytecodes to convert
-            // to half float need to be generated
-            Value value = generator.operand(y);
-            Variable intermediate = tool.newVariable(LIRKind.value(PTXKind.F32));
-            Variable res = tool.newVariable(LIRKind.value(PTXKind.F16));
-            tool.append(new PTXLIRStmt.ConvertHalfFloatStmt(res, value, intermediate));
-            inputY = res;
-        } else {
-            inputY = generator.operand(y);
-        }
-        tool.append(new PTXLIRStmt.VectorMultHalfStmt(result, inputX, inputY));
-        generator.setResult(this, result);
+    if (y.stamp(NodeView.DEFAULT).isFloatStamp() || y instanceof ConstantNode) {
+      // the value to be written is in float format, so the bytecodes to convert
+      // to half float need to be generated
+      Value value = generator.operand(y);
+      Variable intermediate = tool.newVariable(LIRKind.value(PTXKind.F32));
+      Variable res = tool.newVariable(LIRKind.value(PTXKind.F16));
+      tool.append(new PTXLIRStmt.ConvertHalfFloatStmt(res, value, intermediate));
+      inputY = res;
+    } else {
+      inputY = generator.operand(y);
     }
-
+    tool.append(new PTXLIRStmt.VectorMultHalfStmt(result, inputX, inputY));
+    generator.setResult(this, result);
+  }
 }

@@ -27,19 +27,17 @@ import static uk.ac.manchester.tornado.api.exceptions.TornadoInternalError.shoul
 
 public abstract class UnaryNode extends AbstractNode {
 
-    protected AbstractNode input;
+  protected AbstractNode input;
 
-    public AbstractNode getInput() {
-        return input;
+  public AbstractNode getInput() {
+    return input;
+  }
+
+  public void replaceAtInputs(AbstractNode toReplace, AbstractNode replacement) {
+    if (input == toReplace) {
+      input = replacement;
+    } else {
+      shouldNotReachHere();
     }
-
-    public void replaceAtInputs(AbstractNode toReplace, AbstractNode replacement) {
-        if (input == toReplace) {
-            input = replacement;
-        } else {
-            shouldNotReachHere();
-        }
-
-    }
-
+  }
 }

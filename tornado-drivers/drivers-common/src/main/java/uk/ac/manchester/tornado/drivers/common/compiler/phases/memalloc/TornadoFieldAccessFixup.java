@@ -23,7 +23,6 @@ package uk.ac.manchester.tornado.drivers.common.compiler.phases.memalloc;
 
 import java.util.ArrayDeque;
 import java.util.Optional;
-
 import org.graalvm.compiler.nodes.GraphState;
 import org.graalvm.compiler.nodes.ParameterNode;
 import org.graalvm.compiler.nodes.PiNode;
@@ -37,74 +36,95 @@ import org.graalvm.compiler.nodes.java.LoadFieldNode;
 import org.graalvm.compiler.nodes.java.StoreFieldNode;
 import org.graalvm.compiler.nodes.memory.address.OffsetAddressNode;
 import org.graalvm.compiler.phases.BasePhase;
-
 import uk.ac.manchester.tornado.api.exceptions.TornadoInternalError;
 import uk.ac.manchester.tornado.runtime.graal.nodes.calc.TornadoAddressArithmeticNode;
 import uk.ac.manchester.tornado.runtime.graal.phases.TornadoHighTierContext;
 
 public class TornadoFieldAccessFixup extends BasePhase<TornadoHighTierContext> {
-    @Override
-    public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
-        return ALWAYS_APPLICABLE;
-    }
+  @Override
+  public Optional<NotApplicable> notApplicableTo(GraphState graphState) {
+    return ALWAYS_APPLICABLE;
+  }
 
-    @Override
-    protected void run(StructuredGraph graph, TornadoHighTierContext context) {
-        ArrayDeque<LoadFieldNode> worklist = new ArrayDeque<>();
-        graph.getNodes().filter(ParameterNode.class).forEach(parameterNode -> {
-            worklist.addAll(parameterNode.usages().filter(LoadFieldNode.class).snapshot());
-            parameterNode.usages().filter(usage -> usage instanceof PiNode && ((PiNode) usage).object() instanceof ParameterNode).forEach(usage -> worklist.addAll(usage.usages().filter(
-                    LoadFieldNode.class).snapshot()));
-        });
-
-        while (!worklist.isEmpty()) {
-            LoadFieldNode loadField = worklist.poll();
-            worklist.addAll(loadField.usages().filter(LoadFieldNode.class).snapshot());
-
-            loadField.usages().forEach(usage -> {
-                if (usage instanceof AccessIndexedNode accessIndexedNode) {
-                    ValueNode base = loadField.object();
-                    if (base instanceof PiNode) {
-                        base = ((PiNode) base).object();
-                    } else if (base instanceof TornadoAddressArithmeticNode) {
-                        base = ((TornadoAddressArithmeticNode) base).getBase();
-                    }
-                    TornadoAddressArithmeticNode addNode = new TornadoAddressArithmeticNode(base, loadField);
-                    graph.addWithoutUnique(addNode);
-                    accessIndexedNode.setArray(addNode);
-                } else if (usage instanceof AccessFieldNode accessFieldNode) {
-                    ValueNode base = loadField.object();
-                    if (base instanceof PiNode) {
-                        base = ((PiNode) base).object();
-                    } else if (base instanceof TornadoAddressArithmeticNode) {
-                        base = ((TornadoAddressArithmeticNode) base).getBase();
-                    }
-                    TornadoAddressArithmeticNode addNode = new TornadoAddressArithmeticNode(base, loadField);
-                    graph.addWithoutUnique(addNode);
-                    if (accessFieldNode instanceof LoadFieldNode) {
-                        ((LoadFieldNode) accessFieldNode).setObject(addNode);
-                    } else if (accessFieldNode instanceof StoreFieldNode storeFieldNodeUsage) {
-                        StoreFieldNode storeFieldNode = new StoreFieldNode(addNode, storeFieldNodeUsage.field(), storeFieldNodeUsage.value());
-                        graph.addWithoutUnique(storeFieldNode);
-                        graph.replaceFixedWithFixed(storeFieldNodeUsage, storeFieldNode);
-                    } else {
-                        TornadoInternalError.shouldNotReachHere("Unexpected node type = %s", accessFieldNode.getClass().getName());
-                    }
-                } else if (usage instanceof OffsetAddressNode) {
-                    if (usage.usages().filter(JavaWriteNode.class).isNotEmpty() || usage.usages().filter(JavaReadNode.class).isNotEmpty()) {
-                        ValueNode base = loadField.object();
-                        if (base instanceof PiNode basePI) {
-                            base = basePI.object();
-                        } else if (base instanceof TornadoAddressArithmeticNode tornadoAddressArithmeticNode) {
-                            base = tornadoAddressArithmeticNode.getBase();
-                        }
-
-                        TornadoAddressArithmeticNode addNode = new TornadoAddressArithmeticNode(base, loadField);
-                        graph.addWithoutUnique(addNode);
-                        usage.replaceFirstInput(loadField, addNode);
-                    }
-                }
+  @Override
+  protected void run(StructuredGraph graph, TornadoHighTierContext context) {
+    ArrayDeque<LoadFieldNode> worklist = new ArrayDeque<>();
+    graph
+        .getNodes()
+        .filter(ParameterNode.class)
+        .forEach(
+            parameterNode -> {
+              worklist.addAll(parameterNode.usages().filter(LoadFieldNode.class).snapshot());
+              parameterNode
+                  .usages()
+                  .filter(
+                      usage ->
+                          usage instanceof PiNode
+                              && ((PiNode) usage).object() instanceof ParameterNode)
+                  .forEach(
+                      usage ->
+                          worklist.addAll(usage.usages().filter(LoadFieldNode.class).snapshot()));
             });
-        }
+
+    while (!worklist.isEmpty()) {
+      LoadFieldNode loadField = worklist.poll();
+      worklist.addAll(loadField.usages().filter(LoadFieldNode.class).snapshot());
+
+      loadField
+          .usages()
+          .forEach(
+              usage -> {
+                if (usage instanceof AccessIndexedNode accessIndexedNode) {
+                  ValueNode base = loadField.object();
+                  if (base instanceof PiNode) {
+                    base = ((PiNode) base).object();
+                  } else if (base instanceof TornadoAddressArithmeticNode) {
+                    base = ((TornadoAddressArithmeticNode) base).getBase();
+                  }
+                  TornadoAddressArithmeticNode addNode =
+                      new TornadoAddressArithmeticNode(base, loadField);
+                  graph.addWithoutUnique(addNode);
+                  accessIndexedNode.setArray(addNode);
+                } else if (usage instanceof AccessFieldNode accessFieldNode) {
+                  ValueNode base = loadField.object();
+                  if (base instanceof PiNode) {
+                    base = ((PiNode) base).object();
+                  } else if (base instanceof TornadoAddressArithmeticNode) {
+                    base = ((TornadoAddressArithmeticNode) base).getBase();
+                  }
+                  TornadoAddressArithmeticNode addNode =
+                      new TornadoAddressArithmeticNode(base, loadField);
+                  graph.addWithoutUnique(addNode);
+                  if (accessFieldNode instanceof LoadFieldNode) {
+                    ((LoadFieldNode) accessFieldNode).setObject(addNode);
+                  } else if (accessFieldNode instanceof StoreFieldNode storeFieldNodeUsage) {
+                    StoreFieldNode storeFieldNode =
+                        new StoreFieldNode(
+                            addNode, storeFieldNodeUsage.field(), storeFieldNodeUsage.value());
+                    graph.addWithoutUnique(storeFieldNode);
+                    graph.replaceFixedWithFixed(storeFieldNodeUsage, storeFieldNode);
+                  } else {
+                    TornadoInternalError.shouldNotReachHere(
+                        "Unexpected node type = %s", accessFieldNode.getClass().getName());
+                  }
+                } else if (usage instanceof OffsetAddressNode) {
+                  if (usage.usages().filter(JavaWriteNode.class).isNotEmpty()
+                      || usage.usages().filter(JavaReadNode.class).isNotEmpty()) {
+                    ValueNode base = loadField.object();
+                    if (base instanceof PiNode basePI) {
+                      base = basePI.object();
+                    } else if (base
+                        instanceof TornadoAddressArithmeticNode tornadoAddressArithmeticNode) {
+                      base = tornadoAddressArithmeticNode.getBase();
+                    }
+
+                    TornadoAddressArithmeticNode addNode =
+                        new TornadoAddressArithmeticNode(base, loadField);
+                    graph.addWithoutUnique(addNode);
+                    usage.replaceFirstInput(loadField, addNode);
+                  }
+                }
+              });
     }
+  }
 }

@@ -24,6 +24,8 @@
  */
 package uk.ac.manchester.tornado.drivers.spirv.graal.nodes;
 
+import jdk.vm.ci.meta.JavaKind;
+import jdk.vm.ci.meta.Value;
 import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
@@ -34,9 +36,6 @@ import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.memory.address.AddressNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-
-import jdk.vm.ci.meta.JavaKind;
-import jdk.vm.ci.meta.Value;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary;
@@ -46,34 +45,36 @@ import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVUnary.MemoryIndexed
 @NodeInfo
 public class WriteHalfFloatNode extends FixedWithNextNode implements LIRLowerable {
 
-    public static final NodeClass<WriteHalfFloatNode> TYPE = NodeClass.create(WriteHalfFloatNode.class);
+  public static final NodeClass<WriteHalfFloatNode> TYPE =
+      NodeClass.create(WriteHalfFloatNode.class);
 
-    @Input
-    private AddressNode addressNode;
+  @Input private AddressNode addressNode;
 
-    @Input
-    private ValueNode valueNode;
+  @Input private ValueNode valueNode;
 
-    public WriteHalfFloatNode(AddressNode addressNode, ValueNode valueNode) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.addressNode = addressNode;
-        this.valueNode = valueNode;
+  public WriteHalfFloatNode(AddressNode addressNode, ValueNode valueNode) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.addressNode = addressNode;
+    this.valueNode = valueNode;
+  }
+
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRGeneratorTool tool = generator.getLIRGeneratorTool();
+
+    Value addressValue = generator.operand(addressNode);
+    Value valueToStore = generator.operand(valueNode);
+
+    if (addressValue instanceof MemoryAccess memoryAccess) {
+      SPIRVUnary.SPIRVAddressCast cast =
+          new SPIRVUnary.SPIRVAddressCast(
+              memoryAccess.getValue(),
+              memoryAccess.getMemoryRegion(),
+              LIRKind.value(SPIRVKind.OP_TYPE_FLOAT_16));
+      if (memoryAccess.getIndex() == null) {
+        tool.append(new SPIRVLIRStmt.StoreStmt(cast, memoryAccess, valueToStore));
+      }
+    } else if (addressValue instanceof MemoryIndexedAccess indexedAccess) {
+      tool.append(new SPIRVLIRStmt.StoreIndexedMemAccess(indexedAccess, valueToStore));
     }
-
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRGeneratorTool tool = generator.getLIRGeneratorTool();
-
-        Value addressValue = generator.operand(addressNode);
-        Value valueToStore = generator.operand(valueNode);
-
-        if (addressValue instanceof MemoryAccess memoryAccess) {
-            SPIRVUnary.SPIRVAddressCast cast = new SPIRVUnary.SPIRVAddressCast(memoryAccess.getValue(), memoryAccess.getMemoryRegion(), LIRKind.value(SPIRVKind.OP_TYPE_FLOAT_16));
-            if (memoryAccess.getIndex() == null) {
-                tool.append(new SPIRVLIRStmt.StoreStmt(cast, memoryAccess, valueToStore));
-            }
-        } else if (addressValue instanceof MemoryIndexedAccess indexedAccess) {
-            tool.append(new SPIRVLIRStmt.StoreIndexedMemAccess(indexedAccess, valueToStore));
-        }
-
-    }
+  }
 }

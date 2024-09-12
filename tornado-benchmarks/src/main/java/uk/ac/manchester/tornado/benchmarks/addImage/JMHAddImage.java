@@ -19,7 +19,6 @@ package uk.ac.manchester.tornado.benchmarks.addImage;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -37,7 +36,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -47,85 +45,84 @@ import uk.ac.manchester.tornado.api.types.vectors.Float4;
 import uk.ac.manchester.tornado.benchmarks.GraphicsKernels;
 
 /**
- * <p>
- * How to run in isolation?
- * </p>
- * <code>
+ * How to run in isolation? <code>
  * tornado -jar tornado-benchmarks/target/jmhbenchmarks.jar uk.ac.manchester.tornado.benchmarks.addImage.JMHAddImage
  * </code>
  */
 public class JMHAddImage {
 
-    @State(Scope.Thread)
-    public static class BenchmarkSetup {
+  @State(Scope.Thread)
+  public static class BenchmarkSetup {
 
-        int numElementsX = Integer.parseInt(System.getProperty("x", "2048"));
-        int numElementsY = Integer.parseInt(System.getProperty("y", "2048"));
-        TaskGraph taskGraph;
+    int numElementsX = Integer.parseInt(System.getProperty("x", "2048"));
+    int numElementsY = Integer.parseInt(System.getProperty("y", "2048"));
+    TaskGraph taskGraph;
 
-        TornadoExecutionPlan executor;
+    TornadoExecutionPlan executor;
 
-        ImageFloat4 a;
-        ImageFloat4 b;
-        ImageFloat4 c;
+    ImageFloat4 a;
+    ImageFloat4 b;
+    ImageFloat4 c;
 
-        @Setup(Level.Trial)
-        public void doSetup() {
-            a = new ImageFloat4(numElementsX, numElementsY);
-            b = new ImageFloat4(numElementsX, numElementsY);
-            c = new ImageFloat4(numElementsX, numElementsY);
+    @Setup(Level.Trial)
+    public void doSetup() {
+      a = new ImageFloat4(numElementsX, numElementsY);
+      b = new ImageFloat4(numElementsX, numElementsY);
+      c = new ImageFloat4(numElementsX, numElementsY);
 
-            Random r = new Random();
-            for (int j = 0; j < numElementsY; j++) {
-                for (int i = 0; i < numElementsX; i++) {
-                    a.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
-                    b.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
-                }
-            }
-            taskGraph = new TaskGraph("benchmark") //
-                    .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
-                    .task("addImage", GraphicsKernels::addImage, a, b, c) //
-                    .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
-
-            ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
-            executor = new TornadoExecutionPlan(immutableTaskGraph);
-            executor.withWarmUp();
+      Random r = new Random();
+      for (int j = 0; j < numElementsY; j++) {
+        for (int i = 0; i < numElementsX; i++) {
+          a.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
+          b.set(i, j, new Float4(r.nextFloat(), r.nextFloat(), r.nextFloat(), r.nextFloat()));
         }
-    }
+      }
+      taskGraph =
+          new TaskGraph("benchmark") //
+              .transferToDevice(DataTransferMode.EVERY_EXECUTION, a, b) //
+              .task("addImage", GraphicsKernels::addImage, a, b, c) //
+              .transferToHost(DataTransferMode.EVERY_EXECUTION, c);
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void addImageJava(BenchmarkSetup state) {
-        GraphicsKernels.addImage(state.a, state.b, state.c);
+      ImmutableTaskGraph immutableTaskGraph = taskGraph.snapshot();
+      executor = new TornadoExecutionPlan(immutableTaskGraph);
+      executor.withWarmUp();
     }
+  }
 
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
-    @OutputTimeUnit(TimeUnit.NANOSECONDS)
-    @Fork(1)
-    public void addImageTornado(BenchmarkSetup state, Blackhole blackhole) {
-        TornadoExecutionPlan executor = state.executor;
-        executor.execute();
-        blackhole.consume(executor);
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 60, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void addImageJava(BenchmarkSetup state) {
+    GraphicsKernels.addImage(state.a, state.b, state.c);
+  }
 
-    public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder() //
-                .include(JMHAddImage.class.getName() + ".*") //
-                .mode(Mode.AverageTime) //
-                .timeUnit(TimeUnit.NANOSECONDS) //
-                .warmupTime(TimeValue.seconds(60)) //
-                .warmupIterations(2) //
-                .measurementTime(TimeValue.seconds(30)) //
-                .measurementIterations(5) //
-                .forks(1) //
-                .build();
-        new Runner(opt).run();
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @Warmup(iterations = 2, time = 30, timeUnit = TimeUnit.SECONDS)
+  @Measurement(iterations = 5, time = 30, timeUnit = TimeUnit.SECONDS)
+  @OutputTimeUnit(TimeUnit.NANOSECONDS)
+  @Fork(1)
+  public void addImageTornado(BenchmarkSetup state, Blackhole blackhole) {
+    TornadoExecutionPlan executor = state.executor;
+    executor.execute();
+    blackhole.consume(executor);
+  }
+
+  public static void main(String[] args) throws RunnerException {
+    Options opt =
+        new OptionsBuilder() //
+            .include(JMHAddImage.class.getName() + ".*") //
+            .mode(Mode.AverageTime) //
+            .timeUnit(TimeUnit.NANOSECONDS) //
+            .warmupTime(TimeValue.seconds(60)) //
+            .warmupIterations(2) //
+            .measurementTime(TimeValue.seconds(30)) //
+            .measurementIterations(5) //
+            .forks(1) //
+            .build();
+    new Runner(opt).run();
+  }
 }

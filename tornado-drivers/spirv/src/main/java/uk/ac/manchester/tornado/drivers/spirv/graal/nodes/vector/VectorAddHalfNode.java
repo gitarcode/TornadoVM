@@ -30,50 +30,49 @@ import org.graalvm.compiler.core.common.LIRKind;
 import org.graalvm.compiler.core.common.type.StampFactory;
 import org.graalvm.compiler.graph.NodeClass;
 import org.graalvm.compiler.lir.Variable;
-import org.graalvm.compiler.lir.gen.LIRGeneratorTool;
 import org.graalvm.compiler.nodeinfo.NodeInfo;
 import org.graalvm.compiler.nodes.ValueNode;
 import org.graalvm.compiler.nodes.spi.LIRLowerable;
 import org.graalvm.compiler.nodes.spi.NodeLIRBuilderTool;
-import uk.ac.manchester.tornado.drivers.common.logging.Logger;
 import uk.ac.manchester.tornado.drivers.spirv.graal.asm.SPIRVAssembler;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVBinary;
-import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVKind;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIROp;
 import uk.ac.manchester.tornado.drivers.spirv.graal.lir.SPIRVLIRStmt;
 
 @NodeInfo
 public class VectorAddHalfNode extends ValueNode implements LIRLowerable {
 
-    public static final NodeClass<VectorAddHalfNode> TYPE = NodeClass.create(VectorAddHalfNode.class);
+  public static final NodeClass<VectorAddHalfNode> TYPE = NodeClass.create(VectorAddHalfNode.class);
 
-    @Input
-    private ValueNode x;
+  @Input private ValueNode x;
 
-    @Input
-    private ValueNode y;
+  @Input private ValueNode y;
 
-    public VectorAddHalfNode(ValueNode x, ValueNode y) {
-        super(TYPE, StampFactory.forKind(JavaKind.Short));
-        this.x = x;
-        this.y = y;
-    }
+  public VectorAddHalfNode(ValueNode x, ValueNode y) {
+    super(TYPE, StampFactory.forKind(JavaKind.Short));
+    this.x = x;
+    this.y = y;
+  }
 
-    private SPIRVLIROp genBinaryExpr(Variable result, SPIRVAssembler.SPIRVBinaryOp op, LIRKind lirKind, Value x, Value y) {
-        return new SPIRVBinary.Expr(result, op, lirKind, x, y);
-    }
+  private SPIRVLIROp genBinaryExpr(
+      Variable result, SPIRVAssembler.SPIRVBinaryOp op, LIRKind lirKind, Value x, Value y) {
+    return new SPIRVBinary.Expr(result, op, lirKind, x, y);
+  }
 
-    public void generate(NodeLIRBuilderTool generator) {
-        LIRKind lirKind = generator.getLIRGeneratorTool().getLIRKind(stamp);
-        final Variable result = generator.getLIRGeneratorTool().newVariable(lirKind);
+  public void generate(NodeLIRBuilderTool generator) {
+    LIRKind lirKind = generator.getLIRGeneratorTool().getLIRKind(stamp);
+    final Variable result = generator.getLIRGeneratorTool().newVariable(lirKind);
 
-        final Value input1 = generator.operand(x);
-        final Value input2 = generator.operand(y);
+    final Value input1 = generator.operand(x);
+    final Value input2 = generator.operand(y);
 
-        SPIRVAssembler.SPIRVBinaryOp binaryOp = SPIRVAssembler.SPIRVBinaryOp.ADD_FLOAT;
+    SPIRVAssembler.SPIRVBinaryOp binaryOp = SPIRVAssembler.SPIRVBinaryOp.ADD_FLOAT;
 
-        generator.getLIRGeneratorTool().append(new SPIRVLIRStmt.AssignStmt(result, genBinaryExpr(result, binaryOp, lirKind, input1, input2)));
-        generator.setResult(this, result);
-    }
-
+    generator
+        .getLIRGeneratorTool()
+        .append(
+            new SPIRVLIRStmt.AssignStmt(
+                result, genBinaryExpr(result, binaryOp, lirKind, input1, input2)));
+    generator.setResult(this, result);
+  }
 }

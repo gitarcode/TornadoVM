@@ -20,68 +20,64 @@ package uk.ac.manchester.tornado.benchmarks.sgemv;
 import static uk.ac.manchester.tornado.benchmarks.LinearAlgebraArrays.sgemv;
 
 import java.util.Random;
-
 import uk.ac.manchester.tornado.api.common.TornadoDevice;
 import uk.ac.manchester.tornado.api.types.arrays.FloatArray;
 import uk.ac.manchester.tornado.benchmarks.BenchmarkDriver;
 
 public class SgemvJava extends BenchmarkDriver {
 
-    private final int m;
-    private final int n;
-    private FloatArray a;
-    private FloatArray x;
-    private FloatArray y;
+  private final int m;
+  private final int n;
+  private FloatArray a;
+  private FloatArray x;
+  private FloatArray y;
 
-    public SgemvJava(int iterations, int m, int n) {
-        super(iterations);
-        this.m = m;
-        this.n = n;
+  public SgemvJava(int iterations, int m, int n) {
+    super(iterations);
+    this.m = m;
+    this.n = n;
+  }
+
+  @Override
+  public void setUp() {
+    a = new FloatArray(m * n);
+    x = new FloatArray(n);
+    y = new FloatArray(n);
+
+    final Random random = new Random();
+
+    for (int i = 0; i < m; i++) {
+      a.set(i * (m + 1), 1);
     }
 
-    @Override
-    public void setUp() {
-        a = new FloatArray(m * n);
-        x = new FloatArray(n);
-        y = new FloatArray(n);
-
-        final Random random = new Random();
-
-        for (int i = 0; i < m; i++) {
-            a.set(i * (m + 1), 1);
-        }
-
-        for (int i = 0; i < n; i++) {
-            x.set(i, random.nextFloat());
-        }
-
+    for (int i = 0; i < n; i++) {
+      x.set(i, random.nextFloat());
     }
+  }
 
-    @Override
-    public void tearDown() {
-        a = null;
-        x = null;
-        y = null;
-        super.tearDown();
-    }
+  @Override
+  public void tearDown() {
+    a = null;
+    x = null;
+    y = null;
+    super.tearDown();
+  }
 
-    @Override
-    public void runBenchmark(TornadoDevice device) {
-        sgemv(m, n, a, x, y);
-    }
+  @Override
+  public void runBenchmark(TornadoDevice device) {
+    sgemv(m, n, a, x, y);
+  }
 
-    @Override
-    public void barrier() {
+  @Override
+  public void barrier() {}
 
-    }
+  @Override
+  public boolean validate(TornadoDevice device) {
+    return true;
+  }
 
-    @Override
-    public boolean validate(TornadoDevice device) {
-        return true;
-    }
-
-    public void printSummary() {
-        System.out.printf("id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
-    }
-
+  public void printSummary() {
+    System.out.printf(
+        "id=java-serial, elapsed=%f, per iteration=%f\n", getElapsed(), getElapsedPerIteration());
+  }
 }
