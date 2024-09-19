@@ -17,10 +17,13 @@
  */
 package uk.ac.manchester.tornado.unittests.vectortypes;
 
-import static org.junit.Assert.assertEquals;
+import static java.time.Duration.ofMillis;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.number.IsCloseTo.closeTo;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 
 import java.util.Random;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -283,7 +286,7 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(16.0, vectorHalfC.get(0).getFloat32(), DELTA);
+    assertThat((double) 16.0, closeTo(vectorHalfC.get(0).getFloat32(), DELTA));
   }
 
   @Test
@@ -303,7 +306,7 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(7, output.get(0).getFloat32(), DELTA);
+    assertThat((double) 7, closeTo(output.get(0).getFloat32(), DELTA));
   }
 
   @Test
@@ -323,7 +326,7 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(10, output.get(0).getFloat32(), DELTA);
+    assertThat((double) 10, closeTo(output.get(0).getFloat32(), DELTA));
   }
 
   @Test
@@ -343,7 +346,7 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(20, output.get(0).getFloat32(), DELTA);
+    assertThat((double) 20, closeTo(output.get(0).getFloat32(), DELTA));
   }
 
   @Test
@@ -381,7 +384,7 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(120, output.get(0).getFloat32(), DELTA);
+    assertThat((double) 120, closeTo(output.get(0).getFloat32(), DELTA));
   }
 
   @Test
@@ -435,7 +438,7 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(120, output.get(0).getFloat32(), DELTA);
+    assertThat((double) 120, closeTo(output.get(0).getFloat32(), DELTA));
   }
 
   @Test
@@ -457,9 +460,9 @@ public class TestHalfFloats extends TornadoTestBase {
     }
 
     for (int i = 0; i < size; i++) {
-      assertEquals(4, output.get(i).getX().getFloat32(), DELTA);
-      assertEquals(4, output.get(i).getY().getFloat32(), DELTA);
-      assertEquals(4, output.get(i).getZ().getFloat32(), DELTA);
+      assertThat((double) 4, closeTo(output.get(i).getX().getFloat32(), DELTA));
+      assertThat((double) 4, closeTo(output.get(i).getY().getFloat32(), DELTA));
+      assertThat((double) 4, closeTo(output.get(i).getZ().getFloat32(), DELTA));
     }
   }
 
@@ -489,8 +492,12 @@ public class TestHalfFloats extends TornadoTestBase {
 
     for (int i = 0; i < size; i++) {
       Half2 sequential = new Half2(new HalfFloat(i + (size - i)), new HalfFloat(i + (size - i)));
-      assertEquals(sequential.getX().getFloat32(), output.get(i).getX().getFloat32(), DELTA);
-      assertEquals(sequential.getY().getFloat32(), output.get(i).getY().getFloat32(), DELTA);
+      assertThat(
+          (double) sequential.getX().getFloat32(),
+          closeTo(output.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getY().getFloat32(),
+          closeTo(output.get(i).getY().getFloat32(), DELTA));
     }
   }
 
@@ -525,9 +532,15 @@ public class TestHalfFloats extends TornadoTestBase {
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + (size - i)));
-      assertEquals(sequential.getX().getFloat32(), output.get(i).getX().getFloat32(), DELTA);
-      assertEquals(sequential.getY().getFloat32(), output.get(i).getY().getFloat32(), DELTA);
-      assertEquals(sequential.getZ().getFloat32(), output.get(i).getZ().getFloat32(), DELTA);
+      assertThat(
+          (double) sequential.getX().getFloat32(),
+          closeTo(output.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getY().getFloat32(),
+          closeTo(output.get(i).getY().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getZ().getFloat32(),
+          closeTo(output.get(i).getZ().getFloat32(), DELTA));
     }
   }
 
@@ -599,10 +612,18 @@ public class TestHalfFloats extends TornadoTestBase {
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + size));
-      assertEquals(sequential.getX().getFloat32(), output.get(i).getX().getFloat32(), DELTA);
-      assertEquals(sequential.getY().getFloat32(), output.get(i).getY().getFloat32(), DELTA);
-      assertEquals(sequential.getZ().getFloat32(), output.get(i).getZ().getFloat32(), DELTA);
-      assertEquals(sequential.getW().getFloat32(), output.get(i).getW().getFloat32(), DELTA);
+      assertThat(
+          (double) sequential.getX().getFloat32(),
+          closeTo(output.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getY().getFloat32(),
+          closeTo(output.get(i).getY().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getZ().getFloat32(),
+          closeTo(output.get(i).getZ().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getW().getFloat32(),
+          closeTo(output.get(i).getW().getFloat32(), DELTA));
     }
   }
 
@@ -685,22 +706,54 @@ public class TestHalfFloats extends TornadoTestBase {
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + size));
-      assertEquals(sequential.getS0().getFloat32(), output.get(i).getS0().getFloat32(), DELTA);
-      assertEquals(sequential.getS1().getFloat32(), output.get(i).getS1().getFloat32(), DELTA);
-      assertEquals(sequential.getS2().getFloat32(), output.get(i).getS2().getFloat32(), DELTA);
-      assertEquals(sequential.getS3().getFloat32(), output.get(i).getS3().getFloat32(), DELTA);
-      assertEquals(sequential.getS4().getFloat32(), output.get(i).getS4().getFloat32(), DELTA);
-      assertEquals(sequential.getS5().getFloat32(), output.get(i).getS5().getFloat32(), DELTA);
-      assertEquals(sequential.getS6().getFloat32(), output.get(i).getS6().getFloat32(), DELTA);
-      assertEquals(sequential.getS7().getFloat32(), output.get(i).getS7().getFloat32(), DELTA);
-      assertEquals(sequential.getS8().getFloat32(), output.get(i).getS8().getFloat32(), DELTA);
-      assertEquals(sequential.getS9().getFloat32(), output.get(i).getS9().getFloat32(), DELTA);
-      assertEquals(sequential.getS10().getFloat32(), output.get(i).getS10().getFloat32(), DELTA);
-      assertEquals(sequential.getS11().getFloat32(), output.get(i).getS11().getFloat32(), DELTA);
-      assertEquals(sequential.getS12().getFloat32(), output.get(i).getS12().getFloat32(), DELTA);
-      assertEquals(sequential.getS13().getFloat32(), output.get(i).getS13().getFloat32(), DELTA);
-      assertEquals(sequential.getS14().getFloat32(), output.get(i).getS14().getFloat32(), DELTA);
-      assertEquals(sequential.getS15().getFloat32(), output.get(i).getS15().getFloat32(), DELTA);
+      assertThat(
+          (double) sequential.getS0().getFloat32(),
+          closeTo(output.get(i).getS0().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS1().getFloat32(),
+          closeTo(output.get(i).getS1().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS2().getFloat32(),
+          closeTo(output.get(i).getS2().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS3().getFloat32(),
+          closeTo(output.get(i).getS3().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS4().getFloat32(),
+          closeTo(output.get(i).getS4().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS5().getFloat32(),
+          closeTo(output.get(i).getS5().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS6().getFloat32(),
+          closeTo(output.get(i).getS6().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS7().getFloat32(),
+          closeTo(output.get(i).getS7().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS8().getFloat32(),
+          closeTo(output.get(i).getS8().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS9().getFloat32(),
+          closeTo(output.get(i).getS9().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS10().getFloat32(),
+          closeTo(output.get(i).getS10().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS11().getFloat32(),
+          closeTo(output.get(i).getS11().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS12().getFloat32(),
+          closeTo(output.get(i).getS12().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS13().getFloat32(),
+          closeTo(output.get(i).getS13().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS14().getFloat32(),
+          closeTo(output.get(i).getS14().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS15().getFloat32(),
+          closeTo(output.get(i).getS15().getFloat32(), DELTA));
     }
   }
 
@@ -759,14 +812,30 @@ public class TestHalfFloats extends TornadoTestBase {
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + (size - i)),
               new HalfFloat(i + size));
-      assertEquals(sequential.getS0().getFloat32(), output.get(i).getS0().getFloat32(), DELTA);
-      assertEquals(sequential.getS1().getFloat32(), output.get(i).getS1().getFloat32(), DELTA);
-      assertEquals(sequential.getS2().getFloat32(), output.get(i).getS2().getFloat32(), DELTA);
-      assertEquals(sequential.getS3().getFloat32(), output.get(i).getS3().getFloat32(), DELTA);
-      assertEquals(sequential.getS4().getFloat32(), output.get(i).getS4().getFloat32(), DELTA);
-      assertEquals(sequential.getS5().getFloat32(), output.get(i).getS5().getFloat32(), DELTA);
-      assertEquals(sequential.getS6().getFloat32(), output.get(i).getS6().getFloat32(), DELTA);
-      assertEquals(sequential.getS7().getFloat32(), output.get(i).getS7().getFloat32(), DELTA);
+      assertThat(
+          (double) sequential.getS0().getFloat32(),
+          closeTo(output.get(i).getS0().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS1().getFloat32(),
+          closeTo(output.get(i).getS1().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS2().getFloat32(),
+          closeTo(output.get(i).getS2().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS3().getFloat32(),
+          closeTo(output.get(i).getS3().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS4().getFloat32(),
+          closeTo(output.get(i).getS4().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS5().getFloat32(),
+          closeTo(output.get(i).getS5().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS6().getFloat32(),
+          closeTo(output.get(i).getS6().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS7().getFloat32(),
+          closeTo(output.get(i).getS7().getFloat32(), DELTA));
     }
   }
 
@@ -813,14 +882,30 @@ public class TestHalfFloats extends TornadoTestBase {
               new HalfFloat(i),
               new HalfFloat(i),
               new HalfFloat(i));
-      assertEquals(sequential.getS0().getFloat32(), output.get(i).getS0().getFloat32(), DELTA);
-      assertEquals(sequential.getS1().getFloat32(), output.get(i).getS1().getFloat32(), DELTA);
-      assertEquals(sequential.getS2().getFloat32(), output.get(i).getS2().getFloat32(), DELTA);
-      assertEquals(sequential.getS3().getFloat32(), output.get(i).getS3().getFloat32(), DELTA);
-      assertEquals(sequential.getS4().getFloat32(), output.get(i).getS4().getFloat32(), DELTA);
-      assertEquals(sequential.getS5().getFloat32(), output.get(i).getS5().getFloat32(), DELTA);
-      assertEquals(sequential.getS6().getFloat32(), output.get(i).getS6().getFloat32(), DELTA);
-      assertEquals(sequential.getS7().getFloat32(), output.get(i).getS7().getFloat32(), DELTA);
+      assertThat(
+          (double) sequential.getS0().getFloat32(),
+          closeTo(output.get(i).getS0().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS1().getFloat32(),
+          closeTo(output.get(i).getS1().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS2().getFloat32(),
+          closeTo(output.get(i).getS2().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS3().getFloat32(),
+          closeTo(output.get(i).getS3().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS4().getFloat32(),
+          closeTo(output.get(i).getS4().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS5().getFloat32(),
+          closeTo(output.get(i).getS5().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS6().getFloat32(),
+          closeTo(output.get(i).getS6().getFloat32(), DELTA));
+      assertThat(
+          (double) sequential.getS7().getFloat32(),
+          closeTo(output.get(i).getS7().getFloat32(), DELTA));
     }
   }
 
@@ -860,7 +945,8 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(seqReduce.get(0).getFloat32(), outputReduce.get(0).getFloat32(), DELTA);
+    assertThat(
+        (double) seqReduce.get(0).getFloat32(), closeTo(outputReduce.get(0).getFloat32(), DELTA));
   }
 
   @Test
@@ -882,9 +968,9 @@ public class TestHalfFloats extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(8.0f, output.get(0).getS0().getFloat32(), DELTA);
-    assertEquals(8.0f, output.get(0).getS1().getFloat32(), DELTA);
-    assertEquals(8.0f, output.get(0).getS2().getFloat32(), DELTA);
+    assertThat((double) 8.0f, closeTo(output.get(0).getS0().getFloat32(), DELTA));
+    assertThat((double) 8.0f, closeTo(output.get(0).getS1().getFloat32(), DELTA));
+    assertThat((double) 8.0f, closeTo(output.get(0).getS2().getFloat32(), DELTA));
   }
 
   @Test
@@ -905,14 +991,12 @@ public class TestHalfFloats extends TornadoTestBase {
     testPrivateVectorHalf2(sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getX().getFloat32(),
-          tornadoOutput.get(i).getX().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getY().getFloat32(),
-          tornadoOutput.get(i).getY().getFloat32(),
-          DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getX().getFloat32(),
+          closeTo(tornadoOutput.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getY().getFloat32(),
+          closeTo(tornadoOutput.get(i).getY().getFloat32(), DELTA));
     }
   }
 
@@ -934,22 +1018,18 @@ public class TestHalfFloats extends TornadoTestBase {
     testPrivateVectorHalf4(sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getX().getFloat32(),
-          tornadoOutput.get(i).getX().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getY().getFloat32(),
-          tornadoOutput.get(i).getY().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getZ().getFloat32(),
-          tornadoOutput.get(i).getZ().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getW().getFloat32(),
-          tornadoOutput.get(i).getW().getFloat32(),
-          DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getX().getFloat32(),
+          closeTo(tornadoOutput.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getY().getFloat32(),
+          closeTo(tornadoOutput.get(i).getY().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getZ().getFloat32(),
+          closeTo(tornadoOutput.get(i).getZ().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getW().getFloat32(),
+          closeTo(tornadoOutput.get(i).getW().getFloat32(), DELTA));
     }
   }
 
@@ -971,38 +1051,30 @@ public class TestHalfFloats extends TornadoTestBase {
     testPrivateVectorHalf8(sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getS0().getFloat32(),
-          tornadoOutput.get(i).getS0().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getS1().getFloat32(),
-          tornadoOutput.get(i).getS1().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getS2().getFloat32(),
-          tornadoOutput.get(i).getS2().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getS3().getFloat32(),
-          tornadoOutput.get(i).getS3().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getS4().getFloat32(),
-          tornadoOutput.get(i).getS4().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getS5().getFloat32(),
-          tornadoOutput.get(i).getS5().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getS6().getFloat32(),
-          tornadoOutput.get(i).getS6().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getS7().getFloat32(),
-          tornadoOutput.get(i).getS7().getFloat32(),
-          DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getS0().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS0().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getS1().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS1().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getS2().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS2().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getS3().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS3().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getS4().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS4().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getS5().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS5().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getS6().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS6().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getS7().getFloat32(),
+          closeTo(tornadoOutput.get(i).getS7().getFloat32(), DELTA));
     }
   }
 
@@ -1024,14 +1096,18 @@ public class TestHalfFloats extends TornadoTestBase {
     vectorHalfUnary(sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getX().getFloat32(), output.get(i).getX().getFloat32(), DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getY().getFloat32(), output.get(i).getY().getFloat32(), DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getZ().getFloat32(), output.get(i).getZ().getFloat32(), DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getW().getFloat32(), output.get(i).getW().getFloat32(), DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getX().getFloat32(),
+          closeTo(output.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getY().getFloat32(),
+          closeTo(output.get(i).getY().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getZ().getFloat32(),
+          closeTo(output.get(i).getZ().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getW().getFloat32(),
+          closeTo(output.get(i).getW().getFloat32(), DELTA));
     }
   }
 
@@ -1064,14 +1140,12 @@ public class TestHalfFloats extends TornadoTestBase {
     vectorComputation01(sequentialInput, sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getX().getFloat32(),
-          tornadoOutput.get(i).getX().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getY().getFloat32(),
-          tornadoOutput.get(i).getY().getFloat32(),
-          DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getX().getFloat32(),
+          closeTo(tornadoOutput.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getY().getFloat32(),
+          closeTo(tornadoOutput.get(i).getY().getFloat32(), DELTA));
     }
   }
 
@@ -1104,18 +1178,15 @@ public class TestHalfFloats extends TornadoTestBase {
     vectorComputation02(sequentialInput, sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getX().getFloat32(),
-          tornadoOutput.get(i).getX().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getY().getFloat32(),
-          tornadoOutput.get(i).getY().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getZ().getFloat32(),
-          tornadoOutput.get(i).getZ().getFloat32(),
-          DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getX().getFloat32(),
+          closeTo(tornadoOutput.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getY().getFloat32(),
+          closeTo(tornadoOutput.get(i).getY().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getZ().getFloat32(),
+          closeTo(tornadoOutput.get(i).getZ().getFloat32(), DELTA));
     }
   }
 
@@ -1153,18 +1224,15 @@ public class TestHalfFloats extends TornadoTestBase {
     vectorComputation03(sequentialInput, sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getX().getFloat32(),
-          tornadoOutput.get(i).getX().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getY().getFloat32(),
-          tornadoOutput.get(i).getY().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getZ().getFloat32(),
-          tornadoOutput.get(i).getZ().getFloat32(),
-          DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getX().getFloat32(),
+          closeTo(tornadoOutput.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getY().getFloat32(),
+          closeTo(tornadoOutput.get(i).getY().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getZ().getFloat32(),
+          closeTo(tornadoOutput.get(i).getZ().getFloat32(), DELTA));
     }
   }
 
@@ -1206,25 +1274,28 @@ public class TestHalfFloats extends TornadoTestBase {
     vectorComputation04(sequentialInput, sequentialOutput);
 
     for (int i = 0; i < size; i++) {
-      assertEquals(
-          sequentialOutput.get(i).getX().getFloat32(),
-          tornadoOutput.get(i).getX().getFloat32(),
-          DELTA);
-      assertEquals(
-          sequentialOutput.get(i).getY().getFloat32(),
-          tornadoOutput.get(i).getY().getFloat32(),
-          DELTA);
+      assertThat(
+          (double) sequentialOutput.get(i).getX().getFloat32(),
+          closeTo(tornadoOutput.get(i).getX().getFloat32(), DELTA));
+      assertThat(
+          (double) sequentialOutput.get(i).getY().getFloat32(),
+          closeTo(tornadoOutput.get(i).getY().getFloat32(), DELTA));
     }
   }
 
-  @Test(timeout = 1000) // timeout of 1sec
+  @Test
   public void testAllocationIssue() {
-    int size = 8192 * 4096;
+    assertTimeout(
+        ofMillis(1000),
+        () -> {
+          int size = 8192 * 4096;
 
-    VectorHalf4 buffer = new VectorHalf4(size);
-    for (int x = 0; x < size; x++) {
-      buffer.set(
-          x, new Half4(new HalfFloat(x), new HalfFloat(x), new HalfFloat(x), new HalfFloat(x)));
-    }
+          VectorHalf4 buffer = new VectorHalf4(size);
+          for (int x = 0; x < size; x++) {
+            buffer.set(
+                x,
+                new Half4(new HalfFloat(x), new HalfFloat(x), new HalfFloat(x), new HalfFloat(x)));
+          }
+        });
   }
 }
