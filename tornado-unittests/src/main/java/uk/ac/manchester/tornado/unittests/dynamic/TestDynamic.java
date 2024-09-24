@@ -17,9 +17,11 @@
  */
 package uk.ac.manchester.tornado.unittests.dynamic;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.number.IsCloseTo.closeTo;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import uk.ac.manchester.tornado.api.DRMode;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.Policy;
@@ -87,7 +89,7 @@ public class TestDynamic extends TornadoTestBase {
     }
 
     for (int i = 0; i < b.getSize(); i++) {
-      assertEquals(a.get(i) * 2, b.get(i));
+      assertThat(b.get(i), equalTo(a.get(i) * 2));
     }
   }
 
@@ -120,7 +122,7 @@ public class TestDynamic extends TornadoTestBase {
     }
 
     for (int i = 0; i < b.getSize(); i++) {
-      assertEquals(a.get(i) * 2, b.get(i));
+      assertThat(b.get(i), equalTo(a.get(i) * 2));
     }
   }
 
@@ -149,7 +151,7 @@ public class TestDynamic extends TornadoTestBase {
     }
 
     for (int i = 0; i < b.getSize(); i++) {
-      assertEquals(a.get(i) * 2.0f, b.get(i), 0.01f);
+      assertThat((double) b.get(i), closeTo(a.get(i) * 2.0f, 0.01f));
     }
   }
 
@@ -185,7 +187,7 @@ public class TestDynamic extends TornadoTestBase {
     }
 
     for (int i = 0; i < b.getSize(); i++) {
-      assertEquals(seq.get(i), b.get(i));
+      assertThat(b.get(i), equalTo(seq.get(i)));
     }
   }
 
@@ -223,7 +225,7 @@ public class TestDynamic extends TornadoTestBase {
     }
 
     for (int i = 0; i < b.getSize(); i++) {
-      assertEquals(seq.get(i), b.get(i));
+      assertThat(b.get(i), equalTo(seq.get(i)));
     }
   }
 
@@ -255,7 +257,7 @@ public class TestDynamic extends TornadoTestBase {
     }
 
     for (int i = 0; i < b.getSize(); i++) {
-      assertEquals(a.get(i) * 2, b.get(i));
+      assertThat(b.get(i), equalTo(a.get(i) * 2));
     }
   }
 }
