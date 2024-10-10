@@ -18,10 +18,11 @@
 
 package uk.ac.manchester.tornado.unittests.branching;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 import java.util.stream.IntStream;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -205,7 +206,7 @@ public class TestConditionals extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(10, a.get(0));
+    assertThat(a.get(0), equalTo(10));
   }
 
   @Test
@@ -225,7 +226,7 @@ public class TestConditionals extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(10, a.get(0));
+    assertThat(a.get(0), equalTo(10));
   }
 
   @Test
@@ -255,7 +256,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < size; i++) {
-      assertEquals(serial.get(i), a.get(i));
+      assertThat(a.get(i), equalTo(serial.get(i)));
     }
   }
 
@@ -277,7 +278,7 @@ public class TestConditionals extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(10, a.get(0));
+    assertThat(a.get(0), equalTo(10));
   }
 
   @Test
@@ -298,7 +299,7 @@ public class TestConditionals extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(20, a.get(0));
+    assertThat(a.get(0), equalTo(20));
   }
 
   @Test
@@ -319,7 +320,7 @@ public class TestConditionals extends TornadoTestBase {
       executionPlan.execute();
     }
 
-    assertEquals(10, a.get(0));
+    assertThat(a.get(0), equalTo(10));
   }
 
   @Test
@@ -342,7 +343,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(10, a.get(i));
+      assertThat(a.get(i), equalTo(10));
     }
   }
 
@@ -366,7 +367,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(10, a.get(i));
+      assertThat(a.get(i), equalTo(10));
     }
   }
 
@@ -388,7 +389,7 @@ public class TestConditionals extends TornadoTestBase {
       executionPlan.execute();
     }
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(10, a.get(i));
+      assertThat(a.get(i), equalTo(10));
     }
   }
 
@@ -412,7 +413,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(10, a.get(i));
+      assertThat(a.get(i), equalTo(10));
     }
   }
 
@@ -437,7 +438,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(20, a.get(i));
+      assertThat(a.get(i), equalTo(20));
     }
   }
 
@@ -462,7 +463,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(50, a.get(i));
+      assertThat(a.get(i), equalTo(50));
     }
   }
 
@@ -484,7 +485,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(30, a.get(i));
+      assertThat(a.get(i), equalTo(30));
     }
   }
 
@@ -506,7 +507,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(10, a.get(i));
+      assertThat(a.get(i), equalTo(10));
     }
   }
 
@@ -528,7 +529,7 @@ public class TestConditionals extends TornadoTestBase {
     }
 
     for (int i = 0; i < a.getSize(); i++) {
-      assertEquals(10, a.get(i));
+      assertThat(a.get(i), equalTo(10));
     }
   }
 
@@ -556,7 +557,7 @@ public class TestConditionals extends TornadoTestBase {
     integerTestMove(sequential, size);
 
     for (int i = 0; i < size * size; i++) {
-      assertEquals(sequential.get(i), output.get(i));
+      assertThat(output.get(i), equalTo(sequential.get(i)));
     }
   }
 }

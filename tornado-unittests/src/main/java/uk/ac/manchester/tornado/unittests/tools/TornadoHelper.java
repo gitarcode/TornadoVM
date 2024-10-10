@@ -28,6 +28,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import org.junit.platform.engine.discovery.DiscoverySelectors;
+import org.junit.platform.launcher.Launcher;
+import org.junit.platform.launcher.LauncherDiscoveryRequest;
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
+import org.junit.platform.launcher.core.LauncherFactory;
+import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
 import org.junit.runner.Result;
@@ -48,8 +55,9 @@ public class TornadoHelper {
   public static final boolean OPTIMIZE_LOAD_STORE_SPIRV =
       Boolean.parseBoolean(System.getProperty("tornado.spirv.loadstore", "False"));
 
-  private static void printResult(Result result) {
-    System.out.printf("Test ran: %s, Failed: %s%n", result.getRunCount(), result.getFailureCount());
+  private static void printResult(TestExecutionSummary result) {
+    System.out.printf(
+        "Test ran: %s, Failed: %s%n", result.getTestsFoundCount(), result.getTestsFailedCount());
   }
 
   private static void printResult(int success, int failed, int notSupported) {
@@ -93,9 +101,9 @@ public class TornadoHelper {
       boolean testEnabled = false;
       boolean ignoreTest = false;
       for (Annotation a : annotations) {
-        if (a instanceof org.junit.Ignore) {
+        if (a instanceof org.junit.jupiter.api.Disabled) {
           ignoreTest = true;
-        } else if (a instanceof org.junit.Test) {
+        } else if (a instanceof org.junit.jupiter.api.Test) {
           testEnabled = true;
         } else if (a instanceof TornadoNotSupported) {
           testEnabled = true;
@@ -369,15 +377,31 @@ public class TornadoHelper {
 
   static void runTestClassAndMethod(String klassName, String methodName)
       throws ClassNotFoundException {
-    Request request = Request.method(Class.forName(klassName), methodName);
-    Result result = new JUnitCore().run(request);
-    printResult(result);
+    LauncherDiscoveryRequest request =
+        LauncherDiscoveryRequestBuilder.request()
+            .selectors(selectMethod(Class.forName(klassName), methodName))
+            .build();
+    Launcher launcher = LauncherFactory.create();
+    TestPlan testPlan = launcher.discover(request);
+    SummaryGeneratingListener listener = new SummaryGeneratingListener();
+    launcher.registerTestExecutionListeners(listener);
+    launcher.execute(request);
+    TestExecutionSummary summary = listener.getSummary();
+    printResult(summary);
   }
 
   static void runTestClass(String klassName) throws ClassNotFoundException {
-    Request request = Request.aClass(Class.forName(klassName));
-    Result result = new JUnitCore().run(request);
-    printResult(result);
+    LauncherDiscoveryRequest request =
+        LauncherDiscoveryRequestBuilder.request()
+            .selectors(DiscoverySelectors.selectClass(Class.forName(klassName)))
+            .build();
+    Launcher launcher = LauncherFactory.create();
+    TestPlan testPlan = launcher.discover(request);
+    SummaryGeneratingListener listener = new SummaryGeneratingListener();
+    launcher.registerTestExecutionListeners(listener);
+    launcher.execute(request);
+    TestExecutionSummary summary = listener.getSummary();
+    printResult(summary);
   }
 
   static class TestSuiteCollection {
