@@ -1,2 +1,4 @@
 [cleanup]
 update_existing = false
+[ai]
+policy = "code_and_metadata_allowed"
