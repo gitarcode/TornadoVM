@@ -17,14 +17,17 @@
  */
 package uk.ac.manchester.tornado.unittests.virtual;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.stream.IntStream;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -52,7 +55,7 @@ public class TestVirtualDeviceKernel extends TornadoTestBase {
     }
   }
 
-  @After
+  @AfterEach
   public void after() {
     // make sure the source file generated is deleted
     File fileLog = new File(SOURCE_DIR);
@@ -91,13 +94,15 @@ public class TestVirtualDeviceKernel extends TornadoTestBase {
       generatedKernel = Files.readAllBytes(fileLog.toPath());
       expectedKernel = Files.readAllBytes(expectedKernelFile.toPath());
     } catch (IOException e) {
-      Assert.fail();
+      MatcherAssert.fail();
     }
 
     boolean fileEquivalent =
         TestVirtualDeviceFeatureExtraction.performComparison(generatedKernel, expectedKernel);
-    Assert.assertTrue(
-        "There is a mismatch between pre-compiled and JIT compiled kernels.", fileEquivalent);
+    assertThat(
+        "There is a mismatch between pre-compiled and JIT compiled kernels.",
+        fileEquivalent,
+        is(true));
   }
 
   @Test
