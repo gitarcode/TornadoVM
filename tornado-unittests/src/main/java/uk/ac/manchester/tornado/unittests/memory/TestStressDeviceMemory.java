@@ -18,10 +18,11 @@
 
 package uk.ac.manchester.tornado.unittests.memory;
 
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import uk.ac.manchester.tornado.api.ImmutableTaskGraph;
 import uk.ac.manchester.tornado.api.TaskGraph;
 import uk.ac.manchester.tornado.api.TornadoExecutionPlan;
@@ -71,7 +72,7 @@ public class TestStressDeviceMemory extends TornadoTestBase {
     for (int i = 0; i < 10; i++) {
       try {
         stressDataAllocationTest(minSize);
-        assertTrue(true);
+        assertThat(true, is(true));
       } catch (TornadoExecutionPlanException e) {
         fail();
       }
@@ -95,7 +96,7 @@ public class TestStressDeviceMemory extends TornadoTestBase {
         int size = 1024 * 1024 * i;
         try {
           stressDataAllocationTest(size);
-          assertTrue(true);
+          assertThat(true, is(true));
         } catch (TornadoExecutionPlanException e) {
           fail();
         }
